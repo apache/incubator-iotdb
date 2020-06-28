@@ -156,17 +156,6 @@ public class IoTDBDescriptor {
             + " use default value");
       }
 
-      conf.setEnableMetricService(Boolean.parseBoolean(properties
-          .getProperty("enable_metric_service", Boolean.toString(conf.isEnableMetricService()))));
-
-      conf.setMetricsPort(Integer.parseInt(properties.getProperty("metrics_port",
-          Integer.toString(conf.getMetricsPort()))));
-
-      conf.setQueryCacheSizeInMetric(Integer
-          .parseInt(properties.getProperty("query_cache_size_in_metric",
-              Integer.toString(conf.getQueryCacheSizeInMetric()))
-          ));
-
       conf.setRpcAddress(properties.getProperty("rpc_address", conf.getRpcAddress()));
 
       conf.setRpcThriftCompressionEnable(
@@ -433,6 +422,22 @@ public class IoTDBDescriptor {
           "org.apache.iotdb.db.auth.authorizer.LocalFileAuthorizer"));
       //if using org.apache.iotdb.db.auth.authorizer.OpenIdAuthorizer, openID_url is needed.
       conf.setOpenIdProviderUrl(properties.getProperty("openID_url", ""));
+
+      // Load Metrics Settings
+      conf.setEnableMetricService(Boolean.parseBoolean(properties
+              .getProperty("enable_metric_service", Boolean.toString(conf.isEnableMetricService()))));
+
+      conf.setEnableIotDBMetricsStorage(Boolean.parseBoolean(properties
+              .getProperty("metrics_iotdb_storage_enabled", Boolean.toString(conf.isEnableIotDBMetricsStorage()))));
+
+      conf.setEnablePrometheusMetricsEndpoint(Boolean.parseBoolean(properties
+              .getProperty("metrics_prometheus_enable", Boolean.toString(conf.isEnablePrometheusMetricsEndpoint()))));
+
+      conf.setMetricsPrometheusPort(Integer.parseInt(properties.getProperty("metrics_prometheus_port",
+              Integer.toString(conf.getMetricsPrometheusPort()))));
+
+      conf.setMetricsPrometheusEndpoint(properties.getProperty("metrics_prometheus_endpoint_port", 
+              conf.getMetricsPrometheusEndpoint()));
 
       // At the same time, set TSFileConfig
       TSFileDescriptor.getInstance().getConfig()

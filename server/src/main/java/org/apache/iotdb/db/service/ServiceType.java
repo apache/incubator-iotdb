@@ -25,6 +25,7 @@ public enum ServiceType {
   STORAGE_ENGINE_SERVICE("Storage Engine ServerService", ""),
   JMX_SERVICE("JMX ServerService", "JMX ServerService"),
   METRICS_SERVICE("Metrics ServerService","MetricsService"),
+  METRICS2_SERVICE("Micrometer based Metrics ServerService","Metrics2Service"),
   RPC_SERVICE("RPC ServerService", "RPCService"),
   MQTT_SERVICE("MQTTService", ""),
   MONITOR_SERVICE("Monitor ServerService", "Monitor"),

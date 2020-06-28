@@ -37,7 +37,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 //this test is not for testing the correctness of Session API. So we just implement one of the API.
-public class SessionPoolTest {
+public class SessionPoolIT {
 
   @Before
   public void setUp() throws Exception {

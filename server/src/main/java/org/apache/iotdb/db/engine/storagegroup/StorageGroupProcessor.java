@@ -20,8 +20,12 @@ package org.apache.iotdb.db.engine.storagegroup;
 
 import static org.apache.iotdb.db.engine.merge.task.MergeTask.MERGE_SUFFIX;
 import static org.apache.iotdb.db.engine.storagegroup.TsFileResource.TEMP_SUFFIX;
+import static org.apache.iotdb.db.service.metrics.MicroMetricName.GROUP_TAG;
+import static org.apache.iotdb.db.service.metrics.MicroMetricName.QUERY_SG_ACTIVE;
+import static org.apache.iotdb.db.service.metrics.MicroMetricName.QUERY_SG_LATENCY;
 import static org.apache.iotdb.tsfile.common.constant.TsFileConstant.TSFILE_SUFFIX;
 
+import io.micrometer.core.instrument.Timer;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -39,8 +43,12 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import io.micrometer.core.instrument.LongTaskTimer;
+import io.micrometer.core.instrument.Metrics;
 import org.apache.commons.io.FileUtils;
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
@@ -247,6 +255,8 @@ public class StorageGroupProcessor {
    * partition number -> max version number
    */
   private Map<Long, Long> partitionMaxFileVersions = new HashMap<>();
+
+
 
   public StorageGroupProcessor(String systemDir, String storageGroupName,
       TsFileFlushPolicy fileFlushPolicy) throws StorageGroupProcessorException {
@@ -1220,6 +1230,12 @@ public class StorageGroupProcessor {
       QueryFileManager filePathsManager, Filter timeFilter) throws QueryProcessException {
     insertLock.readLock().lock();
     mergeLock.readLock().lock();
+    LongTaskTimer.Sample sample = null;
+    if (StorageEngine.enableMetricService) {
+      sample = Metrics.more()
+          .longTaskTimer(QUERY_SG_ACTIVE, GROUP_TAG, storageGroupName).start();
+    }
+    long start = System.nanoTime();
     try {
       List<TsFileResource> seqResources = getFileResourceListForQuery(sequenceFileTreeSet,
           upgradeSeqFileList, deviceId, measurementId, context, timeFilter, true);
@@ -1238,6 +1254,11 @@ public class StorageGroupProcessor {
     } catch (MetadataException e) {
       throw new QueryProcessException(e);
     } finally {
+      if (StorageEngine.enableMetricService) {
+        Metrics.timer(QUERY_SG_LATENCY, GROUP_TAG, storageGroupName)
+            .record(System.nanoTime() - start, TimeUnit.NANOSECONDS);
+        sample.stop();
+      }
       insertLock.readLock().unlock();
       mergeLock.readLock().unlock();
     }

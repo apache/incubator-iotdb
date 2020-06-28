@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -16,182 +16,121 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.iotdb.db.service;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.SocketAddress;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import org.apache.iotdb.db.concurrent.ThreadName;
-import org.apache.iotdb.db.concurrent.WrappedRunnable;
-import org.apache.iotdb.db.conf.IoTDBConfig;
-import org.apache.iotdb.db.conf.IoTDBConstant;
+import io.github.mweirauch.micrometer.jvm.extras.ProcessMemoryMetrics;
+import io.github.mweirauch.micrometer.jvm.extras.ProcessThreadMetrics;
+import io.micrometer.core.instrument.Clock;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics;
+import io.micrometer.core.instrument.binder.system.FileDescriptorMetrics;
+import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
+import io.micrometer.core.instrument.binder.system.UptimeMetrics;
+import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import io.micrometer.jmx.JmxConfig;
+import io.micrometer.jmx.JmxMeterRegistry;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.StartupException;
-import org.apache.iotdb.db.metrics.server.MetricsSystem;
-import org.apache.iotdb.db.metrics.server.ServerArgument;
-import org.apache.iotdb.db.metrics.ui.MetricsWebUI;
-import org.eclipse.jetty.server.Server;
+
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.iotdb.db.service.metrics.IMetricRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class MetricsService implements MetricsServiceMBean, IService {
-
-  private static final Logger logger = LoggerFactory.getLogger(MetricsService.class);
-  private final String mbeanName = String.format("%s:%s=%s", IoTDBConstant.IOTDB_PACKAGE,
-      IoTDBConstant.JMX_TYPE, getID().getJmxName());
-
-  private Server server;
-  private ExecutorService executorService;
-
-  public static final MetricsService getInstance() {
-    return MetricsServiceHolder.INSTANCE;
-  }
-
-  @Override
-  public ServiceType getID() {
-    return ServiceType.METRICS_SERVICE;
-  }
-
-  @Override
-  public int getMetricsPort() {
-    IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
-    return config.getMetricsPort();
-  }
-
-  @Override
-  public void start() throws StartupException {
-    try {
-      JMXService.registerMBean(getInstance(), mbeanName);
-      startService();
-    } catch (Exception e) {
-      logger.error("Failed to start {} because: ", this.getID().getName(), e);
-      throw new StartupException(this.getID().getName(), e.getMessage());
-    }
-  }
-
-  @Override
-  public void stop() {
-    stopService();
-    JMXService.deregisterMBean(mbeanName);
-  }
-
-  @Override
-  public synchronized void startService() throws StartupException {
-    if (!IoTDBDescriptor.getInstance().getConfig().isEnableMetricService()) {
-      return;
-    }
-    logger.info("{}: start {}...", IoTDBConstant.GLOBAL_DB_NAME, this.getID().getName());
-    executorService = Executors.newSingleThreadExecutor();
-    int port = getMetricsPort();
-    MetricsSystem metricsSystem = new MetricsSystem(new ServerArgument(port));
-    MetricsWebUI metricsWebUI = new MetricsWebUI(metricsSystem.getMetricRegistry());
-    metricsWebUI.getHandlers().add(metricsSystem.getServletHandlers());
-    metricsWebUI.initialize();
-    server = metricsWebUI.getServer(port);
-    server.setStopTimeout(10000);
-    metricsSystem.start();
-    try {
-      executorService.execute(new MetricsServiceThread(server));
-      logger.info("{}: start {} successfully, listening on ip {} port {}",
-          IoTDBConstant.GLOBAL_DB_NAME, this.getID().getName(),
-          IoTDBDescriptor.getInstance().getConfig().getRpcAddress(),
-          IoTDBDescriptor.getInstance().getConfig().getMetricsPort());
-    } catch (NullPointerException e) {
-      //issue IOTDB-415, we need to stop the service.
-      logger.error("{}: start {} failed, listening on ip {} port {}",
-          IoTDBConstant.GLOBAL_DB_NAME, this.getID().getName(),
-          IoTDBDescriptor.getInstance().getConfig().getRpcAddress(),
-          IoTDBDescriptor.getInstance().getConfig().getMetricsPort());
-      stopService();
-    }
-  }
-
-  @Override
-  public void restartService() throws StartupException {
-    stopService();
-    startService();
-  }
-
-  @Override
-  public void stopService() {
-    logger.info("{}: closing {}...", IoTDBConstant.GLOBAL_DB_NAME, this.getID().getName());
-    try {
-      if (server != null) {
-        server.stop();
-        server = null;
-      }
-      if (executorService != null) {
-        executorService.shutdown();
-        if (!executorService.awaitTermination(
-            3000, TimeUnit.MILLISECONDS)) {
-          executorService.shutdownNow();
-        }
-        executorService = null;
-      }
-    } catch (Exception e) {
-      logger
-          .error("{}: close {} failed because {}", IoTDBConstant.GLOBAL_DB_NAME, getID().getName(),
-              e);
-      executorService.shutdownNow();
-    }
-    checkAndWaitPortIsClosed();
-    logger.info("{}: close {} successfully", IoTDBConstant.GLOBAL_DB_NAME, this.getID().getName());
-  }
-
-  private void checkAndWaitPortIsClosed() {
-    SocketAddress socketAddress = new InetSocketAddress("localhost", getMetricsPort());
-    @SuppressWarnings("squid:S2095")
-    Socket socket = new Socket();
-    int timeout = 1;
-    int count = 10000; // 10 seconds
-    while (count > 0) {
-      try {
-        socket.connect(socketAddress, timeout);
-        count--;
-      } catch (IOException e) {
-        return;
-      } finally {
-        try {
-          socket.close();
-        } catch (IOException e) {
-          //do nothing
-        }
-      }
-    }
-    logger.error("Port {} can not be closed.", getMetricsPort());
-  }
-
-  private static class MetricsServiceHolder {
+/**
+ * Metrics Service that is based on micrometer.
+ * It does two things.
+ * First, exposes a Prometheus Endpoint on :8080/metrics.
+ * Second, it logs all collected metrics into IoTDB in the storage group root._metrics.
+ */
+// The warning about com.sun.* package can be ignored
+// See command here https://stackoverflow.com/questions/3732109/simple-http-server-in-java-using-only-java-se-api
+@SuppressWarnings({"squid:S1191", "java:S1191"})
+public class MetricsService implements IService {
+    private static Logger logger = LoggerFactory.getLogger(MetricsService.class);
 
     private static final MetricsService INSTANCE = new MetricsService();
 
-    private MetricsServiceHolder() {}
-  }
+    private List<IMetricRegistry> registryWrappers = new ArrayList<>();
+    private JvmGcMetrics jvmGcMetrics;
+    private JmxMeterRegistry jmxMeterRegistry;
 
-  private class MetricsServiceThread extends WrappedRunnable {
+    public MetricsService() {
+        // Do nothing
+    }
 
-    private Server server;
-
-    public MetricsServiceThread(Server server) {
-      this.server = server;
+    public static IService getInstance() {
+        return INSTANCE;
     }
 
     @Override
-    public void runMayThrow() {
-      try {
-        Thread.currentThread().setName(ThreadName.METRICS_SERVICE.getName());
-        server.start();
-        server.join();
-      } catch (@SuppressWarnings("squid:S2142") InterruptedException e1) {
-        //we do not sure why InterruptedException happens, but it indeed occurs in Travis WinOS
-        logger.error(e1.getMessage(), e1);
-      } catch (Exception e) {
-        logger.error("{}: failed to start {}, because ", IoTDBConstant.GLOBAL_DB_NAME, getID().getName(), e);
-      }
+    public void start() throws StartupException {
+        // Define Meter Registry
+        List<MeterRegistry> registries = new ArrayList<>();
+        if (IoTDBDescriptor.getInstance().getConfig().isEnableIotDBMetricsStorage()) {
+            addRegister("org.apache.iotdb.micrometer.IoTDBMeterRegistryWrapper", registries);
+        }
+        if (IoTDBDescriptor.getInstance().getConfig().isEnablePrometheusMetricsEndpoint()) {
+            addRegister("org.apache.iotdb.micrometer.PrometheusMeterRegistryWrapper", registries);
+        }
+        //by default, we allow JMXRegistry
+        jmxMeterRegistry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
+        registries.add(jmxMeterRegistry);
+        MeterRegistry registry = new CompositeMeterRegistry(Clock.SYSTEM,
+                registries);
+        // Set this as default, then users can simply write Metrics.xxx
+        Metrics.addRegistry(registry);
+        // Wire up JVM and Other Default Bindings
+        new ClassLoaderMetrics().bindTo(registry);
+        new JvmMemoryMetrics().bindTo(registry);
+        jvmGcMetrics = new JvmGcMetrics();
+        jvmGcMetrics.bindTo(registry);
+        new ProcessorMetrics().bindTo(registry);
+        new JvmThreadMetrics().bindTo(registry);
+        new ProcessMemoryMetrics().bindTo(registry);
+        new ProcessThreadMetrics().bindTo(registry);
+        new UptimeMetrics().bindTo(registry);
+        new FileDescriptorMetrics().bindTo(registry);
     }
-  }
+
+    /**
+     * initialize the registerClass and put it into registers
+     * @param registerClassName
+     * @param registries
+     */
+    private void addRegister(String registerClassName, List<MeterRegistry> registries) {
+        Class clazz = null;
+        try {
+            clazz = Class.forName(registerClassName);
+            IMetricRegistry wrapper = (IMetricRegistry) clazz.newInstance();
+            registries.add(wrapper.registry());
+            registryWrappers.add(wrapper);
+            wrapper.start();
+        } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
+            logger.error("load micrometer registry {} failed", registerClassName, e);
+        }
+    }
+
+    @Override
+    public void stop() {
+        jvmGcMetrics.close();
+        for (IMetricRegistry wrapper: registryWrappers) {
+            wrapper.stop();
+        }
+        //jmxMeterRegistry.stop();
+        Metrics.globalRegistry.close();
+        Metrics.globalRegistry.getRegistries().forEach(Metrics::removeRegistry);
+
+    }
+
+    @Override
+    public ServiceType getID() {
+        return ServiceType.METRICS2_SERVICE;
+    }
 }

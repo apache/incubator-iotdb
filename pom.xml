@@ -94,6 +94,7 @@
         <module>flink-iotdb-connector</module>
         <module>distribution</module>
         <module>hive-connector</module>
+        <module>micrometer</module>
     </modules>
     <!-- Properties Management -->
     <properties>

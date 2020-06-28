@@ -18,22 +18,12 @@
  */
 package org.apache.iotdb.db.service;
 
-import static org.apache.iotdb.db.conf.IoTDBConfig.PATH_PATTERN;
-import static org.apache.iotdb.db.qp.physical.sys.ShowPlan.ShowContentType.TIMESERIES;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.sql.SQLException;
-import java.time.ZoneId;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
+import io.micrometer.core.instrument.Metrics;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.apache.iotdb.db.auth.AuthException;
 import org.apache.iotdb.db.auth.AuthorityChecker;
-import org.apache.iotdb.db.auth.authorizer.IAuthorizer;
 import org.apache.iotdb.db.auth.authorizer.BasicAuthorizer;
+import org.apache.iotdb.db.auth.authorizer.IAuthorizer;
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
@@ -47,15 +37,20 @@ import org.apache.iotdb.db.exception.metadata.StorageGroupNotSetException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.exception.runtime.SQLParserException;
 import org.apache.iotdb.db.metadata.MManager;
-import org.apache.iotdb.db.metrics.server.SqlArgument;
 import org.apache.iotdb.db.qp.Planner;
 import org.apache.iotdb.db.qp.constant.SQLConstant;
 import org.apache.iotdb.db.qp.executor.IPlanExecutor;
 import org.apache.iotdb.db.qp.executor.PlanExecutor;
 import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
 import org.apache.iotdb.db.qp.physical.PhysicalPlan;
-import org.apache.iotdb.db.qp.physical.crud.*;
+import org.apache.iotdb.db.qp.physical.crud.AggregationPlan;
+import org.apache.iotdb.db.qp.physical.crud.AlignByDevicePlan;
 import org.apache.iotdb.db.qp.physical.crud.AlignByDevicePlan.MeasurementType;
+import org.apache.iotdb.db.qp.physical.crud.DeletePlan;
+import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
+import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
+import org.apache.iotdb.db.qp.physical.crud.LastQueryPlan;
+import org.apache.iotdb.db.qp.physical.crud.QueryPlan;
 import org.apache.iotdb.db.qp.physical.sys.AuthorPlan;
 import org.apache.iotdb.db.qp.physical.sys.CreateTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.DeleteStorageGroupPlan;
@@ -112,6 +107,27 @@ import org.apache.thrift.server.ServerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.sql.SQLException;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
+
+import static org.apache.iotdb.db.conf.IoTDBConfig.PATH_PATTERN;
+import static org.apache.iotdb.db.qp.physical.sys.ShowPlan.ShowContentType.TIMESERIES;
+import static org.apache.iotdb.db.service.metrics.MicroMetricName.OPEN_SESSION_REQUEST_COUNTER;
+import static org.apache.iotdb.db.service.metrics.MicroMetricName.QUERY_EXECUTION_PLAN;
+
 
 /**
  * Thrift RPC implementation at server side.
@@ -121,12 +137,10 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
   private static final Logger auditLogger = LoggerFactory.getLogger(IoTDBConstant.AUDIT_LOGGER_NAME);
   private static final Logger logger = LoggerFactory.getLogger(TSServiceImpl.class);
   private static final String INFO_NOT_LOGIN = "{}: Not login.";
-  private static final int MAX_SIZE =
-      IoTDBDescriptor.getInstance().getConfig().getQueryCacheSizeInMetric();
-  private static final int DELETE_SIZE = 20;
+  private static final String METRIC_STATUS_TAG = "status";
   private static final String ERROR_PARSING_SQL =
       "meet error while parsing SQL to physical plan: {}";
-  private static final List<SqlArgument> sqlArgumentList = new ArrayList<>(MAX_SIZE);
+
   protected Planner processor;
   protected IPlanExecutor executor;
   private boolean enableMetric = IoTDBDescriptor.getInstance().getConfig().isEnableMetricService();
@@ -157,10 +171,6 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
     executor = new PlanExecutor();
   }
 
-  public static List<SqlArgument> getSqlArgumentList() {
-    return sqlArgumentList;
-  }
-
   @Override
   public TSOpenSessionResp openSession(TSOpenSessionReq req) throws TException {
     boolean status;
@@ -168,6 +178,10 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
     try {
       authorizer = BasicAuthorizer.getInstance();
     } catch (AuthException e) {
+      if (enableMetric) {
+        Metrics.counter(OPEN_SESSION_REQUEST_COUNTER, METRIC_STATUS_TAG, "INTERNAL_EXCEPTION")
+            .increment();
+      }
       throw new TException(e);
     }
     String loginMessage = null;
@@ -175,6 +189,10 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
       status = authorizer.login(req.getUsername(), req.getPassword());
     } catch (AuthException e) {
       logger.info("meet error while logging in.", e);
+      if (enableMetric) {
+        Metrics.counter(OPEN_SESSION_REQUEST_COUNTER, METRIC_STATUS_TAG, "INTERNAL_EXCEPTION")
+            .increment();
+      }
       status = false;
       loginMessage = e.getMessage();
     }
@@ -190,16 +208,27 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
         TSOpenSessionResp resp = new TSOpenSessionResp(tsStatus,
             TSProtocolVersion.IOTDB_SERVICE_PROTOCOL_V2);
         resp.setSessionId(sessionId);
+        if (enableMetric) {
+          Metrics.counter(OPEN_SESSION_REQUEST_COUNTER, METRIC_STATUS_TAG, "VERSION_INCOMPATIBLE")
+              .increment();
+        }
         return resp;
       }
 
       tsStatus = RpcUtils.getStatus(TSStatusCode.SUCCESS_STATUS, "Login successfully");
+      if (enableMetric) {
+        Metrics.counter(OPEN_SESSION_REQUEST_COUNTER, METRIC_STATUS_TAG, "SUCCESS").increment();
+      }
       sessionId = sessionIdGenerator.incrementAndGet();
       sessionIdUsernameMap.put(sessionId, req.getUsername());
       sessionIdZoneIdMap.put(sessionId, config.getZoneID());
       currSessionId.set(sessionId);
     } else {
       tsStatus = RpcUtils.getStatus(TSStatusCode.WRONG_LOGIN_PASSWORD_ERROR);
+      if (enableMetric) {
+        Metrics.counter(OPEN_SESSION_REQUEST_COUNTER, METRIC_STATUS_TAG, "LOGIN_FAILED")
+            .increment();
+      }
       tsStatus.setMessage(loginMessage);
     }
     auditLogger.info("User {} opens Session-{}", req.getUsername(), sessionId);
@@ -571,14 +600,16 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
       resp.setQueryId(queryId);
 
       if (enableMetric) {
-        long endTime = System.currentTimeMillis();
-        SqlArgument sqlArgument = new SqlArgument(resp, plan, statement, startTime, endTime);
-        synchronized (sqlArgumentList) {
-          sqlArgumentList.add(sqlArgument);
-          if (sqlArgumentList.size() >= MAX_SIZE) {
-            sqlArgumentList.subList(0, DELETE_SIZE).clear();
-          }
-        }
+        // TODO Replace with micrometer, see IOTDB-758
+        Metrics.counter(QUERY_EXECUTION_PLAN, "plan", plan.getClass().getSimpleName()).increment();
+//        long endTime = System.currentTimeMillis();
+//        SqlArgument sqlArgument = new SqlArgument(resp, plan, statement, startTime, endTime);
+//        synchronized (sqlArgumentList) {
+//          sqlArgumentList.add(sqlArgument);
+//          if (sqlArgumentList.size() >= MAX_SIZE) {
+//            sqlArgumentList.subList(0, DELETE_SIZE).clear();
+//          }
+//        }
       }
 
       return resp;
