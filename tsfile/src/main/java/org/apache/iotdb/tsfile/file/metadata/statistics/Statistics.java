@@ -165,6 +165,31 @@ public abstract class Statistics<T> {
     }
   }
 
+  public void update(long time, Object value, TSDataType type) {
+    switch (type) {
+      case INT32:
+        update(time, (Integer) value);
+        break;
+      case INT64:
+        update(time, (Long) value);
+        break;
+      case TEXT:
+        update(time, (Binary) value);
+        break;
+      case BOOLEAN:
+        update(time, (Boolean) value);
+        break;
+      case DOUBLE:
+        update(time, (Double) value);
+        break;
+      case FLOAT:
+        update(time, (Float) value);
+        break;
+      default:
+        throw new UnknownColumnTypeException(type.toString());
+    }
+  }
+
   public void update(long time, boolean value) {
     if (time < this.startTime) {
       startTime = time;

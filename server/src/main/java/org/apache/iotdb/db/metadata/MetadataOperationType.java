@@ -27,6 +27,8 @@ public class MetadataOperationType {
   public static final String CREATE_TIMESERIES = "0";
   public static final String DELETE_TIMESERIES = "1";
   public static final String SET_STORAGE_GROUP = "2";
+  public static final String ADD_INDEX = "3";
+  public static final String DROP_INDEX = "4";
   public static final String SET_TTL = "10";
   public static final String DELETE_STORAGE_GROUP = "11";
   public static final String CHANGE_OFFSET = "12";

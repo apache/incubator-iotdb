@@ -58,7 +58,7 @@ public class JDBCExample {
     }
   }
 
-  private static void outputResult(ResultSet resultSet) throws SQLException {
+  static void outputResult(ResultSet resultSet) throws SQLException {
     if (resultSet != null) {
       System.out.println("--------------------------");
       final ResultSetMetaData metaData = resultSet.getMetaData();

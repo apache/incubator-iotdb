@@ -16,29 +16,25 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.iotdb.db.exception.index;
 
-package org.apache.iotdb.db.exception.query;
-
-import org.apache.iotdb.db.exception.IoTDBException;
+import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.rpc.TSStatusCode;
 
-public class QueryProcessException extends IoTDBException {
+public class IndexException extends QueryProcessException {
 
-  private static final long serialVersionUID = -683191083844850054L;
 
-  public QueryProcessException(String message) {
-    super(message, TSStatusCode.QUERY_PROCESS_ERROR.getStatusCode());
+  private static final long serialVersionUID = 2585920847533339136L;
+
+  public IndexException(Throwable cause) {
+    super(cause, TSStatusCode.INDEX_ERROR.getStatusCode());
   }
 
-  public QueryProcessException(String message, int errorCode) {
+  public IndexException(String message) {
+    super(message, TSStatusCode.INDEX_ERROR.getStatusCode());
+  }
+
+  public IndexException(String message, int errorCode) {
     super(message, errorCode);
-  }
-
-  public QueryProcessException(IoTDBException e) {
-    super(e, e.getErrorCode());
-  }
-
-  public QueryProcessException(Throwable cause, int errorCode) {
-    super(cause, errorCode);
   }
 }
