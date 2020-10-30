@@ -31,7 +31,7 @@ import java.io.IOException;
 /**
  * <p>
  * DiffEncoder is a encoder for compressing data in type of INT32(integer) and
- * INT64(long). It is based in delta-encoding arithmetic.We adapt a hypothesis
+ * INT64(long). It is based in delta-encoding arithmetic. We adapt a hypothesis
  * that contiguous data points have similar values.Thus the difference value of
  * two adjacent points is smaller than those two point values. One integer in
  * java takes 32-bits. If a positive number is less than 2^m, the bits of this
@@ -41,24 +41,24 @@ import java.io.IOException;
  * </p>
  * <p>
  * DiffEncoder calculates difference between two adjacent. Then it saves the delta
- * value. Then it statistics the longest bit length {@code m} it takes for each
+ * values. Then it counts the longest bit length {@code m} it takes for each
  * delta value, which means the bit length that maximum delta value takes. Only
- * the low m bits are saved into result byte array for all delta values.
+ * the low {@code m} bits are saved into result byte array for all delta values.
  * </p>
  */
 public abstract class DiffEncoder extends Encoder {
   protected static final int BLOCK_DEFAULT_SIZE = 128;
-  private static final Logger logger = LoggerFactory.getLogger(DeltaBinaryEncoder.class);
+  private static final Logger logger = LoggerFactory.getLogger(DiffEncoder.class);
   protected ByteArrayOutputStream out;
   protected int blockSize;
-  // input value is stored in deltaBlackBuffer temporarily
+
   protected byte[] encodingBlockBuffer;
 
   protected int writeIndex = -1;
   protected int writeWidth = 0;
 
   /**
-   * constructor of DeltaBinaryEncoder.
+   * constructor of DiffEncoder.
    *
    * @param size - the number how many numbers to be packed into a block.
    */
@@ -93,13 +93,13 @@ public abstract class DiffEncoder extends Encoder {
   }
 
 
-  //Write the data to buteArrayoutputStram
+  /**
+   * Write the data to byteArrayOutPutStream.
+   */
   private void flushBlockBuffer(ByteArrayOutputStream out) throws IOException {
     if (writeIndex == -1) {
       return;
     }
-    // since we store the min delta, the deltas will be converted to be the
-    // difference to min delta and all positive
     this.out = out;
     writeWidth = calculateBitWidthsForDeltaBlockBuffer();
     writeHeaderToBytes();
@@ -128,14 +128,13 @@ public abstract class DiffEncoder extends Encoder {
     private int[] deltaBlockBuffer;
     private int firstValue;
     private int previousValue;
-//        private int minDeltaBase;
 
     public IntDeltaEncoder() {
       this(BLOCK_DEFAULT_SIZE);
     }
 
     /**
-     * constructor of IntDeltaEncoder which is a sub-class of DeltaBinaryEncoder.
+     * constructor of IntDeltaEncoder which is a sub-class of DiffEncoder.
      *
      * @param size - the number how many numbers to be packed into a block.
      */
@@ -235,7 +234,7 @@ public abstract class DiffEncoder extends Encoder {
     }
 
     /**
-     * constructor of LongDeltaEncoder which is a sub-class of DeltaBinaryEncoder.
+     * constructor of LongDeltaEncoder which is a sub-class of DiffEncoder.
      *
      * @param size - the number how many numbers to be packed into a block.
      */

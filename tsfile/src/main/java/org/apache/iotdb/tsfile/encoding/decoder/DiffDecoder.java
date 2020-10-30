@@ -28,9 +28,8 @@ import java.nio.ByteBuffer;
 
 /**
  * This class is a decoder for decoding the byte array that encoded by {@code
- * DeltaBinaryEncoder}.DeltaBinaryDecoder just supports integer and long
- * values.<br>
- * .
+ * DiffEncoder}.DiffDecoder just supports integer and long values.<br>
+ *
  *
  * @see org.apache.iotdb.tsfile.encoding.encoder.DiffEncoder
  */
@@ -87,10 +86,6 @@ public abstract class DiffDecoder extends Decoder {
     private int firstValue;
     private int[] data;
     private int previous;
-    /**
-     * minimum value for all difference.
-     */
-    private int minDeltaBase;
 
     public IntDeltaDecoder() {
       super();
@@ -123,7 +118,7 @@ public abstract class DiffDecoder extends Decoder {
     protected int loadIntBatch(ByteBuffer buffer) {
       packNum = ReadWriteIOUtils.readInt(buffer);
       packWidth = ReadWriteIOUtils.readInt(buffer);
-      //count++;
+
       readHeader(buffer);
 
       encodingLength = ceil(packNum * packWidth);
@@ -199,7 +194,7 @@ public abstract class DiffDecoder extends Decoder {
     protected long loadIntBatch(ByteBuffer buffer) {
       packNum = ReadWriteIOUtils.readInt(buffer);
       packWidth = ReadWriteIOUtils.readInt(buffer);
-      //count++;
+
       readHeader(buffer);
 
       encodingLength = ceil(packNum * packWidth);
