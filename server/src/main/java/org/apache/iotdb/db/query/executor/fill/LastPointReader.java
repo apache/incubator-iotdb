@@ -216,6 +216,9 @@ public class LastPointReader {
   }
 
   private boolean endtimeContainedByTimeFilter(Statistics statistics) {
+    if (timeFilter == null) {
+      return true;
+    }
     return timeFilter.containStartEndTime(statistics.getEndTime(), statistics.getEndTime());
   }
 

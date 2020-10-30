@@ -100,7 +100,7 @@ public class GroupByFillDataSet extends QueryDataSet {
     for (int i = 0; i < paths.size(); i++) {
       TimeValuePair lastTimeValuePair;
       lastTimeValuePair = LastQueryExecutor.calculateLastPairForOneSeriesLocally(
-          (PartialPath) paths.get(i), dataTypes.get(i), context,
+          (PartialPath) paths.get(i), dataTypes.get(i), context, null,
           groupByFillPlan.getAllMeasurementsInDevice(paths.get(i).getDevice()));
       if (lastTimeValuePair.getValue() != null) {
         lastTimeArray[i] = lastTimeValuePair.getTimestamp();

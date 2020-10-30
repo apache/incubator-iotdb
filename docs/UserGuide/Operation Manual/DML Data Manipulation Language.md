@@ -393,10 +393,12 @@ The Last point query is to return the most recent data point of the given timese
 The SQL statement is defined as:
 
 ```
-select last <Path> [COMMA <Path>]* from < PrefixPath > [COMMA < PrefixPath >]* <DISABLE ALIGN>
+select last <Path> [COMMA <Path>]* from < PrefixPath > [COMMA < PrefixPath >]* <WhereClause>
 ```
 
 which means: Query and return the last data points of timeseries prefixPath.path.
+
+Only time filter is supported in \<WhereClause\>. Any value filters given in the \<WhereClause\> take no effects.
 
 The result will be returned in a three column table format.
 
@@ -414,10 +416,11 @@ Example 1: get the last point of root.ln.wf01.wt01.speed:
 |  5   | root.ln.wf01.wt01.speed | 100   |
 ```
 
-Example 2: get the last speed, status and temperature points of root.ln.wf01.wt01
+Example 2: get the last speed, status and temperature points of root.ln.wf01.wt01,
+whose timestamp in range [5, 10).
 
 ```
-> select last speed, status, temperature from root.ln.wf01.wt01
+> select last speed, status, temperature from root.ln.wf01.wt01 where time >= 5 and time < 10
 
 | Time | Path                         | Value |
 | ---  | ---------------------------- | ----- |

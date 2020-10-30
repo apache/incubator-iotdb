@@ -20,11 +20,19 @@
 package org.apache.iotdb.db.qp.physical.crud;
 
 import org.apache.iotdb.db.qp.logical.Operator;
+import org.apache.iotdb.tsfile.read.expression.IExpression;
+import org.apache.iotdb.tsfile.read.expression.impl.GlobalTimeExpression;
 
 public class LastQueryPlan extends RawDataQueryPlan {
 
   public LastQueryPlan() {
     super();
     setOperatorType(Operator.OperatorType.LAST);
+  }
+
+  public void setExpression(IExpression expression) {
+    if (expression instanceof GlobalTimeExpression) {
+      super.setExpression(expression);
+    }
   }
 }

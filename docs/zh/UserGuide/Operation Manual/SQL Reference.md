@@ -586,18 +586,23 @@ root.sg1.d0.s0 is INT32 while root.sg2.d3.s0 is FLOAT.
 Last 语句返回所要查询时间序列的最近时间戳的一条数据
 
 ```
-SELECT LAST <SelectClause> FROM <FromClause>
+SELECT LAST <SelectClause> FROM <FromClause> WHERE <WhereClause>
 Select Clause : <Path> [COMMA <Path>]*
 FromClause : < PrefixPath > [COMMA < PrefixPath >]*
+WhereClause : <TimeExpr> [(AND | OR) <TimeExpr>]*
+TimeExpr : TIME PrecedenceEqualOperator (<TimeValue> | <RelativeTime>)
 
 Eg. SELECT LAST s1 FROM root.sg.d1
 Eg. SELECT LAST s1, s2 FROM root.sg.d1
 Eg. SELECT LAST s1 FROM root.sg.d1, root.sg.d2
+Eg. SELECT LAST s1 FROM root.sg.d1 where time < 100
+Eg. SELECT LAST s1, s2 FROM root.sg.d1 where time > 100 and time <= 500
+Eg. SELECT LAST s1, s2 FROM root.sg.d1 where time < 300 or time > 1000
 
 规则:
 1. 需要满足PrefixPath.Path 为一条完整的时间序列，即 <PrefixPath> + <Path> = <Timeseries>
 
-2. SELECT LAST 语句不支持过滤条件.
+2. SELECT LAST 语句不支持值过滤条件.
 
 3. 结果集以三列的表格的固定形式返回。
 例如 "select last s1, s2 from root.sg.d1, root.sg.d2", 结果集返回如下：

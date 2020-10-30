@@ -446,6 +446,110 @@ public class IoTDBLastIT {
     }
   }
 
+  @Test
+  public void lastWithTimeFilterTest() throws SQLException, MetadataException {
+    String[] retArray =
+        new String[]{
+            "200,root.ln.wf01.wt01.temperature,25.2",
+            "500,root.ln.wf01.wt01.temperature,22.1",
+            "300,root.ln.wf01.wt01.temperature,15.7",
+        };
+
+    try (Connection connection =
+             DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
+         Statement statement = connection.createStatement()) {
+
+      boolean hasResultSet = statement.execute(
+          "select last temperature from root.ln.wf01.wt01 where time < 300");
+
+      assertTrue(hasResultSet);
+      int cnt = 0;
+      try (ResultSet resultSet = statement.getResultSet()) {
+        while (resultSet.next()) {
+          String ans =
+              resultSet.getString(TIMESTAMP_STR) + ","
+                  + resultSet.getString(TIMESEIRES_STR) + ","
+                  + resultSet.getString(VALUE_STR);
+          Assert.assertEquals(retArray[cnt], ans);
+          cnt++;
+        }
+      }
+
+      statement.execute(
+          "select last temperature from root.ln.wf01.wt01 where time >= 300 and time < 1000");
+      try (ResultSet resultSet = statement.getResultSet()) {
+        while (resultSet.next()) {
+          String ans =
+              resultSet.getString(TIMESTAMP_STR) + ","
+                  + resultSet.getString(TIMESEIRES_STR) + ","
+                  + resultSet.getString(VALUE_STR);
+          Assert.assertEquals(retArray[cnt], ans);
+          cnt++;
+        }
+      }
+
+      statement.execute(
+          "select last temperature from root.ln.wf01.wt01 where time <= 300 or time > 1000");
+      try (ResultSet resultSet = statement.getResultSet()) {
+        while (resultSet.next()) {
+          String ans =
+              resultSet.getString(TIMESTAMP_STR) + ","
+                  + resultSet.getString(TIMESEIRES_STR) + ","
+                  + resultSet.getString(VALUE_STR);
+          Assert.assertEquals(retArray[cnt], ans);
+          cnt++;
+        }
+      }
+      statement.execute(
+          "select last temperature from root.ln.wf01.wt01 where time > 1000");
+      try (ResultSet resultSet = statement.getResultSet()) {
+        Assert.assertFalse(resultSet.next());
+      }
+    }
+  }
+
+  @Test
+  public void lastCacheWithFilterTest() throws SQLException, MetadataException {
+    String[] retArray =
+        new String[]{
+            "500,root.ln.wf01.wt01.temperature,22.1",
+            "300,root.ln.wf01.wt01.temperature,15.7",
+        };
+
+    try (Connection connection =
+             DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
+         Statement statement = connection.createStatement()) {
+
+      statement.execute("select last temperature from root.ln.wf01.wt01");
+      statement.execute(
+          "select last temperature from root.ln.wf01.wt01 where time >= 300 and time < 1000");
+      int cnt = 0;
+      try (ResultSet resultSet = statement.getResultSet()) {
+        while (resultSet.next()) {
+          String ans =
+              resultSet.getString(TIMESTAMP_STR) + ","
+                  + resultSet.getString(TIMESEIRES_STR) + ","
+                  + resultSet.getString(VALUE_STR);
+          Assert.assertEquals(retArray[cnt], ans);
+          cnt++;
+        }
+      }
+
+      statement.execute(
+          "select last temperature from root.ln.wf01.wt01 where time <= 300");
+      try (ResultSet resultSet = statement.getResultSet()) {
+        while (resultSet.next()) {
+          String ans =
+              resultSet.getString(TIMESTAMP_STR) + ","
+                  + resultSet.getString(TIMESEIRES_STR) + ","
+                  + resultSet.getString(VALUE_STR);
+          Assert.assertEquals(retArray[cnt], ans);
+          cnt++;
+        }
+      }
+    }
+  }
+
   private void prepareData() {
     try (Connection connection = DriverManager
         .getConnection(Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root",
