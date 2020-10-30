@@ -59,6 +59,7 @@ public class SchemaUtils {
     Set<TSEncoding> int32Set = new HashSet<>();
     int32Set.add(TSEncoding.PLAIN);
     int32Set.add(TSEncoding.RLE);
+    int32Set.add(TSEncoding.DIFF);
     int32Set.add(TSEncoding.TS_2DIFF);
     int32Set.add(TSEncoding.REGULAR);
     schemaChecker.put(TSDataType.INT32, int32Set);

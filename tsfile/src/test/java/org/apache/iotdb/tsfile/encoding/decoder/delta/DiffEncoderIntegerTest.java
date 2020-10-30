@@ -18,32 +18,31 @@
  */
 package org.apache.iotdb.tsfile.encoding.decoder.delta;
 
-import static org.junit.Assert.assertEquals;
+import org.apache.iotdb.tsfile.encoding.decoder.DiffDecoder;
+import org.apache.iotdb.tsfile.encoding.encoder.DiffEncoder;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
 
-import org.apache.iotdb.tsfile.encoding.decoder.DeltaBinaryDecoder;
-import org.apache.iotdb.tsfile.encoding.encoder.DeltaBinaryEncoder;
+public class DiffEncoderIntegerTest {
 
-public class DeltaBinaryEncoderIntegerTest {
-
-  private static final int ROW_NUM = 10000000;
+  private static final int ROW_NUM = 100_000_00;
   ByteArrayOutputStream out;
-  private DeltaBinaryEncoder writer;
-  private DeltaBinaryDecoder reader;
+  private DiffEncoder writer;
+  private DiffDecoder reader;
   private Random ran = new Random();
   private ByteBuffer buffer;
 
   @Before
   public void test() {
-    writer = new DeltaBinaryEncoder.IntDeltaEncoder();
-    reader = new DeltaBinaryDecoder.IntDeltaDecoder();
+    writer = new DiffEncoder.IntDeltaEncoder();
+    reader = new DiffDecoder.IntDeltaDecoder();
   }
 
   @Test
@@ -76,6 +75,7 @@ public class DeltaBinaryEncoderIntegerTest {
     for (int i = 0; i < ROW_NUM; i++) {
       data[i] = ran.nextInt();
     }
+    System.out.println();
     shouldReadAndWrite(data, ROW_NUM);
   }
 
@@ -84,6 +84,16 @@ public class DeltaBinaryEncoderIntegerTest {
     int data[] = new int[ROW_NUM];
     for (int i = 0; i < ROW_NUM; i++) {
       data[i] = (i & 1) == 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE;
+    }
+    shouldReadAndWrite(data, ROW_NUM);
+  }
+
+
+  @Test
+  public void testSmallInt() throws  IOException{
+    int data[] = new int[ROW_NUM];
+    for (int i = 0; i< ROW_NUM ; i++){
+      data[i] = i;
     }
     shouldReadAndWrite(data, ROW_NUM);
   }
@@ -105,7 +115,7 @@ public class DeltaBinaryEncoderIntegerTest {
     System.out.println("encode take(ns): "+(encodeEnd-encodeStart));
 
     byte[] page = out.toByteArray();
-    System.out.println("encoding data size:" + page.length + " byte");
+     System.out.println("encoding data size:" + page.length + " byte");
     buffer = ByteBuffer.wrap(page);
     int i = 0;
 

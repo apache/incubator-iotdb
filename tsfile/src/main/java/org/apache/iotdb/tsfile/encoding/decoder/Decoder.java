@@ -94,6 +94,16 @@ public abstract class Decoder {
           throw new TsFileDecodingException(
               String.format(ERROR_MSG, type, dataType));
       }
+    } else if(type == TSEncoding.DIFF) {
+      switch (dataType) {
+        case INT32:
+          return new DiffDecoder.IntDeltaDecoder();
+        case INT64:
+          return new DiffDecoder.LongDeltaDecoder();
+        default:
+          throw new TsFileDecodingException(
+                  "Decoder not found:" + type + " , DataType is :" + dataType);
+      }
     } else if (type == TSEncoding.REGULAR) {
       switch (dataType) {
         case INT32:

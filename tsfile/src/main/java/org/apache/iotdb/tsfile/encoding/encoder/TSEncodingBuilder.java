@@ -62,6 +62,8 @@ public abstract class TSEncodingBuilder {
         return new RLE();
       case TS_2DIFF:
         return new TS_2DIFF();
+      case DIFF:
+        return new DIFF();
       case GORILLA:
         return new GORILLA();
       case REGULAR:
@@ -243,6 +245,27 @@ public abstract class TSEncodingBuilder {
       // allowed do nothing
     }
 
+  }
+
+  /**
+   * for INT32 and INT64.
+   */
+  public static class DIFF extends TSEncodingBuilder {
+    @Override
+    public Encoder getEncoder(TSDataType type){
+      switch (type) {
+        case INT32:
+          return new DiffEncoder.IntDeltaEncoder();
+        case INT64:
+          return new DiffEncoder.LongDeltaEncoder();
+        default:
+          throw new UnSupportedDataTypeException("DIFF doesn't support data type: " + type);
+      }
+    }
+    @Override
+    public void initFromProps(Map<String, String> props) {
+      // allowed do nothing
+    }
   }
 
   /**

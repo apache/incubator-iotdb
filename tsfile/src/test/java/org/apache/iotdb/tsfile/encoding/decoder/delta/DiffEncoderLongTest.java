@@ -18,8 +18,8 @@
  */
 package org.apache.iotdb.tsfile.encoding.decoder.delta;
 
-import org.apache.iotdb.tsfile.encoding.decoder.DeltaBinaryDecoder;
-import org.apache.iotdb.tsfile.encoding.encoder.DeltaBinaryEncoder;
+import org.apache.iotdb.tsfile.encoding.decoder.DiffDecoder;
+import org.apache.iotdb.tsfile.encoding.encoder.DiffEncoder;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -39,23 +39,20 @@ import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
 
-import org.apache.iotdb.tsfile.encoding.decoder.DeltaBinaryDecoder;
-import org.apache.iotdb.tsfile.encoding.encoder.DeltaBinaryEncoder;
+public class DiffEncoderLongTest {
 
-public class DeltaBinaryEncoderLongTest {
-
-  private static int ROW_NUM = 10000000;
+  private static int ROW_NUM = 100_000_00;
   private final long BASIC_FACTOR = 1l << 32;
   ByteArrayOutputStream out;
-  private DeltaBinaryEncoder writer;
-  private DeltaBinaryDecoder reader;
+  private DiffEncoder writer;
+  private DiffDecoder reader;
   private Random ran = new Random();
   private ByteBuffer buffer;
 
   @Before
   public void test() {
-    writer = new DeltaBinaryEncoder.LongDeltaEncoder();
-    reader = new DeltaBinaryDecoder.LongDeltaDecoder();
+    writer = new DiffEncoder.LongDeltaEncoder();
+    reader = new DiffDecoder.LongDeltaDecoder();
   }
 
   @Test
@@ -113,6 +110,7 @@ public class DeltaBinaryEncoderLongTest {
     DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
     ROW_NUM = dates.size();
+    System.out.println("ROW_NUM: "+ROW_NUM);
 
     long[] data = new long[ROW_NUM];
     for (int i = 0; i < dates.size(); i++) {
@@ -130,7 +128,7 @@ public class DeltaBinaryEncoderLongTest {
   @Test
   public void testRegularWithMissingPoints() throws IOException {
     reader.reset();
-    List<String> dates = getBetweenDate("1970-01-08", "2004-03-29");
+    List<String> dates = getBetweenDate("1970-01-08", "2004-04-24");
 
     DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
