@@ -98,6 +98,7 @@
         <module>hive-connector</module>
         <module>cluster</module>
         <module>cross-tests</module>
+        <module>calcite</module>
         <module>client-py</module>
     </modules>
     <!-- Properties Management -->
