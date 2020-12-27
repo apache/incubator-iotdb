@@ -29,6 +29,7 @@ import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
+import org.apache.iotdb.db.qp.physical.PhysicalPlan;
 import org.apache.iotdb.db.utils.QueryDataSetUtils;
 import org.apache.iotdb.tsfile.exception.write.UnSupportedDataTypeException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -144,6 +145,7 @@ public class InsertTabletPlan extends InsertPlan {
     stream.writeByte((byte) type);
 
     putString(stream, deviceId.getFullPath());
+
     writeMeasurements(stream);
     writeDataTypes(stream);
     writeTimes(stream);
@@ -270,11 +272,68 @@ public class InsertTabletPlan extends InsertPlan {
     buffer.putLong(index);
   }
 
+  @Override
+  public void serialize(ByteBuffer buffer, PhysicalPlan base) {
+    int type = PhysicalPlanType.BATCHINSERT.ordinal();
+    buffer.put((byte) type);
+
+    writeTimes(buffer);
+    writeValues(buffer);
+    buffer.putLong(index);
+  }
+
+  @Override
+  public void deserialize(ByteBuffer buffer, PhysicalPlan base) {
+    InsertTabletPlan baseInsertTabletPlan = (InsertTabletPlan) base;
+
+    this.deviceId = baseInsertTabletPlan.deviceId;
+
+    this.measurements = baseInsertTabletPlan.getMeasurements();
+
+    this.dataTypes = baseInsertTabletPlan.dataTypes;
+
+    int rows = buffer.getInt();
+    rowCount = rows;
+    this.times = new long[rows];
+    deserializeTimes(buffer, rows);
+
+    columns = QueryDataSetUtils.readValuesFromBuffer(buffer, dataTypes, measurements.length, rows);
+    this.index = buffer.getLong();
+  }
+
+  private void deserializeTimes(ByteBuffer buffer, int number) {
+    for (int i = 0; i < number; i++) {
+      times[i] = buffer.getLong();
+    }
+  }
+
+  private void serializeTimes(ByteBuffer buffer) {
+    for (int i = start; i < end; i++) {
+      buffer.putLong(times[i]);
+    }
+  }
+
+  public void serializeTimeValue(ByteBuffer buffer) {
+    buffer.putInt(end - start);
+
+    if (timeBuffer == null) {
+      serializeTimes(buffer);
+    } else {
+      buffer.put(timeBuffer.array());
+      timeBuffer = null;
+    }
+
+    if (valueBuffer == null) {
+      serializeValues(buffer);
+    } else {
+      buffer.put(valueBuffer.array());
+      valueBuffer = null;
+    }
+  }
+
+
   private void serializeValues(DataOutputStream outputStream) throws IOException {
     for (int i = 0; i < measurements.length; i++) {
-      if (measurements[i] == null) {
-        continue;
-      }
       serializeColumn(dataTypes[i], columns[i], outputStream, start, end);
     }
   }
@@ -412,7 +471,7 @@ public class InsertTabletPlan extends InsertPlan {
     int rows = buffer.getInt();
     rowCount = rows;
     this.times = new long[rows];
-    times = QueryDataSetUtils.readTimesFromBuffer(buffer, rows);
+    deserializeTimes(buffer, rows);
     updateTimesCache();
 
     columns = QueryDataSetUtils.readValuesFromBuffer(buffer, dataTypes, measurementSize, rows);

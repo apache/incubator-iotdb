@@ -95,6 +95,7 @@ public class LogReplayer {
       while (logReader.hasNext()) {
         try {
           PhysicalPlan plan = logReader.next();
+
           if (plan instanceof InsertPlan) {
             replayInsert((InsertPlan) plan);
           } else if (plan instanceof DeletePlan) {

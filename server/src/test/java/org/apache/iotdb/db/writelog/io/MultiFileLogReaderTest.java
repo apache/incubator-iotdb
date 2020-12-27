@@ -73,7 +73,7 @@ public class MultiFileLogReaderTest {
 
   @Test
   public void test() throws IOException {
-    MultiFileLogReader reader = new MultiFileLogReader(logFiles);
+    MultiFileLogReader reader = new MultiFileLogReader(logFiles, SingleFileLogReader::new);
     int i = 0;
     while (reader.hasNext()) {
       PhysicalPlan plan = reader.next();

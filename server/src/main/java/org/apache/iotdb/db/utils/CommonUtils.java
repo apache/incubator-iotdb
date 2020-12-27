@@ -33,10 +33,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Queue;
 import java.util.List;
 import java.util.stream.Stream;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.qp.constant.SQLConstant;
+import org.apache.iotdb.db.qp.physical.PhysicalPlan;
+import org.apache.iotdb.db.qp.physical.crud.InsertRowPlan;
+import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.utils.Binary;
@@ -159,6 +163,26 @@ public class CommonUtils {
       return true;
     }
     throw new QueryProcessException("The BOOLEAN should be true/TRUE, false/FALSE or 0/1");
+  }
+
+  public static void updatePlanWindow(PhysicalPlan plan, int windowLength,
+      Queue<PhysicalPlan> planWindow) {
+    if (planWindow.size() >= windowLength) {
+      planWindow.poll();
+    }
+    // remove unnecessary fields as bases to reduce memory footprint
+    if (plan instanceof InsertRowPlan) {
+      InsertRowPlan insertRowPlan = (InsertRowPlan) plan;
+      plan = new InsertRowPlan(insertRowPlan.getDeviceId(),
+          insertRowPlan.getTime(), insertRowPlan.getMeasurements(), null);
+      ((InsertRowPlan) plan).setDataTypes(insertRowPlan.getDataTypes());
+    } else if (plan instanceof InsertTabletPlan) {
+      InsertTabletPlan insertTabletPlan = (InsertTabletPlan) plan;
+      plan = new InsertTabletPlan(insertTabletPlan.getDeviceId(),
+          insertTabletPlan.getMeasurements());
+      ((InsertTabletPlan) plan).setDataTypes(insertTabletPlan.getDataTypes());
+    }
+    planWindow.add(plan);
   }
 
   public static int getCpuCores() {

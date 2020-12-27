@@ -30,14 +30,14 @@ import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.logical.Operator;
 import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
 import org.apache.iotdb.db.qp.physical.crud.DeletePlan;
-import org.apache.iotdb.db.qp.physical.sys.AlterTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
+import org.apache.iotdb.db.qp.physical.sys.AlterTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.AuthorPlan;
-import org.apache.iotdb.db.qp.physical.sys.CreateMultiTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.ChangeAliasPlan;
 import org.apache.iotdb.db.qp.physical.sys.ChangeTagOffsetPlan;
 import org.apache.iotdb.db.qp.physical.sys.CreateIndexPlan;
+import org.apache.iotdb.db.qp.physical.sys.CreateMultiTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.CreateTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.DataAuthPlan;
 import org.apache.iotdb.db.qp.physical.sys.DeleteStorageGroupPlan;
@@ -51,6 +51,7 @@ import org.apache.iotdb.db.qp.physical.sys.SetStorageGroupPlan;
 import org.apache.iotdb.db.qp.physical.sys.SetTTLPlan;
 import org.apache.iotdb.db.qp.physical.sys.ShowTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.StorageGroupMNodePlan;
+import org.apache.iotdb.db.utils.datastructure.RandomAccessArrayDeque;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 /**
@@ -87,10 +88,6 @@ public abstract class PhysicalPlan {
   protected PhysicalPlan(boolean isQuery, Operator.OperatorType operatorType) {
     this.isQuery = isQuery;
     this.operatorType = operatorType;
-  }
-
-  public String printQueryPlan() {
-    return "abstract plan";
   }
 
   public abstract List<PartialPath> getPaths();
@@ -149,6 +146,26 @@ public abstract class PhysicalPlan {
     throw new UnsupportedOperationException(SERIALIZATION_UNIMPLEMENTED);
   }
 
+  /**
+   * Serialize the plan into the given buffer. This is provided for WAL, so fields that can be
+   * recovered will not be serialized.
+   *
+   * @param buffer
+   */
+  public void serialize(ByteBuffer buffer, PhysicalPlan base) {
+    throw new UnsupportedOperationException(SERIALIZATION_UNIMPLEMENTED);
+  }
+
+  /**
+   * Deserialize the plan from the given buffer. This is provided for WAL, and must be used with
+   * serializeToWAL.
+   *
+   * @param buffer
+   */
+  public void deserialize(ByteBuffer buffer, PhysicalPlan base) {
+    throw new UnsupportedOperationException(SERIALIZATION_UNIMPLEMENTED);
+  }
+
   protected void putString(ByteBuffer buffer, String value) {
     if (value == null) {
       buffer.putInt(NULL_VALUE_LEN);
@@ -203,6 +220,8 @@ public abstract class PhysicalPlan {
 
   public static class Factory {
 
+    public static final String UNRECOGNIZED_LOG_TYPE = "unrecognized log type ";
+
     private Factory() {
       // hidden initializer
     }
@@ -210,11 +229,15 @@ public abstract class PhysicalPlan {
     public static PhysicalPlan create(ByteBuffer buffer) throws IOException, IllegalPathException {
       int typeNum = buffer.get();
       if (typeNum >= PhysicalPlanType.values().length) {
-        throw new IOException("unrecognized log type " + typeNum);
+        throw new IOException(UNRECOGNIZED_LOG_TYPE + typeNum);
       }
       PhysicalPlanType type = PhysicalPlanType.values()[typeNum];
+      return create(type, buffer);
+    }
+
+    public static PhysicalPlan create(PhysicalPlanType type, ByteBuffer buffer)
+        throws IllegalPathException, IOException {
       PhysicalPlan plan;
-      // TODO-Cluster: support more plans
       switch (type) {
         case INSERT:
           plan = new InsertRowPlan();
@@ -349,9 +372,50 @@ public abstract class PhysicalPlan {
           plan.deserialize(buffer);
           break;
         default:
-          throw new IOException("unrecognized log type " + type);
+          throw new IOException(UNRECOGNIZED_LOG_TYPE + type);
       }
       return plan;
+    }
+
+    public static PhysicalPlan create(ByteBuffer buffer,
+        RandomAccessArrayDeque<PhysicalPlan> planWindow) throws IOException,
+        IllegalPathException {
+      short baseIndex = buffer.getShort();
+      int typeNum = buffer.get();
+      if (typeNum >= PhysicalPlanType.values().length) {
+        throw new IOException(UNRECOGNIZED_LOG_TYPE + typeNum);
+      }
+      PhysicalPlanType type = PhysicalPlanType.values()[typeNum];
+      PhysicalPlan plan;
+      switch (type) {
+        case INSERT:
+          plan = new InsertRowPlan();
+          if (baseIndex < 0) {
+            plan.deserialize(buffer);
+          } else {
+            InsertRowPlan baseInsertRowPlan = (InsertRowPlan) getPlan(planWindow, baseIndex);
+            plan.deserialize(buffer, baseInsertRowPlan);
+          }
+          break;
+        case BATCHINSERT:
+          plan = new InsertTabletPlan();
+          if (baseIndex < 0) {
+            plan.deserialize(buffer);
+          } else {
+            InsertTabletPlan baseInsertTabletPlan = (InsertTabletPlan) getPlan(planWindow,
+                baseIndex);
+            plan.deserialize(buffer, baseInsertTabletPlan);
+          }
+          break;
+        default:
+          plan = create(type, buffer);
+      }
+      return plan;
+    }
+
+    private static PhysicalPlan getPlan(RandomAccessArrayDeque<PhysicalPlan> planWindow,
+        int index) {
+      return planWindow.get(index);
     }
   }
 
@@ -372,9 +436,63 @@ public abstract class PhysicalPlan {
     this.index = index;
   }
 
+  protected void putDiffTime(long time, long base, ByteBuffer buffer) {
+    long timeDiff = time - base;
+    TimeDiffType diffType = TimeDiffType.fromDiff(timeDiff);
+    buffer.put((byte) diffType.ordinal());
+    switch (diffType) {
+      case INT:
+        buffer.putInt((int) timeDiff);
+        break;
+      case BYTE:
+        buffer.put((byte) timeDiff);
+        break;
+      case SHORT:
+        buffer.putShort((short) timeDiff);
+        break;
+      case LONG:
+      default:
+        // NOTICE HERE
+        buffer.putLong(time);
+    }
+  }
+
+  protected long getDiffTime(ByteBuffer buffer, long base) {
+    TimeDiffType diffType = TimeDiffType.values()[buffer.get()];
+    switch (diffType) {
+      case INT:
+        return buffer.getInt() + base;
+      case BYTE:
+        return buffer.get() + base;
+      case SHORT:
+        return buffer.getShort() + base;
+      case LONG:
+      default:
+        // NOTICE HERE
+        return buffer.getLong();
+    }
+  }
+
+  public enum TimeDiffType {
+    BYTE, SHORT, INT, LONG;
+
+    public static TimeDiffType fromDiff(long timeDiff) {
+      if (Byte.MIN_VALUE <= timeDiff && timeDiff <= Byte.MAX_VALUE) {
+        return BYTE;
+      } else if (Short.MIN_VALUE <= timeDiff && timeDiff <= Short.MAX_VALUE) {
+        return SHORT;
+      } else if (Integer.MIN_VALUE <= timeDiff && timeDiff <= Integer.MAX_VALUE) {
+        return INT;
+      } else {
+        return LONG;
+      }
+    }
+  }
+
   /**
-   * Check the integrity of the plan in case that the plan is generated by a careless user
-   * through Session API.
+   * Check the integrity of the plan in case that the plan is generated by a careless user through
+   * Session API.
+   *
    * @throws QueryProcessException when the check fails
    */
   public void checkIntegrity() throws QueryProcessException {

@@ -88,7 +88,7 @@ public class SingleFileLogReader implements ILogReader {
             + "%d Calculated: %d.", idx, checkSum, checkSummer.getValue()));
       }
 
-      batchLogReader = new BatchLogReader(ByteBuffer.wrap(buffer));
+      batchLogReader = getBatchLogReader(ByteBuffer.wrap(buffer));
       fileCorrupted = fileCorrupted || batchLogReader.isFileCorrupted();
     } catch (Exception e) {
       logger.error("Cannot read more PhysicalPlans from {} because", filepath, e);
@@ -96,6 +96,10 @@ public class SingleFileLogReader implements ILogReader {
       return false;
     }
     return true;
+  }
+
+  BatchLogReader getBatchLogReader(ByteBuffer byteBuffer) {
+    return new BatchLogReader(byteBuffer);
   }
 
   @Override
@@ -128,5 +132,10 @@ public class SingleFileLogReader implements ILogReader {
 
   public boolean isFileCorrupted() {
     return fileCorrupted;
+  }
+
+  public interface Factory {
+
+    SingleFileLogReader create(File file) throws FileNotFoundException;
   }
 }

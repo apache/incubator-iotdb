@@ -40,6 +40,7 @@ import org.apache.iotdb.db.writelog.io.ILogReader;
 import org.apache.iotdb.db.writelog.io.ILogWriter;
 import org.apache.iotdb.db.writelog.io.LogWriter;
 import org.apache.iotdb.db.writelog.io.MultiFileLogReader;
+import org.apache.iotdb.db.writelog.io.SingleFileLogReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,22 +52,22 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
   public static final String WAL_FILE_NAME = "wal";
   private static final Logger logger = LoggerFactory.getLogger(ExclusiveWriteLogNode.class);
 
-  private String identifier;
+  String identifier;
 
-  private String logDirectory;
+  String logDirectory;
 
   private ILogWriter currentFileWriter;
 
   private IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
 
-  private ByteBuffer logBufferWorking = ByteBuffer
+  ByteBuffer logBufferWorking = ByteBuffer
       .allocate(IoTDBDescriptor.getInstance().getConfig().getWalBufferSize() / 2);
-  private ByteBuffer logBufferIdle = ByteBuffer
+  ByteBuffer logBufferIdle = ByteBuffer
       .allocate(IoTDBDescriptor.getInstance().getConfig().getWalBufferSize() / 2);
-  private ByteBuffer logBufferFlushing;
+  ByteBuffer logBufferFlushing;
 
   private final Object switchBufferCondition = new Object();
-  private ReentrantLock lock = new ReentrantLock();
+  ReentrantLock lock = new ReentrantLock();
   private static final ExecutorService FLUSH_BUFFER_THREAD_POOL =
       Executors.newCachedThreadPool(
           new ThreadFactoryBuilder().setNameFormat("Flush-WAL-Thread-%d").setDaemon(true).build());
@@ -74,7 +75,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
   private long fileId = 0;
   private long lastFlushedId = 0;
 
-  private int bufferedLogNum = 0;
+  int bufferedLogNum = 0;
 
   private boolean deleted;
 
@@ -111,7 +112,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
     }
   }
 
-  private void putLog(PhysicalPlan plan) {
+  void putLog(PhysicalPlan plan) {
     logBufferWorking.mark();
     try {
       plan.serialize(logBufferWorking);
@@ -213,7 +214,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
     File[] logFiles = SystemFileFactory.INSTANCE.getFile(logDirectory).listFiles();
     Arrays.sort(logFiles,
         Comparator.comparingInt(f -> Integer.parseInt(f.getName().replace(WAL_FILE_NAME, ""))));
-    return new MultiFileLogReader(logFiles);
+    return new MultiFileLogReader(logFiles, SingleFileLogReader::new);
   }
 
   private void discard(File logFile) {
@@ -244,7 +245,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
     }
   }
 
-  private void sync() {
+  void sync() {
     lock.lock();
     try {
       if (bufferedLogNum == 0) {
@@ -320,14 +321,14 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
     }
   }
 
-  private ILogWriter getCurrentFileWriter() throws FileNotFoundException {
+  ILogWriter getCurrentFileWriter() throws FileNotFoundException {
     if (currentFileWriter == null) {
       nextFileWriter();
     }
     return currentFileWriter;
   }
 
-  private void nextFileWriter() throws FileNotFoundException {
+  void nextFileWriter() throws FileNotFoundException {
     fileId++;
     File newFile = SystemFileFactory.INSTANCE.getFile(logDirectory, WAL_FILE_NAME + fileId);
     if (newFile.getParentFile().mkdirs()) {

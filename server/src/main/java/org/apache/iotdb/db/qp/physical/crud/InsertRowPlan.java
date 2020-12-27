@@ -34,6 +34,7 @@ import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.metadata.mnode.MeasurementMNode;
 import org.apache.iotdb.db.qp.logical.Operator;
 import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
+import org.apache.iotdb.db.qp.physical.PhysicalPlan;
 import org.apache.iotdb.db.utils.CommonUtils;
 import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -85,8 +86,10 @@ public class InsertRowPlan extends InsertPlan {
     this.measurements = measurementList;
     this.dataTypes = new TSDataType[measurements.length];
     // We need to create an Object[] for the data type casting, because we can not set Float, Long to String[i]
-    this.values = new Object[measurements.length];
-    System.arraycopy(insertValues, 0, values, 0, measurements.length);
+    if (insertValues != null) {
+      this.values = new Object[measurements.length];
+      System.arraycopy(insertValues, 0, values, 0, measurements.length);
+    }
     isNeedInferType = true;
   }
 
@@ -316,7 +319,41 @@ public class InsertRowPlan extends InsertPlan {
     }
   }
 
-  private void putValues(ByteBuffer buffer) throws QueryProcessException {
+  public void putValuesNoType(ByteBuffer buffer) throws QueryProcessException {
+    for (int i = 0; i < values.length; i++) {
+      // types are not determined, the situation mainly occurs when the plan uses string values
+      // and is forwarded to other nodes
+      if (dataTypes == null || dataTypes[i] == null) {
+        ReadWriteIOUtils.write((String) values[i], buffer);
+        continue;
+      }
+
+      switch (dataTypes[i]) {
+        case BOOLEAN:
+          ReadWriteIOUtils.write((Boolean) values[i], buffer);
+          break;
+        case INT32:
+          ReadWriteIOUtils.write((Integer) values[i], buffer);
+          break;
+        case INT64:
+          ReadWriteIOUtils.write((Long) values[i], buffer);
+          break;
+        case FLOAT:
+          ReadWriteIOUtils.write((Float) values[i], buffer);
+          break;
+        case DOUBLE:
+          ReadWriteIOUtils.write((Double) values[i], buffer);
+          break;
+        case TEXT:
+          ReadWriteIOUtils.write((Binary) values[i], buffer);
+          break;
+        default:
+          throw new QueryProcessException("Unsupported data type:" + dataTypes[i]);
+      }
+    }
+  }
+
+  public void putValues(ByteBuffer buffer) throws QueryProcessException {
     for (int i = 0; i < values.length; i++) {
       if (measurements[i] == null) {
         continue;
@@ -443,6 +480,78 @@ public class InsertRowPlan extends InsertPlan {
 
     isNeedInferType = buffer.get() == 1;
     this.index = buffer.getLong();
+  }
+
+  @Override
+  public void serialize(ByteBuffer buffer, PhysicalPlan base) {
+    InsertRowPlan baseInsertRowPlan = (InsertRowPlan) base;
+    int type = PhysicalPlanType.INSERT.ordinal();
+    buffer.put((byte) type);
+
+    putDiffTime(this.getTime(), baseInsertRowPlan.getTime(), buffer);
+
+    try {
+      putValuesNoType(buffer);
+    } catch (QueryProcessException e) {
+      logger.error("Cannot put values of {} into logBuffer", this, e);
+    }
+
+    // the types are not inferred before the plan is serialized
+    buffer.put((byte) (this.isNeedInferType() ? 1 : 0));
+    buffer.putLong(index);
+  }
+
+  @Override
+  public void deserialize(ByteBuffer buffer, PhysicalPlan base) {
+    InsertRowPlan baseInsertRowPlan = (InsertRowPlan) base;
+
+    this.time = getDiffTime(buffer, baseInsertRowPlan.getTime());
+    this.deviceId = baseInsertRowPlan.deviceId;
+
+    this.measurements = baseInsertRowPlan.measurements;
+    this.dataTypes = baseInsertRowPlan.dataTypes;
+
+    this.values = new Object[measurements.length];
+    try {
+      fillValuesNoType(buffer);
+    } catch (QueryProcessException e) {
+      logger.error("Cannot fill values of {} from logBuffer", this, e);
+    }
+
+    isNeedInferType = buffer.get() == 1;
+    index = buffer.getLong();
+  }
+
+  public void fillValuesNoType(ByteBuffer buffer) throws QueryProcessException {
+    for (int i = 0; i < measurements.length; i++) {
+      if (dataTypes[i] == null) {
+        values[i] = ReadWriteIOUtils.readString(buffer);
+        continue;
+      }
+
+      switch (dataTypes[i]) {
+        case BOOLEAN:
+          values[i] = ReadWriteIOUtils.readBool(buffer);
+          break;
+        case INT32:
+          values[i] = ReadWriteIOUtils.readInt(buffer);
+          break;
+        case INT64:
+          values[i] = ReadWriteIOUtils.readLong(buffer);
+          break;
+        case FLOAT:
+          values[i] = ReadWriteIOUtils.readFloat(buffer);
+          break;
+        case DOUBLE:
+          values[i] = ReadWriteIOUtils.readDouble(buffer);
+          break;
+        case TEXT:
+          values[i] = ReadWriteIOUtils.readBinary(buffer);
+          break;
+        default:
+          throw new QueryProcessException("Unsupported data type:" + dataTypes[i]);
+      }
+    }
   }
 
   @Override

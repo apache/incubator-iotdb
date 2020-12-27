@@ -103,18 +103,6 @@ public class UpdatePlan extends PhysicalPlan {
   }
 
   @Override
-  public String printQueryPlan() {
-    StringContainer sc = new StringContainer();
-    String preSpace = "  ";
-    sc.addTail("UpdatePlan:");
-    sc.addTail(preSpace, "paths:  ", path.getFullPath(), LINE_FEED_SIGNAL);
-    sc.addTail(preSpace, "value:", value, LINE_FEED_SIGNAL);
-    sc.addTail(preSpace, "filter: ", LINE_FEED_SIGNAL);
-    intervals.forEach(p -> sc.addTail(preSpace, preSpace, p.left, p.right, LINE_FEED_SIGNAL));
-    return sc.toString();
-  }
-
-  @Override
   public boolean equals(Object o) {
     if (this == o) {
       return true;

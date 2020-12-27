@@ -92,6 +92,10 @@ public class LongTVList extends TVList {
   }
 
   public void sort() {
+    if (sorted) {
+      return;
+    }
+
     if (sortedTimestamps == null || sortedTimestamps.length < size) {
       sortedTimestamps = (long[][]) PrimitiveArrayManager
           .createDataListsByType(TSDataType.INT64, size);

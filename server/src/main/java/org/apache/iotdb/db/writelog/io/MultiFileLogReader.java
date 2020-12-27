@@ -33,9 +33,11 @@ public class MultiFileLogReader implements ILogReader {
   private SingleFileLogReader currentReader;
   private File[] files;
   private int fileIdx = 0;
+  private SingleFileLogReader.Factory fileLogReaderFactory;
 
-  public MultiFileLogReader(File[] files) {
+  public MultiFileLogReader(File[] files, SingleFileLogReader.Factory fileLogReaderFactory) {
     this.files = files;
+    this.fileLogReaderFactory = fileLogReaderFactory;
   }
 
   @Override
@@ -51,7 +53,7 @@ public class MultiFileLogReader implements ILogReader {
       return false;
     }
     if (currentReader == null) {
-      currentReader = new SingleFileLogReader(files[fileIdx++]);
+      currentReader = fileLogReaderFactory.create(files[fileIdx++]);
     }
     if (currentReader.hasNext()) {
       return true;

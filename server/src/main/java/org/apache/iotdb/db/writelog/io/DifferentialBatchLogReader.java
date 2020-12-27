@@ -17,44 +17,42 @@
  * under the License.
  */
 
+
 package org.apache.iotdb.db.writelog.io;
+
+import static org.apache.iotdb.db.writelog.node.DifferentialWriteLogNode.WINDOW_LENGTH;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.qp.physical.PhysicalPlan;
+import org.apache.iotdb.db.qp.physical.PhysicalPlan.Factory;
+import org.apache.iotdb.db.utils.CommonUtils;
+import org.apache.iotdb.db.utils.datastructure.RandomAccessArrayDeque;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * BatchedLogReader reads logs from a binary batch of log in the format of ByteBuffer. The
- * ByteBuffer must be readable.
- */
-public class BatchLogReader implements ILogReader{
+public class DifferentialBatchLogReader extends BatchLogReader {
 
-  private static Logger logger = LoggerFactory.getLogger(BatchLogReader.class);
+  private static final Logger logger = LoggerFactory.getLogger(DifferentialBatchLogReader.class);
+  private RandomAccessArrayDeque<PhysicalPlan> planWindow;
 
-  Iterator<PhysicalPlan> planIterator;
-
-  boolean fileCorrupted = false;
-
-  BatchLogReader() {
-
-  }
-
-  BatchLogReader(ByteBuffer buffer) {
+  public DifferentialBatchLogReader(ByteBuffer buffer, RandomAccessArrayDeque<PhysicalPlan> planWindow) {
+    this.planWindow = planWindow;
     List<PhysicalPlan> logs = readLogs(buffer);
     this.planIterator = logs.iterator();
   }
 
+  @Override
   List<PhysicalPlan> readLogs(ByteBuffer buffer) {
     List<PhysicalPlan> plans = new ArrayList<>();
     while (buffer.position() != buffer.limit()) {
       try {
-        plans.add(PhysicalPlan.Factory.create(buffer));
+        PhysicalPlan physicalPlan = Factory.create(buffer, planWindow);
+        CommonUtils.updatePlanWindow(physicalPlan, WINDOW_LENGTH, planWindow);
+        plans.add(physicalPlan);
       } catch (IOException | IllegalPathException e) {
         logger.error("Cannot deserialize PhysicalPlans from ByteBuffer, ignore remaining logs", e);
         fileCorrupted = true;
@@ -62,25 +60,5 @@ public class BatchLogReader implements ILogReader{
       }
     }
     return plans;
-  }
-
-
-  @Override
-  public void close() {
-    // nothing to be closed
-  }
-
-  @Override
-  public boolean hasNext() {
-    return planIterator.hasNext();
-  }
-
-  @Override
-  public PhysicalPlan next() {
-    return planIterator.next();
-  }
-
-  public boolean isFileCorrupted() {
-    return fileCorrupted;
   }
 }

@@ -120,7 +120,9 @@ public class TsFileRecoverPerformer {
 
     // redo logs
     if (needRedoWal) {
+      long start = System.currentTimeMillis();
       redoLogs(restorableTsFileIOWriter);
+      logger.debug("Redoing logs of {} costs {}ms", file, System.currentTimeMillis() - start);
 
       // clean logs
       try {
