@@ -32,9 +32,10 @@ public interface WriteLogNode {
    * Then the byte[] will be put into a cache. When the cache is full, the logs in the cache will be
    * synced to disk.
    *
-   * @param plan - a PhysicalPlan
+   * @param plan        - a PhysicalPlan
+   * @param toPrevious  - whether the insert plan is to flush memtable
    */
-  void write(PhysicalPlan plan) throws IOException;
+  void write(PhysicalPlan plan, boolean toPrevious) throws IOException;
 
   /**
    * Sync and close streams.
@@ -45,6 +46,16 @@ public interface WriteLogNode {
    * Write what in cache to disk.
    */
   void forceSync() throws IOException;
+
+  /**
+   * work when change working wal to flush window wal
+   */
+  void flushWindowChange() throws IOException;
+
+  /**
+   * work when flush window wal ends
+   */
+  void flushWindowEnd();
 
   /**
    * When data that have WALs in this node start to be flushed, this method must be called to

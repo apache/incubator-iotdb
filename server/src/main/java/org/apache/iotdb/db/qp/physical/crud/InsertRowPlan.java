@@ -61,6 +61,9 @@ public class InsertRowPlan extends InsertPlan {
 
   private List<Object> failedValues;
 
+  // judge whether a InsertRowPlan should be inserted into flushMemTable or not
+  private boolean toFlushMemTable = false;
+
   public InsertRowPlan() {
     super(OperatorType.INSERT);
   }
@@ -529,5 +532,13 @@ public class InsertRowPlan extends InsertPlan {
         throw new QueryProcessException("Values contain null: " + Arrays.toString(values));
       }
     }
+  }
+
+  public boolean isToFlushMemTable() {
+    return toFlushMemTable;
+  }
+
+  public void setToFlushMemTable(boolean toFlushMemTable) {
+    this.toFlushMemTable = toFlushMemTable;
   }
 }

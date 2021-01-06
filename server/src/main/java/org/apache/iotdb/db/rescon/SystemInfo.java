@@ -43,9 +43,11 @@ public class SystemInfo {
 
   private Map<StorageGroupInfo, Long> reportedSgMemCostMap = new HashMap<>();
 
-  private static final double FLUSH_THERSHOLD =
+  private static final double FORCE_FLUSH_THRESHOLD =
+      config.getAllocateMemoryForWrite() * config.getForceFlushProportion();
+  private static final double FLUSH_THRESHOLD =
       config.getAllocateMemoryForWrite() * config.getFlushProportion();
-  private static final double REJECT_THERSHOLD = 
+  private static final double REJECT_THRESHOLD =
       config.getAllocateMemoryForWrite() * config.getRejectProportion();
 
 
@@ -65,12 +67,12 @@ public class SystemInfo {
     }
     reportedSgMemCostMap.put(storageGroupInfo, storageGroupInfo.getMemCost());
     storageGroupInfo.setLastReportedSize(storageGroupInfo.getMemCost());
-    if (totalSgMemCost >= FLUSH_THERSHOLD) {
+    if (totalSgMemCost >= FLUSH_THRESHOLD) {
       logger.debug("The total storage group mem costs are too large, call for flushing. "
           + "Current sg cost is {}", totalSgMemCost);
       chooseTSPToMarkFlush();
     }
-    if (totalSgMemCost >= REJECT_THERSHOLD) {
+    if (totalSgMemCost >= REJECT_THRESHOLD) {
       logger.info("Change system to reject status...");
       rejected = true;
     }
@@ -96,7 +98,7 @@ public class SystemInfo {
   }
 
   private void checkSystemToInvokeFlush() {
-    if (totalSgMemCost >= FLUSH_THERSHOLD && totalSgMemCost < REJECT_THERSHOLD) {
+    if (totalSgMemCost >= FLUSH_THRESHOLD && totalSgMemCost < REJECT_THRESHOLD) {
       logger.debug("Some sg memory released but still exceeding flush proportion, call flush.");
       if (rejected) {
         logger.info("Some sg memory released, set system to normal status.");
@@ -105,7 +107,7 @@ public class SystemInfo {
       rejected = false;
       forceAsyncFlush();
     }
-    else if (totalSgMemCost >= REJECT_THERSHOLD) {
+    else if (totalSgMemCost >= REJECT_THRESHOLD) {
       logger.warn("Some sg memory released, but system is still in reject status.");
       logCurrentTotalSGMemory();
       rejected = true;
@@ -170,7 +172,7 @@ public class SystemInfo {
     }
     List<TsFileProcessor> processors = new ArrayList<>();
     long memCost = 0;
-    while (totalSgMemCost - memCost > FLUSH_THERSHOLD / 2) {
+    while (totalSgMemCost - memCost > FLUSH_THRESHOLD / 2) {
       if (tsps.isEmpty() || tsps.peek().getWorkMemTableRamCost() == 0) {
         return processors;
       }
@@ -201,5 +203,9 @@ public class SystemInfo {
     }
 
     private static SystemInfo instance = new SystemInfo();
+  }
+
+  public boolean shouldForceFlush(){
+    return totalSgMemCost >= FORCE_FLUSH_THRESHOLD;
   }
 }

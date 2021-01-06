@@ -190,6 +190,9 @@ public class IoTDBDescriptor {
       conf.setFlushProportion(Double.parseDouble(properties.getProperty("flush_proportion",
           Double.toString(conf.getFlushProportion()))));
 
+      conf.setForceFlushProportion(Double.parseDouble(properties.getProperty("force_flush_proportion",
+          Double.toString(conf.getForceFlushProportion()))));
+
       conf.setRejectProportion(Double.parseDouble(properties.getProperty("reject_proportion",
           Double.toString(conf.getRejectProportion()))));
 
@@ -287,6 +290,14 @@ public class IoTDBDescriptor {
       conf.setEstimatedSeriesSize(Integer.parseInt(properties
           .getProperty("estimated_series_size",
               Integer.toString(conf.getEstimatedSeriesSize()))));
+
+      conf.setEnableSlidingMemTable(Boolean.parseBoolean(properties
+          .getProperty("enable_sliding_mem_table",
+              Boolean.toString(conf.isEnableSlidingMemTable()))));
+
+      conf.setFlushWaitTime(Integer.parseInt(properties
+          .getProperty("flush_wait_time",
+              Integer.toString(conf.getFlushWaitTime()))));
 
       conf.setMergeChunkPointNumberThreshold(Integer.parseInt(properties
           .getProperty("merge_chunk_point_number",

@@ -151,7 +151,7 @@ public class SeqTsFileRecoverTest {
         }
         InsertRowPlan insertPlan = new InsertRowPlan(new PartialPath("root.sg.device" + j), i, measurements, types,
             values);
-        node.write(insertPlan);
+        node.write(insertPlan, false);
       }
       node.notifyStartFlush();
     }

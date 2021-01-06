@@ -105,9 +105,9 @@ public class WriteLogNodeTest {
 
     tabletPlan.markFailedMeasurementInsertion(1, new Exception());
 
-    logNode.write(bwInsertPlan);
-    logNode.write(deletePlan);
-    logNode.write(tabletPlan);
+    logNode.write(bwInsertPlan, false);
+    logNode.write(deletePlan, false);
+    logNode.write(tabletPlan, false);
 
     logNode.close();
 
@@ -139,9 +139,9 @@ public class WriteLogNodeTest {
         new String[]{"1.0", "15", "str", "false"});
     DeletePlan deletePlan = new DeletePlan(Long.MIN_VALUE, 50, new PartialPath(identifier + ".s1"));
 
-    logNode.write(bwInsertPlan);
+    logNode.write(bwInsertPlan, false);
     logNode.notifyStartFlush();
-    logNode.write(deletePlan);
+    logNode.write(deletePlan, false);
     logNode.notifyStartFlush();
 
     ILogReader logReader = logNode.getLogReader();
@@ -176,13 +176,13 @@ public class WriteLogNodeTest {
         new String[]{"1.0", "15", "str", "false"});
     DeletePlan deletePlan = new DeletePlan(Long.MIN_VALUE, 50, new PartialPath("root.logTestDevice.s1"));
 
-    logNode.write(bwInsertPlan);
+    logNode.write(bwInsertPlan, false);
 
     File walFile = new File(
         config.getWalDir() + File.separator + "root.logTestDevice" + File.separator + "wal1");
     assertFalse(walFile.exists());
 
-    logNode.write(deletePlan);
+    logNode.write(deletePlan, false);
     System.out.println("Waiting for wal file to be created");
     while (!walFile.exists()) {
 
@@ -206,8 +206,8 @@ public class WriteLogNodeTest {
         new String[]{"1.0", "15", "str", "false"});
     DeletePlan deletePlan = new DeletePlan(Long.MIN_VALUE, 50, new PartialPath("root.logTestDevice.s1"));
 
-    logNode.write(bwInsertPlan);
-    logNode.write(deletePlan);
+    logNode.write(bwInsertPlan, false);
+    logNode.write(deletePlan, false);
 
     logNode.forceSync();
 
@@ -235,7 +235,7 @@ public class WriteLogNodeTest {
 
     boolean caught = false;
     try {
-      logNode.write(bwInsertPlan);
+      logNode.write(bwInsertPlan, false);
     } catch (IOException e) {
       caught = true;
     }

@@ -138,6 +138,103 @@ public class StorageGroupProcessorTest {
   }
 
   @Test
+  public void testSlidingMemTableJDBC()
+      throws WriteProcessException, QueryProcessException, MetadataException {
+    IoTDBDescriptor.getInstance().getConfig().setFlushWaitTime(30000);
+
+    TSRecord record;
+    for (int j = 5; j <= 10; j++) {
+      record = new TSRecord(j, deviceId);
+      record.addTuple(DataPoint.getDataPoint(TSDataType.INT32, measurementId, String.valueOf(j)));
+      processor.insert(new InsertRowPlan(record));
+    }
+
+    for (TsFileProcessor tsfileProcessor : processor.getWorkSequenceTsFileProcessors()) {
+      tsfileProcessor.asyncFlush();
+    }
+
+    for (int j = 1; j <= 3; j++) {
+      record = new TSRecord(j, deviceId);
+      record.addTuple(DataPoint.getDataPoint(TSDataType.INT32, measurementId, String.valueOf(j)));
+      processor.insert(new InsertRowPlan(record));
+    }
+    processor.syncCloseAllWorkingTsFileProcessors();
+    QueryDataSource queryDataSource = processor
+        .query(new PartialPath(deviceId), measurementId, context,
+            null, null);
+    Assert.assertEquals(0, queryDataSource.getUnseqResources().size());
+    IoTDBDescriptor.getInstance().getConfig().setFlushWaitTime(0);
+  }
+
+  @Test
+  public void testSlidingMemTableNativeApi() throws QueryProcessException, IllegalPathException {
+    IoTDBDescriptor.getInstance().getConfig().setFlushWaitTime(30000);
+    String[] measurements = new String[2];
+    measurements[0] = "s0";
+    measurements[1] = "s1";
+    List<Integer> dataTypes = new ArrayList<>();
+    dataTypes.add(TSDataType.INT32.ordinal());
+    dataTypes.add(TSDataType.INT64.ordinal());
+
+    MeasurementMNode[] measurementMNodes = new MeasurementMNode[2];
+    measurementMNodes[0] = new MeasurementMNode(null, "s0",
+        new MeasurementSchema("s0", TSDataType.INT32, TSEncoding.PLAIN), null);
+    measurementMNodes[1] = new MeasurementMNode(null, "s1",
+        new MeasurementSchema("s1", TSDataType.INT64, TSEncoding.PLAIN), null);
+
+    InsertTabletPlan insertTabletPlan1 = new InsertTabletPlan(new PartialPath("root.vehicle.d0"),
+        measurements, dataTypes);
+    insertTabletPlan1.setMeasurementMNodes(measurementMNodes);
+
+    long[] times = new long[5];
+    Object[] columns = new Object[2];
+    columns[0] = new int[5];
+    columns[1] = new long[5];
+
+    for (int r = 5; r < 10; r++) {
+      times[r - 5] = r;
+      ((int[]) columns[0])[r - 5] = 1;
+      ((long[]) columns[1])[r - 5] = 1;
+    }
+    insertTabletPlan1.setTimes(times);
+    insertTabletPlan1.setColumns(columns);
+    insertTabletPlan1.setRowCount(times.length);
+
+    processor.insertTablet(insertTabletPlan1);
+    for (TsFileProcessor tsfileProcessor : processor.getWorkSequenceTsFileProcessors()) {
+      tsfileProcessor.asyncFlush();
+    }
+
+    InsertTabletPlan insertTabletPlan2 = new InsertTabletPlan(new PartialPath("root.vehicle.d0"),
+        measurements, dataTypes);
+    insertTabletPlan2.setMeasurementMNodes(measurementMNodes);
+
+    for (int r = 0; r < 5; r++) {
+      times[r] = r;
+      ((int[]) columns[0])[r] = 1;
+      ((long[]) columns[1])[r] = 1;
+    }
+    insertTabletPlan2.setTimes(times);
+    insertTabletPlan2.setColumns(columns);
+    insertTabletPlan2.setRowCount(times.length);
+
+    processor.insertTablet(insertTabletPlan2);
+    processor.asyncCloseAllWorkingTsFileProcessors();
+    processor.syncCloseAllWorkingTsFileProcessors();
+
+    QueryDataSource queryDataSource = processor
+        .query(new PartialPath(deviceId), measurementId, context,
+            null, null);
+
+    Assert.assertEquals(1, queryDataSource.getSeqResources().size());
+    Assert.assertEquals(0, queryDataSource.getUnseqResources().size());
+    for (TsFileResource resource : queryDataSource.getSeqResources()) {
+      Assert.assertTrue(resource.isClosed());
+    }
+    IoTDBDescriptor.getInstance().getConfig().setFlushWaitTime(0);
+  }
+
+  @Test
   public void testSequenceSyncClose()
       throws WriteProcessException, QueryProcessException, IllegalPathException {
     System.out.println("testSequenceSyncClose");

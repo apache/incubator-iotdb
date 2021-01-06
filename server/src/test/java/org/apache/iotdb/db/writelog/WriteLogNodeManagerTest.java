@@ -36,7 +36,6 @@ import org.apache.iotdb.db.writelog.manager.MultiFileLogNodeManager;
 import org.apache.iotdb.db.writelog.manager.WriteLogNodeManager;
 import org.apache.iotdb.db.writelog.node.WriteLogNode;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.read.common.Path;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -96,8 +95,8 @@ public class WriteLogNodeManagerTest {
     File walFile = new File(logNode.getLogDirectory() + File.separator + "wal1");
     assertTrue(!walFile.exists());
 
-    logNode.write(bwInsertPlan);
-    logNode.write(deletePlan);
+    logNode.write(bwInsertPlan, false);
+    logNode.write(deletePlan, false);
 
     Thread.sleep(config.getForceWalPeriodInMs() + 1000);
     assertTrue(walFile.exists());

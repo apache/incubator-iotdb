@@ -24,8 +24,8 @@ import java.io.File;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
-import org.apache.iotdb.db.engine.merge.selector.MergeFileStrategy;
 import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
+import org.apache.iotdb.db.engine.merge.selector.MergeFileStrategy;
 import org.apache.iotdb.db.exception.LoadConfigurationException;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.service.TSServiceImpl;
@@ -157,6 +157,11 @@ public class IoTDBConfig {
   private double flushProportion = 0.4;
 
   /**
+   * Force flush proportion for system
+   */
+  private double forceFlushProportion = 0.6;
+
+  /**
    * Reject proportion for system
    */
   private double rejectProportion = 0.8;
@@ -215,6 +220,18 @@ public class IoTDBConfig {
    * is larger than this parameter, then the MetaData operation plan will be rejected by MManager.
    */
   private int mlogBufferSize = 1024 * 1024;
+
+  /**
+   * Whether to enable sliding memory table
+   */
+  private boolean enableSlidingMemTable = true;
+
+  /**
+   * Save the flushing memtable in the memory during the period, can help reduce the unseq ratio, Unit: millis.
+   * If flush_wait_time = 0 it means system will keep the flushing memtable during 0.1 * working memtable living time
+   * Manually setting this value may result in larger memory usage
+   */
+  private int flushWaitTime = 0;
 
   /**
    * default base dir, stores all IoTDB runtime files
@@ -1107,6 +1124,22 @@ public class IoTDBConfig {
     this.forceWalPeriodInMs = forceWalPeriodInMs;
   }
 
+  public boolean isEnableSlidingMemTable() {
+    return enableSlidingMemTable;
+  }
+
+  public void setEnableSlidingMemTable(boolean enableSlidingMemTable) {
+    this.enableSlidingMemTable = enableSlidingMemTable;
+  }
+
+  public int getFlushWaitTime() {
+    return flushWaitTime;
+  }
+
+  public void setFlushWaitTime(int flushWaitTime) {
+    this.flushWaitTime = flushWaitTime;
+  }
+
   public String getSystemDir() {
     return systemDir;
   }
@@ -1385,6 +1418,14 @@ public class IoTDBConfig {
 
   public void setFlushProportion(double flushProportion) {
     this.flushProportion = flushProportion;
+  }
+
+  public double getForceFlushProportion() {
+    return forceFlushProportion;
+  }
+
+  public void setForceFlushProportion(double forceFlushProportion) {
+    this.forceFlushProportion = forceFlushProportion;
   }
 
   public double getRejectProportion() {

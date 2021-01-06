@@ -112,16 +112,17 @@ public class LogReplayerTest {
           MultiFileLogNodeManager.getInstance().getNode(logNodePrefix + tsFile.getName());
       node.write(
           new InsertRowPlan(new PartialPath("root.sg.device0"), 100, "sensor0", TSDataType.INT64,
-              String.valueOf(0)));
+              String.valueOf(0)), false);
       node.write(
-          new InsertRowPlan(new PartialPath("root.sg.device0"), 2, "sensor1", TSDataType.INT64, String.valueOf(0)));
+          new InsertRowPlan(new PartialPath("root.sg.device0"), 2, "sensor1", TSDataType.INT64, String.valueOf(0)),
+          false);
       for (int i = 1; i < 5; i++) {
         node.write(new InsertRowPlan(new PartialPath("root.sg.device" + i), i, "sensor" + i, TSDataType.INT64,
-            String.valueOf(i)));
+            String.valueOf(i)), false);
       }
-      node.write(insertTablePlan());
+      node.write(insertTablePlan(), false);
       DeletePlan deletePlan = new DeletePlan(0, 200, new PartialPath("root.sg.device0.sensor0"));
-      node.write(deletePlan);
+      node.write(deletePlan, false);
       node.close();
 
       replayer.replayLogs();

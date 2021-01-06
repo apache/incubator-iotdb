@@ -155,14 +155,14 @@ public class UnseqTsFileRecoverTest {
         }
         InsertRowPlan insertRowPlan = new InsertRowPlan(new PartialPath("root.sg.device" + j), i, measurements, types,
             values);
-        node.write(insertRowPlan);
+        node.write(insertRowPlan, false);
       }
       node.notifyStartFlush();
     }
     InsertRowPlan insertRowPlan = new InsertRowPlan(new PartialPath("root.sg.device99"), 1, "sensor4", TSDataType.INT64, "4");
-    node.write(insertRowPlan);
+    node.write(insertRowPlan, false);
     insertRowPlan = new InsertRowPlan(new PartialPath("root.sg.device99"), 300, "sensor2", TSDataType.INT64, "2");
-    node.write(insertRowPlan);
+    node.write(insertRowPlan, false);
     node.close();
 
     resource = new TsFileResource(tsF);

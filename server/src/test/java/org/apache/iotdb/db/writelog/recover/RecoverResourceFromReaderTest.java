@@ -147,16 +147,16 @@ public class RecoverResourceFromReaderTest {
         }
         InsertRowPlan insertRowPlan = new InsertRowPlan(new PartialPath("root.sg.device" + j), i, measurements,
             types, values);
-        node.write(insertRowPlan);
+        node.write(insertRowPlan, false);
       }
       node.notifyStartFlush();
     }
     InsertRowPlan insertRowPlan = new InsertRowPlan(new PartialPath("root.sg.device99"), 1, new String[]{"sensor4"},
         new TSDataType[]{TSDataType.INT64}, new String[]{"4"});
-    node.write(insertRowPlan);
+    node.write(insertRowPlan, false);
     insertRowPlan = new InsertRowPlan(new PartialPath("root.sg.device99"), 300, new String[]{"sensor2"},
         new TSDataType[]{TSDataType.INT64}, new String[]{"2"});
-    node.write(insertRowPlan);
+    node.write(insertRowPlan, false);
     node.close();
 
     resource = new TsFileResource(tsF);

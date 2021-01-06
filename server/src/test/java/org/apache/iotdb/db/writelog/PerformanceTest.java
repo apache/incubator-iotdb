@@ -93,8 +93,8 @@ public class PerformanceTest {
           DeletePlan deletePlan = new DeletePlan(Long.MIN_VALUE, 50,
               new PartialPath("root.logTestDevice.s1"));
 
-          logNode.write(bwInsertPlan);
-          logNode.write(deletePlan);
+          logNode.write(bwInsertPlan, false);
+          logNode.write(deletePlan, false);
         }
         logNode.forceSync();
 
@@ -150,8 +150,8 @@ public class PerformanceTest {
           new String[]{"1.0", "15", "str", "false"});
       DeletePlan deletePlan = new DeletePlan(Long.MIN_VALUE, 50, new PartialPath("root.logTestDevice.s1"));
 
-      logNode.write(bwInsertPlan);
-      logNode.write(deletePlan);
+      logNode.write(bwInsertPlan, false);
+      logNode.write(deletePlan, false);
     }
     try {
       logNode.forceSync();
