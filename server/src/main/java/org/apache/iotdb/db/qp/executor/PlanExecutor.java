@@ -29,6 +29,7 @@ import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_FUNCTION_CLASS;
 import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_FUNCTION_NAME;
 import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_FUNCTION_TYPE;
 import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_ITEM;
+import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_KEY;
 import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_PRIVILEGE;
 import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_PROGRESS;
 import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_ROLE;
@@ -47,6 +48,7 @@ import static org.apache.iotdb.tsfile.common.constant.TsFileConstant.TSFILE_SUFF
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -65,6 +67,7 @@ import org.apache.iotdb.db.auth.authorizer.IAuthorizer;
 import org.apache.iotdb.db.auth.entity.PathPrivilege;
 import org.apache.iotdb.db.auth.entity.Role;
 import org.apache.iotdb.db.auth.entity.User;
+import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.StorageEngine;
@@ -145,6 +148,7 @@ import org.apache.iotdb.db.query.executor.QueryRouter;
 import org.apache.iotdb.db.query.udf.service.UDFRegistrationInformation;
 import org.apache.iotdb.db.query.udf.service.UDFRegistrationService;
 import org.apache.iotdb.db.service.IoTDB;
+import org.apache.iotdb.db.service.TSServiceImpl;
 import org.apache.iotdb.db.utils.AuthUtils;
 import org.apache.iotdb.db.utils.FileLoaderUtils;
 import org.apache.iotdb.db.utils.UpgradeUtils;
@@ -189,7 +193,7 @@ public class PlanExecutor implements IPlanExecutor {
   @Override
   public QueryDataSet processQuery(PhysicalPlan queryPlan, QueryContext context)
       throws IOException, StorageEngineException, QueryFilterOptimizationException,
-      QueryProcessException, MetadataException, InterruptedException {
+      QueryProcessException, MetadataException, InterruptedException, InvocationTargetException, IllegalAccessException {
     if (queryPlan instanceof QueryPlan) {
       return processDataQuery((QueryPlan) queryPlan, context);
     } else if (queryPlan instanceof AuthorPlan) {
@@ -426,7 +430,7 @@ public class PlanExecutor implements IPlanExecutor {
   }
 
   protected QueryDataSet processShowQuery(ShowPlan showPlan, QueryContext context)
-      throws QueryProcessException, MetadataException {
+      throws QueryProcessException, MetadataException, InvocationTargetException, IllegalAccessException {
     switch (showPlan.getShowContentType()) {
       case TTL:
         return processShowTTLQuery((ShowTTLPlan) showPlan);
@@ -456,10 +460,56 @@ public class PlanExecutor implements IPlanExecutor {
         return processShowMergeStatus();
       case FUNCTIONS:
         return processShowFunctions((ShowFunctionsPlan) showPlan);
+      case CONFIG:
+        return processShowConfig();
+      case COUNT_CLIENT:
+        return processCountClients();
       default:
         throw new QueryProcessException(String.format("Unrecognized show plan %s", showPlan));
     }
   }
+
+  private QueryDataSet processCountClients() {
+    return createSingleDataSet(COLUMN_COUNT, TSDataType.INT64,
+        TSServiceImpl.getSessionIdGenerator());
+  }
+
+  private QueryDataSet processShowConfig()
+      throws InvocationTargetException, IllegalAccessException {
+    ListDataSet listDataSet = new ListDataSet(
+        Arrays.asList(new PartialPath(COLUMN_KEY, false), new PartialPath(COLUMN_VALUE, false)),
+        Arrays.asList(TSDataType.TEXT, TSDataType.TEXT));
+    IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
+    Method[] methods = IoTDBConfig.class.getMethods();
+    for (Method method : methods) {
+      boolean needInvoke = false;
+      String methodName = method.getName();
+      if (methodName.startsWith("is")) {
+        methodName = methodName.replace("is", "").toLowerCase();
+        needInvoke = true;
+      } else if (methodName.startsWith("get")) {
+        methodName = methodName.replace("get", "").toLowerCase();
+        needInvoke = true;
+      }
+      if (needInvoke) {
+        RowRecord record = new RowRecord(0);
+        Field field = new Field(TSDataType.TEXT);
+        field.setBinaryV(new Binary(methodName));
+        record.addField(field);
+        Object value = method.invoke(config);
+        field = new Field(TSDataType.TEXT);
+        if(value != null) {
+          field.setBinaryV(new Binary(value.toString()));
+        } else {
+          field.setBinaryV(new Binary("null"));
+        }
+        record.addField(field);
+        listDataSet.putRecord(record);
+      }
+    }
+    return listDataSet;
+  }
+
 
   private QueryDataSet processCountNodes(CountPlan countPlan) throws MetadataException {
     int num = getNodesNumInGivenLevel(countPlan.getPath(), countPlan.getLevel());

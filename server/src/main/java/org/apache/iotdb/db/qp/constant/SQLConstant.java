@@ -167,6 +167,8 @@ public class SQLConstant {
 
   public static final int TOK_COUNT_DEVICES = 95;
   public static final int TOK_COUNT_STORAGE_GROUP = 96;
+  public static final int TOK_COUNT_CLIENT = 97;
+  public static final int TOK_CONFIG = 98;
 
   public static final Map<Integer, String> tokenSymbol = new HashMap<>();
   public static final Map<Integer, String> tokenNames = new HashMap<>();

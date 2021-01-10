@@ -18,7 +18,9 @@
  */
 package org.apache.iotdb.db.query.dataset;
 
+import java.beans.IntrospectionException;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
@@ -69,7 +71,7 @@ public class ListDataSetTest {
 
   @Test
   public void showStorageGroups()
-      throws QueryProcessException, TException, StorageEngineException, QueryFilterOptimizationException, MetadataException, IOException, InterruptedException, SQLException {
+      throws QueryProcessException, TException, StorageEngineException, QueryFilterOptimizationException, MetadataException, IOException, InterruptedException, SQLException, IllegalAccessException, IntrospectionException, InvocationTargetException {
     String[] results = new String [] {"0\troot.test", "0\troot.vehicle"};
     PhysicalPlan plan = processor
         .parseSQLToPhysicalPlan(
@@ -88,7 +90,7 @@ public class ListDataSetTest {
 
   @Test
   public void showChildPaths()
-      throws QueryProcessException, TException, StorageEngineException, QueryFilterOptimizationException, MetadataException, IOException, InterruptedException, SQLException {
+      throws QueryProcessException, TException, StorageEngineException, QueryFilterOptimizationException, MetadataException, IOException, InterruptedException, SQLException, IllegalAccessException, IntrospectionException, InvocationTargetException {
     String[] results = new String [] {"0\troot.test.d0", "0\troot.test.d1"};
     PhysicalPlan plan = processor
         .parseSQLToPhysicalPlan(
@@ -107,7 +109,7 @@ public class ListDataSetTest {
 
   @Test
   public void showDevices()
-      throws QueryProcessException, TException, StorageEngineException, QueryFilterOptimizationException, MetadataException, IOException, InterruptedException, SQLException {
+      throws QueryProcessException, TException, StorageEngineException, QueryFilterOptimizationException, MetadataException, IOException, InterruptedException, SQLException, IllegalAccessException, IntrospectionException, InvocationTargetException {
     String[] results = new String [] {"0\troot.test.d0", "0\troot.test.d1", "0\troot.vehicle.d0"};
     PhysicalPlan plan = processor
         .parseSQLToPhysicalPlan(
@@ -122,5 +124,17 @@ public class ListDataSetTest {
       Assert.assertEquals(results[i], record.toString());
       i++;
     }
+  }
+
+  @Test
+  public void showConf()
+      throws QueryProcessException, TException, StorageEngineException, QueryFilterOptimizationException, MetadataException, IOException, InterruptedException, SQLException, InvocationTargetException, IllegalAccessException {
+    PhysicalPlan plan = processor
+        .parseSQLToPhysicalPlan(
+            "show configuration");
+    QueryDataSet dataSet = queryExecutor
+        .processQuery(plan, EnvironmentUtils.TEST_QUERY_CONTEXT);
+    Assert.assertTrue(dataSet instanceof ListDataSet);
+    Assert.assertEquals("[key, value]",dataSet.getPaths().toString());
   }
 }

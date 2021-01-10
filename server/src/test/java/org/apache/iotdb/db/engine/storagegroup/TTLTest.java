@@ -27,6 +27,7 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -355,7 +356,7 @@ public class TTLTest {
   @Test
   public void testShowTTL()
       throws IOException, QueryProcessException, QueryFilterOptimizationException,
-      StorageEngineException, MetadataException, InterruptedException {
+      StorageEngineException, MetadataException, InterruptedException, InvocationTargetException, IllegalAccessException {
     IoTDB.metaManager.setTTL(new PartialPath(sg1), ttl);
 
     ShowTTLPlan plan = new ShowTTLPlan(Collections.emptyList());

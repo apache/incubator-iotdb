@@ -18,7 +18,9 @@
  */
 package org.apache.iotdb.db.query.dataset;
 
+import java.beans.IntrospectionException;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
@@ -68,7 +70,7 @@ public class SingleDataSetTest {
 
   @Test
   public void countDevice()
-      throws QueryProcessException, TException, StorageEngineException, QueryFilterOptimizationException, MetadataException, IOException, InterruptedException, SQLException {
+      throws QueryProcessException, TException, StorageEngineException, QueryFilterOptimizationException, MetadataException, IOException, InterruptedException, SQLException, IllegalAccessException, IntrospectionException, InvocationTargetException {
     PhysicalPlan plan = processor
         .parseSQLToPhysicalPlan(
             "count devices");
@@ -84,7 +86,7 @@ public class SingleDataSetTest {
 
   @Test
   public void countTimeSeries()
-      throws QueryProcessException, TException, StorageEngineException, QueryFilterOptimizationException, MetadataException, IOException, InterruptedException, SQLException {
+      throws QueryProcessException, TException, StorageEngineException, QueryFilterOptimizationException, MetadataException, IOException, InterruptedException, SQLException, IllegalAccessException, IntrospectionException, InvocationTargetException {
     PhysicalPlan plan = processor
         .parseSQLToPhysicalPlan(
             "count TimeSeries");
@@ -100,7 +102,7 @@ public class SingleDataSetTest {
 
   @Test
   public void countStorageGroup()
-      throws TException, StorageEngineException, QueryFilterOptimizationException, MetadataException, IOException, InterruptedException, SQLException, QueryProcessException {
+      throws TException, StorageEngineException, QueryFilterOptimizationException, MetadataException, IOException, InterruptedException, SQLException, QueryProcessException, IllegalAccessException, IntrospectionException, InvocationTargetException {
     PhysicalPlan plan = processor
         .parseSQLToPhysicalPlan(
             "count storage group");
@@ -116,7 +118,7 @@ public class SingleDataSetTest {
 
   @Test
   public void countNodes()
-      throws QueryProcessException, TException, StorageEngineException, QueryFilterOptimizationException, MetadataException, IOException, InterruptedException, SQLException {
+      throws QueryProcessException, TException, StorageEngineException, QueryFilterOptimizationException, MetadataException, IOException, InterruptedException, SQLException, IllegalAccessException, IntrospectionException, InvocationTargetException {
     PhysicalPlan plan = processor
         .parseSQLToPhysicalPlan(
             "count nodes root.test level=2");
@@ -128,6 +130,18 @@ public class SingleDataSetTest {
       RowRecord record = dataSet.next();
       Assert.assertEquals("0\t2", record.toString());
     }
+  }
+
+  @Test
+  public void countClient()
+      throws QueryProcessException, IOException, InvocationTargetException, QueryFilterOptimizationException, SQLException, InterruptedException, IllegalAccessException, MetadataException, StorageEngineException, TException {
+    PhysicalPlan plan = processor
+        .parseSQLToPhysicalPlan(
+            "count clients");
+    QueryDataSet dataSet = queryExecutor
+        .processQuery(plan, EnvironmentUtils.TEST_QUERY_CONTEXT);
+    Assert.assertTrue(dataSet instanceof SingleDataSet);
+    Assert.assertEquals("[count]", dataSet.getPaths().toString());
   }
 
 }

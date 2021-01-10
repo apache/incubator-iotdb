@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -174,6 +175,8 @@ public class UDTFAlignByTimeDataSetTest {
     } catch (StorageEngineException | QueryFilterOptimizationException | TException | MetadataException | QueryProcessException | SQLException | IOException | InterruptedException e) {
       e.printStackTrace();
       fail(e.toString());
+    } catch (IllegalAccessException | InvocationTargetException e) {
+      e.printStackTrace();
     }
   }
 
@@ -213,6 +216,8 @@ public class UDTFAlignByTimeDataSetTest {
     } catch (StorageEngineException | QueryFilterOptimizationException | TException | MetadataException | QueryProcessException | SQLException | IOException | InterruptedException e) {
       e.printStackTrace();
       fail(e.toString());
+    } catch (IllegalAccessException | InvocationTargetException e) {
+      e.printStackTrace();
     }
   }
 
@@ -263,6 +268,8 @@ public class UDTFAlignByTimeDataSetTest {
     } catch (StorageEngineException | QueryFilterOptimizationException | TException | MetadataException | QueryProcessException | SQLException | IOException | InterruptedException e) {
       e.printStackTrace();
       fail(e.toString());
+    } catch (IllegalAccessException | InvocationTargetException e) {
+      e.printStackTrace();
     }
   }
 
@@ -321,6 +328,8 @@ public class UDTFAlignByTimeDataSetTest {
     } catch (StorageEngineException | QueryFilterOptimizationException | TException | MetadataException | QueryProcessException | SQLException | IOException | InterruptedException e) {
       e.printStackTrace();
       fail(e.toString());
+    } catch (IllegalAccessException | InvocationTargetException e) {
+      e.printStackTrace();
     }
   }
 
@@ -370,6 +379,10 @@ public class UDTFAlignByTimeDataSetTest {
     } catch (StorageEngineException | QueryFilterOptimizationException | TException | MetadataException | QueryProcessException | SQLException | IOException | InterruptedException e) {
       e.printStackTrace();
       fail(e.toString());
+    } catch (IllegalAccessException e) {
+      e.printStackTrace();
+    } catch (InvocationTargetException e) {
+      e.printStackTrace();
     }
   }
 
@@ -422,6 +435,10 @@ public class UDTFAlignByTimeDataSetTest {
     } catch (StorageEngineException | QueryFilterOptimizationException | TException | MetadataException | QueryProcessException | SQLException | IOException | InterruptedException e) {
       e.printStackTrace();
       fail(e.toString());
+    } catch (IllegalAccessException e) {
+      e.printStackTrace();
+    } catch (InvocationTargetException e) {
+      e.printStackTrace();
     }
   }
 
@@ -483,6 +500,10 @@ public class UDTFAlignByTimeDataSetTest {
     } catch (StorageEngineException | QueryFilterOptimizationException | TException | MetadataException | QueryProcessException | SQLException | IOException | InterruptedException e) {
       e.printStackTrace();
       fail(e.toString());
+    } catch (IllegalAccessException e) {
+      e.printStackTrace();
+    } catch (InvocationTargetException e) {
+      e.printStackTrace();
     }
   }
 
@@ -532,6 +553,10 @@ public class UDTFAlignByTimeDataSetTest {
     } catch (StorageEngineException | QueryFilterOptimizationException | TException | MetadataException | QueryProcessException | SQLException | IOException | InterruptedException e) {
       e.printStackTrace();
       fail(e.toString());
+    } catch (IllegalAccessException e) {
+      e.printStackTrace();
+    } catch (InvocationTargetException e) {
+      e.printStackTrace();
     }
   }
 
@@ -573,6 +598,10 @@ public class UDTFAlignByTimeDataSetTest {
     } catch (StorageEngineException | QueryFilterOptimizationException | TException | MetadataException | QueryProcessException | SQLException | IOException | InterruptedException e) {
       e.printStackTrace();
       fail(e.toString());
+    } catch (IllegalAccessException e) {
+      e.printStackTrace();
+    } catch (InvocationTargetException e) {
+      e.printStackTrace();
     }
   }
 }

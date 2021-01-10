@@ -79,12 +79,14 @@ statement
     | SHOW CHILD PATHS prefixPath? #showChildPaths
     | SHOW DEVICES prefixPath? #showDevices
     | SHOW MERGE #showMergeStatus
+    | SHOW CONFIGURATION #showConf
     | TRACING ON #tracingOn
     | TRACING OFF #tracingOff
     | COUNT TIMESERIES prefixPath? (GROUP BY LEVEL OPERATOR_EQ INT)? #countTimeseries
     | COUNT DEVICES prefixPath? #countDevices
     | COUNT STORAGE GROUP prefixPath? #countStorageGroup
     | COUNT NODES prefixPath LEVEL OPERATOR_EQ INT #countNodes
+    | COUNT CLIENTS #countClients
     | LOAD CONFIGURATION (MINUS GLOBAL)? #loadConfigurationStatement
     | LOAD stringLiteral autoCreateSchema?#loadFiles
     | REMOVE stringLiteral #removeFile
@@ -527,6 +529,7 @@ nodeName
     | PARTITION
     | DESC
     | ASC
+    | CLIENTS
     ;
 
 nodeNameWithoutStar
@@ -639,6 +642,7 @@ nodeNameWithoutStar
     | PARTITION
     | DESC
     | ASC
+    | CLIENTS
     ;
 
 dataType
@@ -1228,6 +1232,10 @@ LIKE
 
 TOLERANCE
     : T O L E R A N C E
+    ;
+
+CLIENTS
+    : C L I E N T S
     ;
 //============================
 // End of the keywords list
