@@ -48,8 +48,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * MergeFileTask merges the merge temporary files with the seqFiles, either move the merged chunks
- * in the temp files into the seqFiles or move the unmerged chunks into the merge temp files,
+ * MergeFileTask merges the mergeUnseq temporary files with the seqFiles, either move the merged chunks
+ * in the temp files into the seqFiles or move the unmerged chunks into the mergeUnseq temp files,
  * depending on which one is the majority.
  */
 class MergeFileTask {
@@ -77,10 +77,10 @@ class MergeFileTask {
   }
 
   void mergeFiles() throws IOException {
-    // decide whether to write the unmerged chunks to the merge files or to move the merged chunks
+    // decide whether to write the unmerged chunks to the mergeUnseq files or to move the merged chunks
     // back to the origin seqFile's
     if (logger.isInfoEnabled()) {
-      logger.info("{} starts to merge {} files", taskName, unmergedFiles.size());
+      logger.info("{} starts to mergeUnseq {} files", taskName, unmergedFiles.size());
     }
     long startTime = System.currentTimeMillis();
     for (int i = 0; i < unmergedFiles.size(); i++) {

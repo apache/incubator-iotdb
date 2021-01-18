@@ -31,8 +31,8 @@ public interface ISyncFileManager {
 
   /**
    * Find out all closed and unmodified files, which means there has a .resource file and doesn't
-   * have a .mod file and .merge file. For these files, they will eventually generate a new tsfile
-   * file as the merge operation is executed and executed in subsequent synchronization tasks.
+   * have a .mod file and .mergeUnseq file. For these files, they will eventually generate a new tsfile
+   * file as the mergeUnseq operation is executed and executed in subsequent synchronization tasks.
    *
    * @param dataDir data directory
    */

@@ -63,8 +63,8 @@ public abstract class TsFileManagement {
   public volatile boolean isUnseqMerging = false;
   public volatile boolean isSeqMerging = false;
   /**
-   * This is the modification file of the result of the current merge. Because the merged file may
-   * be invisible at this moment, without this, deletion/update during merge could be lost.
+   * This is the modification file of the result of the current mergeUnseq. Because the merged file may
+   * be invisible at this moment, without this, deletion/update during mergeUnseq could be lost.
    */
   public ModificationFile mergingModification;
   private long mergeStartTime;
@@ -135,7 +135,7 @@ public abstract class TsFileManagement {
   public abstract void recover();
 
   /**
-   * fork current TsFile list (call this before merge)
+   * fork current TsFile list (call this before mergeUnseq)
    */
   public abstract void forkCurrentFileList(long timePartition) throws IOException;
 
@@ -198,7 +198,7 @@ public abstract class TsFileManagement {
       List<TsFileResource> unSeqMergeList, long dataTTL) {
     if (isUnseqMerging) {
       if (logger.isInfoEnabled()) {
-        logger.info("{} Last merge is ongoing, currently consumed time: {}ms", storageGroupName,
+        logger.info("{} Last mergeUnseq is ongoing, currently consumed time: {}ms", storageGroupName,
             (System.currentTimeMillis() - mergeStartTime));
       }
       return;
@@ -235,7 +235,7 @@ public abstract class TsFileManagement {
     try {
       List[] mergeFiles = fileSelector.select();
       if (mergeFiles.length == 0) {
-        logger.info("{} cannot select merge candidates under the budget {}", storageGroupName,
+        logger.info("{} cannot select mergeUnseq candidates under the budget {}", storageGroupName,
             budget);
         isUnseqMerging = false;
         return;
@@ -262,12 +262,12 @@ public abstract class TsFileManagement {
           storageGroupDir + File.separator + MERGING_MODIFICATION_FILE_NAME);
       MergeManager.getINSTANCE().submitMainTask(mergeTask);
       if (logger.isInfoEnabled()) {
-        logger.info("{} submits a merge task {}, merging {} seqFiles, {} unseqFiles",
+        logger.info("{} submits a mergeUnseq task {}, merging {} seqFiles, {} unseqFiles",
             storageGroupName, taskName, mergeFiles[0].size(), mergeFiles[1].size());
       }
 
     } catch (MergeException | IOException e) {
-      logger.error("{} cannot select file for merge", storageGroupName, e);
+      logger.error("{} cannot select file for mergeUnseq", storageGroupName, e);
     }
   }
 
@@ -284,7 +284,7 @@ public abstract class TsFileManagement {
   }
 
   /**
-   * acquire the write locks of the resource , the merge lock and the compaction lock
+   * acquire the write locks of the resource , the mergeUnseq lock and the compaction lock
    */
   private void doubleWriteLock(TsFileResource seqFile) {
     boolean fileLockGot;
@@ -308,7 +308,7 @@ public abstract class TsFileManagement {
   }
 
   /**
-   * release the write locks of the resource , the merge lock and the compaction lock
+   * release the write locks of the resource , the mergeUnseq lock and the compaction lock
    */
   private void doubleWriteUnlock(TsFileResource seqFile) {
     writeUnlock();
@@ -342,7 +342,7 @@ public abstract class TsFileManagement {
   @SuppressWarnings("squid:S1141")
   private void updateMergeModification(TsFileResource seqFile) {
     try {
-      // remove old modifications and write modifications generated during merge
+      // remove old modifications and write modifications generated during mergeUnseq
       seqFile.removeModFile();
       if (mergingModification != null) {
         for (Modification modification : mergingModification.getModifications()) {
@@ -356,7 +356,7 @@ public abstract class TsFileManagement {
         }
       }
     } catch (IOException e) {
-      logger.error("{} cannot clean the ModificationFile of {} after merge", storageGroupName,
+      logger.error("{} cannot clean the ModificationFile of {} after mergeUnseq", storageGroupName,
           seqFile.getTsFile(), e);
     }
   }
@@ -374,19 +374,19 @@ public abstract class TsFileManagement {
 
   public void mergeEndAction(List<TsFileResource> seqFiles, List<TsFileResource> unseqFiles,
       File mergeLog) {
-    logger.info("{} a merge task is ending...", storageGroupName);
+    logger.info("{} a mergeUnseq task is ending...", storageGroupName);
 
     if (unseqFiles.isEmpty()) {
-      // merge runtime exception arose, just end this merge
+      // mergeUnseq runtime exception arose, just end this mergeUnseq
       isUnseqMerging = false;
-      logger.info("{} a merge task abnormally ends", storageGroupName);
+      logger.info("{} a mergeUnseq task abnormally ends", storageGroupName);
       return;
     }
     removeUnseqFiles(unseqFiles);
 
     for (int i = 0; i < seqFiles.size(); i++) {
       TsFileResource seqFile = seqFiles.get(i);
-      // get both seqFile lock and merge lock
+      // get both seqFile lock and mergeUnseq lock
       doubleWriteLock(seqFile);
 
       try {
@@ -398,14 +398,21 @@ public abstract class TsFileManagement {
           Files.delete(mergeLog.toPath());
         }
       } catch (IOException e) {
-        logger.error("{} a merge task ends but cannot delete log {}", storageGroupName,
+        logger.error("{} a mergeUnseq task ends but cannot delete log {}", storageGroupName,
             mergeLog.toPath());
       } finally {
         doubleWriteUnlock(seqFile);
       }
     }
 
-    logger.info("{} a merge task ends", storageGroupName);
+    logger.info("{} a mergeUnseq task ends", storageGroupName);
+  }
+
+  public static int getMergeLevel(File file) {
+    String mergeLevelStr = file.getPath()
+        .substring(file.getPath().lastIndexOf(FILE_NAME_SEPARATOR) + 1)
+        .replaceAll(TSFILE_SUFFIX, "");
+    return Integer.parseInt(mergeLevelStr);
   }
 
   // ({systemTime}-{versionNum}-{mergeNum}.tsfile)

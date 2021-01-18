@@ -99,13 +99,13 @@ public class MergeMultiChunkTask {
 
   void mergeSeries() throws IOException {
     if (logger.isInfoEnabled()) {
-      logger.info("{} starts to merge {} series", taskName, unmergedSeries.size());
+      logger.info("{} starts to mergeUnseq {} series", taskName, unmergedSeries.size());
     }
     long startTime = System.currentTimeMillis();
     for (TsFileResource seqFile : resource.getSeqFiles()) {
       mergeContext.getUnmergedChunkStartTimes().put(seqFile, new HashMap<>());
     }
-    // merge each series and write data into each seqFile's corresponding temp merge file
+    // mergeUnseq each series and write data into each seqFile's corresponding temp mergeUnseq file
     List<List<PartialPath>> devicePaths = MergeUtils.splitPathsByDevice(unmergedSeries);
     for (List<PartialPath> pathList : devicePaths) {
       // TODO: use statistics of queries to better rearrange series
@@ -212,7 +212,7 @@ public class MergeMultiChunkTask {
       MeasurementSchema schema = resource.getSchema(path);
       mergeFileWriter.addSchema(path, schema);
     }
-    // merge unseq data with seq data in this file or small chunks in this file into a larger chunk
+    // mergeUnseq unseq data with seq data in this file or small chunks in this file into a larger chunk
     mergeFileWriter.startChunkGroup(deviceId);
     boolean dataWritten = mergeChunks(seqChunkMeta, isLastFile, fileSequenceReader, unseqReaders,
         mergeFileWriter, currTsFile);
@@ -293,7 +293,7 @@ public class MergeMultiChunkTask {
       }
     }
 
-    // add merge and unmerged chunk statistic
+    // add mergeUnseq and unmerged chunk statistic
     mergeContext.getMergedChunkCnt().compute(currFile, (tsFileResource, anInt) -> anInt == null ?
         mergedChunkNum.get() : anInt + mergedChunkNum.get());
     mergeContext.getUnmergedChunkCnt().compute(currFile, (tsFileResource, anInt) -> anInt == null ?
@@ -304,13 +304,13 @@ public class MergeMultiChunkTask {
 
 
   /**
-   * merge a sequence chunk SK
+   * mergeUnseq a sequence chunk SK
    * <p>
-   * 1. no need to write the chunk to .merge file when: isn't full merge & there isn't unclosed
+   * 1. no need to write the chunk to .mergeUnseq file when: isn't full mergeUnseq & there isn't unclosed
    * chunk before & SK is big enough & SK isn't overflowed & SK isn't modified
    * <p>
    * <p>
-   * 2. write SK to .merge.file without compressing when: is full merge & there isn't unclosed chunk
+   * 2. write SK to .mergeUnseq.file without compressing when: is full mergeUnseq & there isn't unclosed chunk
    * before & SK is big enough & SK isn't overflowed & SK isn't modified
    * <p>
    * 3. other cases: need to unCompress the chunk and write 3.1 SK isn't overflowed 3.2 SK is
@@ -326,7 +326,7 @@ public class MergeMultiChunkTask {
     boolean chunkModified = (currMeta.getDeleteIntervalList() != null &&
         !currMeta.getDeleteIntervalList().isEmpty());
 
-    // no need to write the chunk to .merge file
+    // no need to write the chunk to .mergeUnseq file
     if (!fullMerge && lastUnclosedChunkPoint == 0 && !chunkTooSmall && !chunkOverflowed
         && !chunkModified) {
       unmergedChunkNum.incrementAndGet();
@@ -335,7 +335,7 @@ public class MergeMultiChunkTask {
       return 0;
     }
 
-    // write SK to .merge.file without compressing
+    // write SK to .mergeUnseq.file without compressing
     if (fullMerge && lastUnclosedChunkPoint == 0 && !chunkTooSmall && !chunkOverflowed
         && !chunkModified) {
       synchronized (mergeFileWriter) {
@@ -352,7 +352,7 @@ public class MergeMultiChunkTask {
       unclosedChunkPoint += MergeUtils.writeChunkWithoutUnseq(chunk, chunkWriter);
       mergedChunkNum.incrementAndGet();
     } else {
-      // 3.2 SK is overflowed, uncompress sequence chunk and merge with unseq chunk, then write
+      // 3.2 SK is overflowed, uncompress sequence chunk and mergeUnseq with unseq chunk, then write
       unclosedChunkPoint += writeChunkWithUnseq(chunk, chunkWriter, unseqReader,
           currMeta.getEndTime(), pathIdx);
       mergedChunkNum.incrementAndGet();
@@ -402,7 +402,7 @@ public class MergeMultiChunkTask {
     int cnt = 0;
     for (int i = 0; i < batchData.length(); i++) {
       long time = batchData.getTimeByIndex(i);
-      // merge data in batch and data in unseqReader
+      // mergeUnseq data in batch and data in unseqReader
 
       boolean overwriteSeqPoint = false;
       // unseq point.time <= sequence point.time, write unseq point

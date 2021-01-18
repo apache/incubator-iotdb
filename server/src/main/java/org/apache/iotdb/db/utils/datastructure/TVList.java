@@ -445,7 +445,7 @@ public abstract class TVList {
     }
 
     // copy from sorting buffer to the original arrays so that they can be further sorted
-    // potential speed up: change the place of sorting buffer and origin data between merge
+    // potential speed up: change the place of sorting buffer and origin data between mergeUnseq
     // iterations
     for (int i = lo; i < hi; i++) {
       setFromSorted(i, i);

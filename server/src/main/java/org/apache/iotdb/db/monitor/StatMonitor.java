@@ -68,6 +68,10 @@ public class StatMonitor implements StatMonitorMBean, IService {
   List<PartialPath> globalSeries = new ArrayList<>(3);
   // monitor series value.   e.g. root.stats.global.TOTAL_POINTS -> value
   private List<Long> globalSeriesValue = new ArrayList<>(3);
+  // user write speed bytes/ms.
+  private double writeSpeed = 0;
+  // system mergeUnseq speed bytes/ms
+  private double mergeSpeed = 0;
 
   public StatMonitor() {
     if (config.isEnableStatMonitor()) {
@@ -195,6 +199,22 @@ public class StatMonitor implements StatMonitorMBean, IService {
   public void close() {
     config.setEnableStatMonitor(false);
     config.setEnableMonitorSeriesWrite(false);
+  }
+
+  public double getWriteSpeed() {
+    return writeSpeed;
+  }
+
+  public void setWriteSpeed(double writeSpeed) {
+    this.writeSpeed = writeSpeed;
+  }
+
+  public double getMergeSpeed() {
+    return mergeSpeed;
+  }
+
+  public void setMergeSpeed(double mergeSpeed) {
+    this.mergeSpeed = mergeSpeed;
   }
 
   // implements methods of StatMonitorMean from here

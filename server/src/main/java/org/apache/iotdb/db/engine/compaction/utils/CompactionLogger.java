@@ -32,8 +32,8 @@ public class CompactionLogger {
   public static final String TARGET_NAME = "target";
   public static final String SEQUENCE_NAME = "sequence";
   public static final String UNSEQUENCE_NAME = "unsequence";
-  public static final String FULL_MERGE = "full merge";
-  public static final String MERGE_FINISHED = "merge finished";
+  public static final String FULL_MERGE = "full mergeUnseq";
+  public static final String MERGE_FINISHED = "mergeUnseq finished";
 
   private BufferedWriter logStream;
 

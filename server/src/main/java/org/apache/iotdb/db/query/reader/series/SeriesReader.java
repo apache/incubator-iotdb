@@ -721,7 +721,7 @@ public class SeriesReader {
     }
 
     /*
-     * put all currently directly overlapped unseq page reader to merge reader
+     * put all currently directly overlapped unseq page reader to mergeUnseq reader
      */
     unpackAllOverlappedUnseqPageReadersToMergeReader(currentPageEndpointTime);
   }

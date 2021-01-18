@@ -51,7 +51,7 @@ public class MaxSeriesMergeFileSelector extends MaxFileMergeFileSelector {
   public List[] select() throws MergeException {
     long startTime = System.currentTimeMillis();
     try {
-      logger.info("Selecting merge candidates from {} seqFile, {} unseqFiles", resource.getSeqFiles().size(),
+      logger.info("Selecting mergeUnseq candidates from {} seqFile, {} unseqFiles", resource.getSeqFiles().size(),
           resource.getUnseqFiles().size());
 
       searchMaxSeriesNum();
@@ -59,15 +59,15 @@ public class MaxSeriesMergeFileSelector extends MaxFileMergeFileSelector {
       resource.setUnseqFiles(selectedUnseqFiles);
       resource.removeOutdatedSeqReaders();
       if (selectedUnseqFiles.isEmpty()) {
-        logger.info("No merge candidates are found");
+        logger.info("No mergeUnseq candidates are found");
         return new List[0];
       }
     } catch (IOException e) {
       throw new MergeException(e);
     }
     if (logger.isInfoEnabled()) {
-      logger.info("Selected merge candidates, {} seqFiles, {} unseqFiles, total memory cost {}, "
-              + "concurrent merge num {}" + "time consumption {}ms",
+      logger.info("Selected mergeUnseq candidates, {} seqFiles, {} unseqFiles, total memory cost {}, "
+              + "concurrent mergeUnseq num {}" + "time consumption {}ms",
           selectedSeqFiles.size(), selectedUnseqFiles.size(), totalCost, concurrentMergeNum,
           System.currentTimeMillis() - startTime);
     }

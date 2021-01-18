@@ -45,14 +45,14 @@ import org.slf4j.LoggerFactory;
 
 /**
  * MergeTask merges given seqFiles and unseqFiles into new ones, which basically consists of three
- * steps: 1. rewrite overflowed, modified or small-sized chunks into temp merge files
+ * steps: 1. rewrite overflowed, modified or small-sized chunks into temp mergeUnseq files
  *        2. move the merged chunks in the temp files back to the seqFiles or move the unmerged
  *        chunks in the seqFiles into temp files and replace the seqFiles with the temp files.
  *        3. remove unseqFiles
  */
 public class MergeTask implements Callable<Void> {
 
-  public static final String MERGE_SUFFIX = ".merge";
+  public static final String MERGE_SUFFIX = ".mergeUnseq";
   private static final Logger logger = LoggerFactory.getLogger(MergeTask.class);
 
   MergeResource resource;
@@ -99,7 +99,7 @@ public class MergeTask implements Callable<Void> {
     try {
       doMerge();
     } catch (Exception e) {
-      logger.error("Runtime exception in merge {}", taskName, e);
+      logger.error("Runtime exception in mergeUnseq {}", taskName, e);
       abort();
     }
     return null;
@@ -116,7 +116,7 @@ public class MergeTask implements Callable<Void> {
 
   private void doMerge() throws IOException, MetadataException {
     if (logger.isInfoEnabled()) {
-      logger.info("{} starts to merge {} seqFiles, {} unseqFiles", taskName,
+      logger.info("{} starts to mergeUnseq {} seqFiles, {} unseqFiles", taskName,
           resource.getSeqFiles().size(), resource.getUnseqFiles().size());
     }
     long startTime = System.currentTimeMillis();
@@ -200,7 +200,7 @@ public class MergeTask implements Callable<Void> {
 
     File logFile = new File(storageGroupSysDir, MergeLogger.MERGE_LOG_NAME);
     if (executeCallback) {
-      // make sure merge.log is not deleted until unseqFiles are cleared so that when system
+      // make sure mergeUnseq.log is not deleted until unseqFiles are cleared so that when system
       // reboots, the undeleted files can be deleted again
       callback.call(resource.getSeqFiles(), resource.getUnseqFiles(), logFile);
     } else {

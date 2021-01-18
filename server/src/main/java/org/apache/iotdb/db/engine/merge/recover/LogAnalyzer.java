@@ -50,24 +50,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * LogAnalyzer scans the "merge.log" file and recovers information such as files of last merge,
+ * LogAnalyzer scans the "mergeUnseq.log" file and recovers information such as files of last mergeUnseq,
  * the last available positions of each file and how many timeseries and files have been merged.
  * An example of merging 1 seqFile and 1 unseqFile containing 3 series is:
  * seqFiles
  * server/0seq.tsfile
  * unseqFiles
  * server/0unseq.tsfile
- * merge start
+ * mergeUnseq start
  * start root.mergeTest.device0.sensor0
- * server/0seq.tsfile.merge 338
+ * server/0seq.tsfile.mergeUnseq 338
  * end
  * start root.mergeTest.device0.sensor1
- * server/0seq.tsfile.merge 664
+ * server/0seq.tsfile.mergeUnseq 664
  * end
  * all ts end
  * server/0seq.tsfile 145462
  * end
- * merge end
+ * mergeUnseq end
  */
 public class LogAnalyzer {
 
@@ -96,9 +96,9 @@ public class LogAnalyzer {
   }
 
   /**
-   * Scan through the logs to find out where the last merge has stopped and store the information
+   * Scan through the logs to find out where the last mergeUnseq has stopped and store the information
    * about the progress in the fields.
-   * @return a Status indicating the completed stage of the last merge.
+   * @return a Status indicating the completed stage of the last mergeUnseq.
    * @throws IOException
    */
   public Status analyze() throws IOException, MetadataException {
@@ -197,7 +197,7 @@ public class LogAnalyzer {
         break;
       }
       if (currLine.contains(STR_START)) {
-        // a TS starts to merge
+        // a TS starts to mergeUnseq
         String[] splits = currLine.split(" ");
         for (int i = 1; i < splits.length; i ++) {
           try {
@@ -253,7 +253,7 @@ public class LogAnalyzer {
         fileLastPositions.put(currFile, lastPost);
       } else {
         if (currFile == null) {
-          throw new IOException("Illegal merge files");
+          throw new IOException("Illegal mergeUnseq files");
         }
         fileLastPositions.remove(currFile);
         String seqFilePath = currFile.getAbsolutePath().replace(MergeTask.MERGE_SUFFIX, "");
@@ -314,7 +314,7 @@ public class LogAnalyzer {
     MERGE_START,
     // all the timeseries have been merged(merged chunks are generated)
     ALL_TS_MERGED,
-    // all the merge files are merged with the origin files and the task is almost done
+    // all the mergeUnseq files are merged with the origin files and the task is almost done
     MERGE_END
   }
 }

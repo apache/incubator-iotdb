@@ -42,8 +42,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * RecoverMergeTask is an extension of MergeTask, which resumes the last merge progress by
- * scanning merge.log using LogAnalyzer and continue the unfinished merge.
+ * RecoverMergeTask is an extension of MergeTask, which resumes the last mergeUnseq progress by
+ * scanning mergeUnseq.log using LogAnalyzer and continue the unfinished mergeUnseq.
  */
 public class RecoverMergeTask extends MergeTask {
 
@@ -61,7 +61,7 @@ public class RecoverMergeTask extends MergeTask {
   public void recoverMerge(boolean continueMerge) throws IOException, MetadataException {
     File logFile = new File(storageGroupSysDir, MergeLogger.MERGE_LOG_NAME);
     if (!logFile.exists()) {
-      logger.info("{} no merge.log, merge recovery ends", taskName);
+      logger.info("{} no mergeUnseq.log, mergeUnseq recovery ends", taskName);
       return;
     }
     long startTime = System.currentTimeMillis();
@@ -69,7 +69,7 @@ public class RecoverMergeTask extends MergeTask {
     analyzer = new LogAnalyzer(resource, taskName, logFile, storageGroupName);
     Status status = analyzer.analyze();
     if (logger.isInfoEnabled()) {
-      logger.info("{} merge recovery status determined: {} after {}ms", taskName, status,
+      logger.info("{} mergeUnseq recovery status determined: {} after {}ms", taskName, status,
           (System.currentTimeMillis() - startTime));
     }
     switch (status) {
@@ -89,7 +89,7 @@ public class RecoverMergeTask extends MergeTask {
         throw new UnsupportedOperationException(taskName + " found unrecognized status " + status);
     }
     if (logger.isInfoEnabled()) {
-      logger.info("{} merge recovery ends after {}ms", taskName,
+      logger.info("{} mergeUnseq recovery ends after {}ms", taskName,
           (System.currentTimeMillis() - startTime));
     }
   }
@@ -123,7 +123,7 @@ public class RecoverMergeTask extends MergeTask {
       analyzer.setUnmergedFiles(null);
       mergeFileTask.mergeFiles();
     } else {
-      // NOTICE: although some of the seqFiles may have been truncated in last merge, we do not
+      // NOTICE: although some of the seqFiles may have been truncated in last mergeUnseq, we do not
       // recover them here because later TsFile recovery will recover them
       truncateFiles();
     }

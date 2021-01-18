@@ -28,7 +28,7 @@ import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.metadata.PartialPath;
 
 /**
- * MergeContext records the shared information between merge sub-tasks.
+ * MergeContext records the shared information between mergeUnseq sub-tasks.
  */
 public class MergeContext {
 

@@ -252,7 +252,7 @@ public class OpenIdAuthorizer extends BasicAuthorizer {
         if (user.checkPrivilege(path, privilegeId)) {
             return true;
         }
-        // merge the privileges of the roles of the user
+        // mergeUnseq the privileges of the roles of the user
         for (String roleName : user.getRoleList()) {
             Role role = roleManager.getRole(roleName);
             if (role.checkPrivilege(path, privilegeId)) {

@@ -78,7 +78,7 @@ public class MaxFileMergeFileSelector implements IMergeFileSelector {
   }
 
   /**
-   * Select merge candidates from seqFiles and unseqFiles under the given memoryBudget. This process
+   * Select mergeUnseq candidates from seqFiles and unseqFiles under the given memoryBudget. This process
    * iteratively adds the next unseqFile from unseqFiles and its overlapping seqFiles as newly-added
    * candidates and computes their estimated memory cost. If the current cost pluses the new cost is
    * still under the budget, accept the unseqFile and the seqFiles as candidates, otherwise go to
@@ -88,8 +88,8 @@ public class MaxFileMergeFileSelector implements IMergeFileSelector {
    * one actual data chunk (which is negligible) and writing the timeseries into a new file generate
    * metadata of the similar size, so the size of all seqFiles' metadata (generated when writing new
    * chunks) pluses the largest one (loaded when reading a timeseries from the seqFiles) is the
-   * total estimation of all seqFiles; for an unseqFile, since the merge reader may read all chunks
-   * of a series to perform a merge read, the whole file may be loaded into memory, so we use the
+   * total estimation of all seqFiles; for an unseqFile, since the mergeUnseq reader may read all chunks
+   * of a series to perform a mergeUnseq read, the whole file may be loaded into memory, so we use the
    * file's length as the maximum estimation. The tight estimation: based on the rough estimation,
    * we scan the file's metadata to count the number of chunks for each series, find the series
    * which have the most chunks in the file and use its chunk proportion to refine the rough
@@ -103,7 +103,7 @@ public class MaxFileMergeFileSelector implements IMergeFileSelector {
   public List[] select() throws MergeException {
     long startTime = System.currentTimeMillis();
     try {
-      logger.info("Selecting merge candidates from {} seqFile, {} unseqFiles",
+      logger.info("Selecting mergeUnseq candidates from {} seqFile, {} unseqFiles",
           resource.getSeqFiles().size(), resource.getUnseqFiles().size());
       select(false);
       if (selectedUnseqFiles.isEmpty()) {
@@ -113,14 +113,14 @@ public class MaxFileMergeFileSelector implements IMergeFileSelector {
       resource.setUnseqFiles(selectedUnseqFiles);
       resource.removeOutdatedSeqReaders();
       if (selectedUnseqFiles.isEmpty()) {
-        logger.info("No merge candidates are found");
+        logger.info("No mergeUnseq candidates are found");
         return new List[0];
       }
     } catch (IOException e) {
       throw new MergeException(e);
     }
     if (logger.isInfoEnabled()) {
-      logger.info("Selected merge candidates, {} seqFiles, {} unseqFiles, total memory cost {}, "
+      logger.info("Selected mergeUnseq candidates, {} seqFiles, {} unseqFiles, total memory cost {}, "
               + "time consumption {}ms",
           selectedSeqFiles.size(), selectedUnseqFiles.size(), totalCost,
           System.currentTimeMillis() - startTime);
@@ -227,10 +227,10 @@ public class MaxFileMergeFileSelector implements IMergeFileSelector {
           // the unseqFile overlaps current seqFile
           tmpSelectedSeqFiles.add(i);
           tmpSelectedNum++;
-          // the device of the unseqFile can not merge with later seqFiles
+          // the device of the unseqFile can not mergeUnseq with later seqFiles
           noMoreOverlap = true;
         } else if (unseqStartTime <= seqEndTime) {
-          // the device of the unseqFile may merge with later seqFiles
+          // the device of the unseqFile may mergeUnseq with later seqFiles
           // and the unseqFile overlaps current seqFile
           tmpSelectedSeqFiles.add(i);
           tmpSelectedNum++;

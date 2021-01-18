@@ -150,6 +150,6 @@ public class NoCompactionTsFileManagement extends TsFileManagement {
 
   @Override
   protected void merge(long timePartition) {
-    logger.info("{} no merge logic", storageGroupName);
+    logger.info("{} no mergeUnseq logic", storageGroupName);
   }
 }

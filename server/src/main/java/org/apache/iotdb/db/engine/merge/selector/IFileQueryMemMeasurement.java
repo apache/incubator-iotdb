@@ -25,7 +25,7 @@ import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 
 @FunctionalInterface
 /**
- * Estimate how much memory a file may occupy when being queried during merge.
+ * Estimate how much memory a file may occupy when being queried during mergeUnseq.
  * @param resource
  * @return
  * @throws IOException

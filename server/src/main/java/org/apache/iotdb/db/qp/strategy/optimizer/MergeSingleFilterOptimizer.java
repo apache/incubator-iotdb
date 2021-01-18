@@ -44,8 +44,8 @@ public class MergeSingleFilterOptimizer implements IFilterOptimizer {
   }
 
   /**
-   * merge and extract node with same Path recursively. <br> If a node has more than two children
-   * and some children has same paths, remove them from this node and merge them to a new single
+   * mergeUnseq and extract node with same Path recursively. <br> If a node has more than two children
+   * and some children has same paths, remove them from this node and mergeUnseq them to a new single
    * node, then add the new node to this children list.<br> if all recursive children of this node
    * have same seriesPath, set this node to single node, and return the same seriesPath, otherwise,
    * throw exception;
@@ -107,7 +107,7 @@ public class MergeSingleFilterOptimizer implements IFilterOptimizer {
         tempExtrNode = new ArrayList<>();
         tempExtrNode.add(children.get(firstNonSingleIndex));
       } else if (childPath.equals(tempPath)) {
-        // successive next single child with same seriesPath,merge it with previous children
+        // successive next single child with same seriesPath,mergeUnseq it with previous children
         // if not duplicate
         FilterOperator child = children.get(firstNonSingleIndex);
         if(!tempExtrNode.contains(child)){

@@ -29,7 +29,7 @@ public interface ExternalSortJobEngine {
 
   /**
    * Receive a list of ChunkReaderWraps and judge whether it should be processed using external
-   * sort. If needed, do the merge sort for all ChunkReaderWraps using specific strategy.
+   * sort. If needed, do the mergeUnseq sort for all ChunkReaderWraps using specific strategy.
    *
    * @param queryId query job id
    * @param chunkReaderWraps A list of ChunkReaderWrap
@@ -39,7 +39,7 @@ public interface ExternalSortJobEngine {
 
   /**
    * Receive a list of chunkReaderWraps and judge whether it should be processed using external
-   * sort. If needed, do the merge sort for all ChunkReaderWraps using specific strategy.
+   * sort. If needed, do the mergeUnseq sort for all ChunkReaderWraps using specific strategy.
    *
    * @param chunkReaderWraps A list of ChunkReaderWrap
    */

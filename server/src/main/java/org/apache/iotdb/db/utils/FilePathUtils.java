@@ -119,7 +119,7 @@ public class FilePathUtils {
   }
 
   /**
-   * merge the raw record by level, for example
+   * mergeUnseq the raw record by level, for example
    * raw record [timestamp, root.sg1.d1.s0, root.sg1.d1.s1, root.sg1.d2.s2], level=1
    * and newRecord data is [100, 1, 1, 1]
    * return [100, 3]

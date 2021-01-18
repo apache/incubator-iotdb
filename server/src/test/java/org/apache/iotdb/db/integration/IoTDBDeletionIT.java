@@ -122,7 +122,7 @@ public class IoTDBDeletionIT {
       statement.execute("merge");
       statement.execute("DELETE FROM root.vehicle.d0 WHERE time <= 15000");
 
-      // before merge completes
+      // before mergeUnseq completes
       try (ResultSet set = statement.executeQuery("SELECT * FROM root.vehicle.d0")) {
         int cnt = 0;
         while (set.next()) {
@@ -131,7 +131,7 @@ public class IoTDBDeletionIT {
         assertEquals(5000, cnt);
       }
 
-      // after merge completes
+      // after mergeUnseq completes
       try (ResultSet set = statement.executeQuery("SELECT * FROM root.vehicle.d0")) {
         int cnt = 0;
         while (set.next()) {

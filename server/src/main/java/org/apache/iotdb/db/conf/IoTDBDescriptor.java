@@ -296,6 +296,10 @@ public class IoTDBDescriptor {
           .getProperty("merge_page_point_number",
               Integer.toString(conf.getMergePagePointNumberThreshold()))));
 
+      conf.setQueryTimeInterval(Integer.parseInt(properties
+          .getProperty("query_time_interval",
+              Integer.toString(conf.getQueryTimeInterval()))));
+
       conf.setCompactionStrategy(CompactionStrategy.valueOf(properties
           .getProperty("compaction_strategy",
               conf.getCompactionStrategy().toString())));

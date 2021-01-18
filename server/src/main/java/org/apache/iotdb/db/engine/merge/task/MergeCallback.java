@@ -31,7 +31,7 @@ public interface MergeCallback {
    *    1. replace the modification files of seqFiles with merging modifications since the old
    *    modifications have been merged into the new files.
    *    2. remove the unseqFiles since they have been merged into new files.
-   *    3. remove the merge log file
+   *    3. remove the mergeUnseq log file
    *    4. exit merging status
    * @param seqFiles
    * @param unseqFiles

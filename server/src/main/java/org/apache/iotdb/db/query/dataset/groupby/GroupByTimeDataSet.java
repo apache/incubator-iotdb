@@ -62,7 +62,7 @@ public class GroupByTimeDataSet extends QueryDataSet {
     Map<Integer, String> pathIndex = new HashMap<>();
     Map<String, AggregateResult> finalPaths = FilePathUtils.getPathByLevel(plan, pathIndex);
 
-    // get all records from GroupByDataSet, then we merge every record
+    // get all records from GroupByDataSet, then we mergeUnseq every record
     if (logger.isDebugEnabled()) {
       logger.debug("only group by level, paths:" + groupByTimePlan.getPaths());
     }

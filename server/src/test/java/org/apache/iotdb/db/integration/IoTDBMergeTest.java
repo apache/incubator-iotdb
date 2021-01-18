@@ -81,7 +81,7 @@ public class IoTDBMergeTest {
       }
 
       for (int i = 0; i < 10; i++) {
-        logger.info("Running the {} round merge", i);
+        logger.info("Running the {} round mergeUnseq", i);
         for (int j = i * 10 + 1; j <= (i + 1) * 10; j++) {
           statement
               .execute(String.format("INSERT INTO root.mergeTest(timestamp,s1,s2,s3) VALUES (%d,%d,"

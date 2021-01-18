@@ -20,7 +20,7 @@
 /**
  * <p>
  * Package Sync is a suite tool that periodically uploads persistent tsfiles from the sender disk to
- * the receiver and loads them. With merge module, synchronous update of write, update and delete
+ * the receiver and loads them. With mergeUnseq module, synchronous update of write, update and delete
  * operations can be synced.
  *
  * On the sender side of the sync, the sync module is a separate process, independent of the IoTDB

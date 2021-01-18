@@ -87,9 +87,9 @@ public class DnfFilterOptimizer implements IFilterOptimizer {
   }
 
   /**
-   * used by getDnf. merge two conjunction filter operators into a conjunction.<br> conjunction
+   * used by getDnf. mergeUnseq two conjunction filter operators into a conjunction.<br> conjunction
    * operator consists of {@code FunctionOperator} and inner operator which token is KW_AND.<br>
-   * e.g. (a and b) merge (c) is (a and b and c)
+   * e.g. (a and b) mergeUnseq (c) is (a and b and c)
    *
    * @param operator1 To be merged operator
    * @param operator2 To be merged operator

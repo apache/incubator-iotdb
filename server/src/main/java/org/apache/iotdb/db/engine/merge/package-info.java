@@ -18,7 +18,7 @@
  */
 
 /**
- * Package merge contains classes supporting merge functionality (also compaction in other
+ * Package mergeUnseq contains classes supporting mergeUnseq functionality (also compaction in other
  * systems) that compacts several data files into a new one, making it more ordered and removing
  * duplicated data.
  */

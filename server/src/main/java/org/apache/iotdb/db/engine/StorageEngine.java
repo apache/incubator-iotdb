@@ -614,13 +614,13 @@ public class StorageEngine implements IService {
   }
 
   /**
-   * merge all storage groups.
+   * mergeUnseq all storage groups.
    *
    * @throws StorageEngineException StorageEngineException
    */
   public void mergeAll(boolean fullMerge) throws StorageEngineException {
     if (IoTDBDescriptor.getInstance().getConfig().isReadOnly()) {
-      throw new StorageEngineException("Current system mode is read only, does not support merge");
+      throw new StorageEngineException("Current system mode is read only, does not support mergeUnseq");
     }
     for (StorageGroupProcessor storageGroupProcessor : processorMap.values()) {
       storageGroupProcessor.merge(fullMerge);
@@ -842,7 +842,7 @@ public class StorageEngine implements IService {
   }
 
   /**
-   * get all merge lock of the storage group processor related to the query
+   * get all mergeUnseq lock of the storage group processor related to the query
    */
   public List<StorageGroupProcessor> mergeLock(List<PartialPath> pathList)
       throws StorageEngineException {
@@ -858,7 +858,7 @@ public class StorageEngine implements IService {
   }
 
   /**
-   * unlock all merge lock of the storage group processor related to the query
+   * unlock all mergeUnseq lock of the storage group processor related to the query
    */
   public void mergeUnLock(List<StorageGroupProcessor> list) {
     list.forEach(storageGroupProcessor -> storageGroupProcessor.getTsFileManagement().readUnLock());

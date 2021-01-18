@@ -348,9 +348,9 @@ public class IoTDBConfig {
   private int avgSeriesPointNumberThreshold = 100000;
 
   /**
-   * Work when tsfile_manage_strategy is level_strategy. When merge point number reaches this, merge
+   * Work when tsfile_manage_strategy is level_strategy. When mergeUnseq point number reaches this, mergeUnseq
    * the files to the last level.
-   * During a merge, if a chunk with less number of chunks than this parameter, the chunk will be
+   * During a mergeUnseq, if a chunk with less number of chunks than this parameter, the chunk will be
    * merged with its succeeding chunks even if it is not overflowed, until the merged chunks reach
    * this threshold and the new chunk will be flushed.
    */
@@ -358,9 +358,15 @@ public class IoTDBConfig {
 
   /**
    * Works when the compaction_strategy is LEVEL_COMPACTION.
-   * When point number of a page reaches this, use "append merge" instead of "deserialize merge".
+   * When point number of a page reaches this, use "append mergeUnseq" instead of "deserialize mergeUnseq".
    */
   private int mergePagePointNumberThreshold = 100;
+
+  /**
+   * Works when the compaction_strategy is DYNAMIC_COMPACTION.
+   * The time interval user wants to query from current timestamp, the default value is 1h.
+   */
+  private int queryTimeInterval = 100;
 
   /**
    * LEVEL_COMPACTION, NO_COMPACTION
@@ -368,8 +374,8 @@ public class IoTDBConfig {
   private CompactionStrategy compactionStrategy = CompactionStrategy.LEVEL_COMPACTION;
 
   /**
-   * Works when the compaction_strategy is LEVEL_COMPACTION.
-   * Whether to merge unseq files into seq files or not.
+   * Works when the compaction_strategy is LEVEL_COMPACTION, DYNAMIC_COMPACTION.
+   * Whether to mergeUnseq unseq files into seq files or not.
    */
   private boolean enableUnseqCompaction = true;
 
@@ -377,7 +383,7 @@ public class IoTDBConfig {
    * Works when the compaction_strategy is LEVEL_COMPACTION.
    * The max seq file num of each level.
    * When the num of files in one level exceeds this,
-   * the files in this level will merge to one and put to upper level.
+   * the files in this level will mergeUnseq to one and put to upper level.
    */
   private int seqFileNumInEachLevel = 6;
 
@@ -388,15 +394,15 @@ public class IoTDBConfig {
   private int seqLevelNum = 3;
 
   /**
-   * Works when compaction_strategy is LEVEL_COMPACTION.
+   * Works when compaction_strategy is LEVEL_COMPACTION, DYNAMIC_COMPACTION.
    * The max ujseq file num of each level.
    * When the num of files in one level exceeds this,
-   * the files in this level will merge to one and put to upper level.
+   * the files in this level will mergeUnseq to one and put to upper level.
    */
   private int unseqFileNumInEachLevel = 10;
 
   /**
-   * Works when the compaction_strategy is LEVEL_COMPACTION.
+   * Works when the compaction_strategy is LEVEL_COMPACTION, DYNAMIC_COMPACTION.
    * The max num of unseq level.
    */
   private int unseqLevelNum = 1;
@@ -429,7 +435,7 @@ public class IoTDBConfig {
   /**
    * Set true to enable statistics monitor service, false to disable statistics service.
    */
-  private boolean enableStatMonitor = false;
+  private boolean enableStatMonitor = true;
 
   /**
    * Set true to enable writing monitor time series.
@@ -598,7 +604,7 @@ public class IoTDBConfig {
   private TSEncoding defaultTextEncoding = TSEncoding.PLAIN;
 
   /**
-   * How much memory (in byte) can be used by a single merge task.
+   * How much memory (in byte) can be used by a single mergeUnseq task.
    */
   private long mergeMemoryBudget = (long) (Runtime.getRuntime().maxMemory() * 0.1);
 
@@ -608,17 +614,17 @@ public class IoTDBConfig {
   private int upgradeThreadNum = 1;
 
   /**
-   * How many threads will be set up to perform main merge tasks.
+   * How many threads will be set up to perform main mergeUnseq tasks.
    */
   private int mergeThreadNum = 1;
 
   /**
-   * How many threads will be set up to perform unseq merge chunk sub-tasks.
+   * How many threads will be set up to perform unseq mergeUnseq chunk sub-tasks.
    */
   private int mergeChunkSubThreadNum = 4;
 
   /**
-   * If one merge file selection runs for more than this time, it will be ended and its current
+   * If one mergeUnseq file selection runs for more than this time, it will be ended and its current
    * selection will be used as final selection. Unit: millis. When < 0, it means time is unbounded.
    */
   private long mergeFileSelectionTimeBudget = 30 * 1000L;
@@ -631,20 +637,20 @@ public class IoTDBConfig {
   private boolean continueMergeAfterReboot = false;
 
   /**
-   * A global merge will be performed each such interval, that is, each storage group will be merged
-   * (if proper merge candidates can be found). Unit: second.
+   * A global mergeUnseq will be performed each such interval, that is, each storage group will be merged
+   * (if proper mergeUnseq candidates can be found). Unit: second.
    */
   private long mergeIntervalSec = 0L;
 
   /**
-   * When set to true, all unseq merges becomes full merge (the whole SeqFiles are re-written despite how
-   * much they are overflowed). This may increase merge overhead depending on how much the SeqFiles
+   * When set to true, all unseq merges becomes full mergeUnseq (the whole SeqFiles are re-written despite how
+   * much they are overflowed). This may increase mergeUnseq overhead depending on how much the SeqFiles
    * are overflowed.
    */
   private boolean forceFullMerge = false;
 
   /**
-   * The limit of compaction merge can reach per second
+   * The limit of compaction mergeUnseq can reach per second
    */
   private int mergeWriteThroughputMbPerSec = 8;
 
@@ -1581,6 +1587,14 @@ public class IoTDBConfig {
 
   public void setMergePagePointNumberThreshold(int mergePagePointNumberThreshold) {
     this.mergePagePointNumberThreshold = mergePagePointNumberThreshold;
+  }
+
+  public int getQueryTimeInterval() {
+    return queryTimeInterval;
+  }
+
+  public void setQueryTimeInterval(int queryTimeInterval) {
+    this.queryTimeInterval = queryTimeInterval;
   }
 
   public MergeFileStrategy getMergeFileStrategy() {

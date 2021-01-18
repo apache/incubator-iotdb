@@ -107,10 +107,10 @@ public class MergeResource {
   }
 
   /**
-   * Construct a new or get an existing RestorableTsFileIOWriter of a merge temp file for a SeqFile.
-   * The path of the merge temp file will be the seqFile's + ".merge".
+   * Construct a new or get an existing RestorableTsFileIOWriter of a mergeUnseq temp file for a SeqFile.
+   * The path of the mergeUnseq temp file will be the seqFile's + ".mergeUnseq".
    *
-   * @return A RestorableTsFileIOWriter of a merge temp file for a SeqFile.
+   * @return A RestorableTsFileIOWriter of a mergeUnseq temp file for a SeqFile.
    */
   public RestorableTsFileIOWriter getMergeFileWriter(TsFileResource resource) throws IOException {
     RestorableTsFileIOWriter writer = fileWriterCache.get(resource);
@@ -194,7 +194,7 @@ public class MergeResource {
   }
 
   /**
-   * Remove and close the writer of the merge temp file of a SeqFile. The merge temp file is also
+   * Remove and close the writer of the mergeUnseq temp file of a SeqFile. The mergeUnseq temp file is also
    * deleted.
    *
    * @param tsFileResource the SeqFile

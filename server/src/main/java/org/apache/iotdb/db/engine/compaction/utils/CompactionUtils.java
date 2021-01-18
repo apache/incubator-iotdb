@@ -277,14 +277,14 @@ public class CompactionUtils {
             }
           }
           if (isPageEnoughLarge) {
-            logger.debug("{} [Compaction] page enough large, use append merge", storageGroup);
+            logger.debug("{} [Compaction] page enough large, use append mergeUnseq", storageGroup);
             // append page in chunks, so we do not have to deserialize a chunk
             maxVersion = writeByAppendMerge(maxVersion, device, compactionWriteRateLimiter,
                 entry, targetResource, writer, modificationCache);
           } else {
             logger
-                .debug("{} [Compaction] page too small, use deserialize merge", storageGroup);
-            // we have to deserialize chunks to merge pages
+                .debug("{} [Compaction] page too small, use deserialize mergeUnseq", storageGroup);
+            // we have to deserialize chunks to mergeUnseq pages
             maxVersion = writeByDeserializeMerge(maxVersion, device, compactionWriteRateLimiter,
                 entry, targetResource, writer, modificationCache);
           }

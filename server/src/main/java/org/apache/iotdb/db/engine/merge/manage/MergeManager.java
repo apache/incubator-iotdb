@@ -51,8 +51,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * MergeManager provides a ThreadPool to queue and run all merge tasks to restrain the total
- * resources occupied by merge and manages a Timer to periodically issue a global merge.
+ * MergeManager provides a ThreadPool to queue and run all mergeUnseq tasks to restrain the total
+ * resources occupied by mergeUnseq and manages a Timer to periodically issue a global mergeUnseq.
  */
 public class MergeManager implements IService, MergeManagerMBean {
 
@@ -248,7 +248,7 @@ public class MergeManager implements IService, MergeManagerMBean {
       StorageEngine.getInstance()
           .mergeAll(IoTDBDescriptor.getInstance().getConfig().isForceFullMerge());
     } catch (StorageEngineException e) {
-      logger.error("Cannot perform a global merge because", e);
+      logger.error("Cannot perform a global mergeUnseq because", e);
     }
   }
 
@@ -292,8 +292,8 @@ public class MergeManager implements IService, MergeManagerMBean {
   }
 
   /**
-   * @return 2 maps, the first map contains status of main merge tasks and the second map contains
-   * status of merge chunk heap tasks, both map use storage groups as keys and list of merge status
+   * @return 2 maps, the first map contains status of main mergeUnseq tasks and the second map contains
+   * status of mergeUnseq chunk heap tasks, both map use storage groups as keys and list of mergeUnseq status
    * as values.
    */
   public Map<String, List<TaskStatus>>[] collectTaskStatus() {
