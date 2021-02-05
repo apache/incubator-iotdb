@@ -26,6 +26,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.zip.CRC32;
 import org.apache.iotdb.db.qp.physical.PhysicalPlan;
 import org.slf4j.Logger;
@@ -38,12 +39,12 @@ import org.slf4j.LoggerFactory;
 public class SingleFileLogReader implements ILogReader {
 
   private static final Logger logger = LoggerFactory.getLogger(SingleFileLogReader.class);
-  public static final int LEAST_LOG_SIZE = 12; // size + checksum
+  // size + checksum
+  public static final int LEAST_LOG_SIZE = 12;
 
   private DataInputStream logStream;
   private String filepath;
 
-  private byte[] buffer;
   private CRC32 checkSummer = new CRC32();
 
   // used to indicate the position of the broken log
@@ -59,43 +60,48 @@ public class SingleFileLogReader implements ILogReader {
 
   @Override
   public boolean hasNext() {
-    try {
-      if (batchLogReader != null && batchLogReader.hasNext()) {
+
+    if (Objects.nonNull(batchLogReader) && batchLogReader.hasNext()) {
         return true;
-      }
+    }
 
-      if (logStream.available() < LEAST_LOG_SIZE) {
-        return false;
-      }
+    try {
+      while (logStream.available() > LEAST_LOG_SIZE) {
+        int logSize = logStream.readInt();
+        if (logSize <= 0) {
+          return false;
+        }
 
-      int logSize = logStream.readInt();
-      if (logSize <= 0) {
-        return false;
-      }
-      buffer = new byte[logSize];
+        byte[] buffer = new byte[logSize];
+        int readLen = logStream.read(buffer, 0, logSize);
+        if (readLen < logSize) {
+          throw new IOException("Reach eof");
+        }
 
-      int readLen = logStream.read(buffer, 0, logSize);
-      if (readLen < logSize) {
-        throw new IOException("Reach eof");
-      }
+        final long checkSum = logStream.readLong();
+        checkSummer.reset();
+        checkSummer.update(buffer, 0, logSize);
+        if (checkSummer.getValue() != checkSum) {
+          throw new IOException(String.format("The check sum of the No.%d log batch is incorrect! In "
+                  + "file: "
+                  + "%d Calculated: %d.", idx, checkSum, checkSummer.getValue()));
+        }
 
-      final long checkSum = logStream.readLong();
-      checkSummer.reset();
-      checkSummer.update(buffer, 0, logSize);
-      if (checkSummer.getValue() != checkSum) {
-        throw new IOException(String.format("The check sum of the No.%d log batch is incorrect! In "
-            + "file: "
-            + "%d Calculated: %d.", idx, checkSum, checkSummer.getValue()));
-      }
+        batchLogReader = new BatchLogReader(ByteBuffer.wrap(buffer));
+        if (batchLogReader.isFileCorrupted()) {
+          fileCorrupted = true;
+          return false;
+        }
 
-      batchLogReader = new BatchLogReader(ByteBuffer.wrap(buffer));
-      fileCorrupted = fileCorrupted || batchLogReader.isFileCorrupted();
+        if (batchLogReader.hasNext()) {
+          return true;
+        }
+      }
     } catch (Exception e) {
       logger.error("Cannot read more PhysicalPlans from {} because", filepath, e);
-      fileCorrupted = true;
-      return false;
     }
-    return true;
+
+    return false;
   }
 
   @Override
