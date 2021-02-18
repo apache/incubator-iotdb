@@ -1128,16 +1128,20 @@ public class TsFileSequenceReader implements AutoCloseable {
   /**
    * get ChunkMetaDatas of given path
    *
-   * @param path timeseries path
+   * @param path            timeseries path
+   * @param sortByStartTime whether the chunkMetadata list is sorted by startTime
    * @return List of ChunkMetaData
    */
-  public List<ChunkMetadata> getChunkMetadataList(Path path) throws IOException {
+  public List<ChunkMetadata> getChunkMetadataList(Path path, boolean sortByStartTime)
+      throws IOException {
     TimeseriesMetadata timeseriesMetaData = readTimeseriesMetadata(path);
     if (timeseriesMetaData == null) {
       return Collections.emptyList();
     }
     List<ChunkMetadata> chunkMetadataList = readChunkMetaDataList(timeseriesMetaData);
-    chunkMetadataList.sort(Comparator.comparingLong(ChunkMetadata::getStartTime));
+    if (sortByStartTime) {
+      chunkMetadataList.sort(Comparator.comparingLong(ChunkMetadata::getStartTime));
+    }
     return chunkMetadataList;
   }
 

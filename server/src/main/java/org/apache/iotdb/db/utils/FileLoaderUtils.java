@@ -165,7 +165,7 @@ public class FileLoaderUtils {
   public static List<ChunkMetadata> getChunkMetadataList(Path path, String filePath)
       throws IOException {
     TsFileSequenceReader tsFileReader = FileReaderManager.getInstance().get(filePath, true);
-    return tsFileReader.getChunkMetadataList(path);
+    return tsFileReader.getChunkMetadataList(path, true);
   }
 
   public static TsFileMetadata getTsFileMetadata(String filePath) throws IOException {

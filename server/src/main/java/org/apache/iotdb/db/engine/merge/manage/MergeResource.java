@@ -131,7 +131,7 @@ public class MergeResource {
   public List<ChunkMetadata> queryChunkMetadata(PartialPath path, TsFileResource seqFile)
       throws IOException {
     TsFileSequenceReader sequenceReader = getFileReader(seqFile);
-    return sequenceReader.getChunkMetadataList(path);
+    return sequenceReader.getChunkMetadataList(path, true);
   }
 
   /**

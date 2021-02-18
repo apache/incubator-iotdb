@@ -155,16 +155,17 @@ public class MetadataQuerierByFileImpl implements IMetadataQuerier {
 
   @Override
   public TSDataType getDataType(Path path) throws IOException {
-    if (tsFileReader.getChunkMetadataList(path) == null || tsFileReader.getChunkMetadataList(path)
+    if (tsFileReader.getChunkMetadataList(path,
+        true) == null || tsFileReader.getChunkMetadataList(path, true)
         .isEmpty()) {
       return null;
     }
-    return tsFileReader.getChunkMetadataList(path).get(0).getDataType();
+    return tsFileReader.getChunkMetadataList(path, true).get(0).getDataType();
 
   }
 
   private List<ChunkMetadata> loadChunkMetadata(Path path) throws IOException {
-    return tsFileReader.getChunkMetadataList(path);
+    return tsFileReader.getChunkMetadataList(path, true);
   }
 
 
