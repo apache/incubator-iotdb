@@ -159,12 +159,14 @@ public class VirtualStorageGroupManager {
       });
 
       threadList.add(recoverThread);
-      recoverThread.start();
     }
 
+    Thread thread;
     for (int i = 0; i < partitioner.getPartitionCount(); i++) {
       try {
-        threadList.get(i).join();
+        thread = threadList.get(i);
+        thread.start();
+        thread.join();
       } catch (InterruptedException e) {
         logger.error(
             "failed to recover storage group processor in " + storageGroupMNode.getFullPath()

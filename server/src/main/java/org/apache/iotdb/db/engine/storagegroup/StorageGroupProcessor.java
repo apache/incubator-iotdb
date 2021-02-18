@@ -364,12 +364,16 @@ public class StorageGroupProcessor {
     this.fileFlushPolicy = fileFlushPolicy;
 
     storageGroupSysDir = SystemFileFactory.INSTANCE.getFile(systemDir, virtualStorageGroupId);
+
+    boolean shouldDoRecovery = true;
     if (storageGroupSysDir.mkdirs()) {
       logger.info("Storage Group system Directory {} doesn't exist, create it",
           storageGroupSysDir.getPath());
+      shouldDoRecovery = false;
     } else if (!storageGroupSysDir.exists()) {
       logger.error("create Storage Group system Directory {} failed",
           storageGroupSysDir.getPath());
+      shouldDoRecovery = false;
     }
     this.tsFileManagement = IoTDBDescriptor.getInstance().getConfig().getCompactionStrategy()
         .getTsFileManagement(logicalStorageGroupName, storageGroupSysDir.getAbsolutePath());
@@ -377,7 +381,10 @@ public class StorageGroupProcessor {
     ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
     executorService.scheduleWithFixedDelay(this::trimTask, DEFAULT_POOL_TRIM_INTERVAL_MILLIS,
         DEFAULT_POOL_TRIM_INTERVAL_MILLIS, TimeUnit.MILLISECONDS);
-    recover();
+
+    if (shouldDoRecovery) {
+      recover();
+    }
 
   }
 

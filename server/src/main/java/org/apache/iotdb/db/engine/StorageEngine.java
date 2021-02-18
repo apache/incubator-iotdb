@@ -417,21 +417,13 @@ public class StorageEngine implements IService {
         .get(storageGroupMNode.getPartialPath());
     if (virtualStorageGroupManager == null) {
       // if finish recover
-      if (isAllSgReady.get()) {
-        waitAllSgReady(devicePath);
-        synchronized (storageGroupMNode) {
-          virtualStorageGroupManager = processorMap.get(storageGroupMNode.getPartialPath());
-          if (virtualStorageGroupManager == null) {
-            virtualStorageGroupManager = new VirtualStorageGroupManager();
-            processorMap.put(storageGroupMNode.getPartialPath(), virtualStorageGroupManager);
-          }
+      waitAllSgReady(devicePath);
+      synchronized (storageGroupMNode) {
+        virtualStorageGroupManager = processorMap.get(storageGroupMNode.getPartialPath());
+        if (virtualStorageGroupManager == null) {
+          virtualStorageGroupManager = new VirtualStorageGroupManager();
+          processorMap.put(storageGroupMNode.getPartialPath(), virtualStorageGroupManager);
         }
-      } else {
-        // not finished recover, refuse the request
-        throw new StorageEngineException(
-            "the sg " + storageGroupMNode.getPartialPath()
-                + " may not ready now, please wait and retry later",
-            TSStatusCode.STORAGE_GROUP_NOT_READY.getStatusCode());
       }
     }
     return virtualStorageGroupManager.getProcessor(devicePath, storageGroupMNode);
