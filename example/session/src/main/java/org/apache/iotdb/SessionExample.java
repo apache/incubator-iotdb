@@ -23,6 +23,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import org.apache.iotdb.rpc.BatchExecutionException;
 import org.apache.iotdb.rpc.IoTDBConnectionException;
 import org.apache.iotdb.rpc.StatementExecutionException;
@@ -48,7 +50,7 @@ public class SessionExample {
 
 
   public static void main(String[] args)
-      throws IoTDBConnectionException, StatementExecutionException {
+      throws IoTDBConnectionException, StatementExecutionException, ExecutionException, InterruptedException {
     session = new Session("127.0.0.1", 6667, "root", "root");
     session.open(false);
 
@@ -66,9 +68,13 @@ public class SessionExample {
     createTimeseries();
     createMultiTimeseries();
     insertRecord();
-    insertTablet();
-    insertTablets();
+    asyncInsertRecord();
     insertRecords();
+    asyncInsertRecords();
+    insertTablet();
+    asyncInsertTablet();
+    insertTablets();
+    asyncInsertTablets();
     nonQuery();
     query();
     queryWithTimeout();
@@ -181,6 +187,33 @@ public class SessionExample {
     }
   }
 
+  private static void asyncInsertRecord() throws IoTDBConnectionException, StatementExecutionException {
+    String deviceId = ROOT_SG1_D1;
+    List<String> measurements = new ArrayList<>();
+    List<TSDataType> types = new ArrayList<>();
+    measurements.add("s1");
+    measurements.add("s2");
+    measurements.add("s3");
+    types.add(TSDataType.INT64);
+    types.add(TSDataType.INT64);
+    types.add(TSDataType.INT64);
+    for (long time = 100; time < 200; time++) {
+      List<Object> values = new ArrayList<>();
+      values.add(1L);
+      values.add(2L);
+      values.add(3L);
+      session.asyncInsertRecord(deviceId, time, measurements, types, values,
+          1000, SessionExample::insertRecordAsyncCallback);
+    }
+  }
+
+  private static void insertRecordAsyncCallback(
+      String deviceId, long time, List<String> measurements, List<TSDataType> types,
+      List<Object> values, Throwable e) {
+    System.out.println("InsertRecord() failed, deviceId " + deviceId + " with " +
+        measurements.size() + " measurements, time " + time + ":" + e.getMessage());
+  }
+
   private static void insertStrRecord()
       throws IoTDBConnectionException, StatementExecutionException {
     String deviceId = ROOT_SG1_D1;
@@ -250,8 +283,53 @@ public class SessionExample {
         timestamps.clear();
       }
     }
-
     session.insertRecords(deviceIds, timestamps, measurementsList, typesList, valuesList);
+  }
+
+  private static void asyncInsertRecords() throws IoTDBConnectionException, StatementExecutionException {
+    String deviceId = ROOT_SG1_D1;
+    List<String> measurements = new ArrayList<>();
+    measurements.add("s1");
+    measurements.add("s2");
+    measurements.add("s3");
+    List<String> deviceIds = new ArrayList<>();
+    List<List<String>> measurementsList = new ArrayList<>();
+    List<List<Object>> valuesList = new ArrayList<>();
+    List<Long> timestamps = new ArrayList<>();
+    List<List<TSDataType>> typesList = new ArrayList<>();
+    for (long time = 500; time < 1000; time++) {
+      List<Object> values = new ArrayList<>();
+      List<TSDataType> types = new ArrayList<>();
+      values.add(1L);
+      values.add(2L);
+      values.add(3L);
+      types.add(TSDataType.INT64);
+      types.add(TSDataType.INT64);
+      types.add(TSDataType.INT64);
+
+      deviceIds.add(deviceId);
+      measurementsList.add(measurements);
+      valuesList.add(values);
+      typesList.add(types);
+      timestamps.add(time);
+      if (time != 0 && time % 100 == 0) {
+        session.asyncInsertRecords(deviceIds, timestamps, measurementsList,
+            typesList, valuesList,1000, null);
+        deviceIds.clear();
+        measurementsList.clear();
+        valuesList.clear();
+        timestamps.clear();
+      }
+    }
+
+    session.asyncInsertRecords(deviceIds, timestamps, measurementsList, typesList,
+        valuesList, 1000, SessionExample::insertRecordsAsyncCallback);
+  }
+
+  private static void insertRecordsAsyncCallback(
+      List<String> deviceIds, List<Long> times, List<List<String>> measurementsList,
+      List<List<TSDataType>> typesList, List<List<Object>> valuesList, Throwable e) {
+    System.out.println("InsertRecords() failed when inserting " + times.size() + " records:" + e.getMessage());
   }
 
   /**
@@ -322,7 +400,32 @@ public class SessionExample {
     }
   }
 
-  private static void insertTablets() throws IoTDBConnectionException, StatementExecutionException {
+  private static void asyncInsertTablet() {
+    List<MeasurementSchema> schemaList = new ArrayList<>();
+    schemaList.add(new MeasurementSchema("s1", TSDataType.INT64));
+    schemaList.add(new MeasurementSchema("s2", TSDataType.INT64));
+    schemaList.add(new MeasurementSchema("s3", TSDataType.INT64));
+
+    Tablet tablet = new Tablet(ROOT_SG1_D1, schemaList, 100);
+
+    long[] timestamps = tablet.timestamps;
+    Object[] values = tablet.values;
+    for (long time = 100; time < 200; time++) {
+      int row = tablet.rowSize++;
+      timestamps[row] = time;
+      for (int i = 0; i < 3; i++) {
+        long[] sensor = (long[]) values[i];
+        sensor[row] = i;
+      }
+      if (tablet.rowSize == tablet.getMaxRowNumber()) {
+        session.asyncInsertTablet(tablet, true, 1000, null);
+        tablet.reset();
+      }
+    }
+  }
+
+  private static void insertTablets() throws IoTDBConnectionException, StatementExecutionException,
+      ExecutionException, InterruptedException {
     // The schema of measurements of one device
     // only measurementId and data type in MeasurementSchema take effects in Tablet
     List<MeasurementSchema> schemaList = new ArrayList<>();
@@ -407,6 +510,54 @@ public class SessionExample {
       tablet1.reset();
       tablet2.reset();
       tablet3.reset();
+    }
+  }
+
+  private static void asyncInsertTablets() throws ExecutionException, InterruptedException {
+    List<MeasurementSchema> schemaList = new ArrayList<>();
+    schemaList.add(new MeasurementSchema("s1", TSDataType.INT64));
+    schemaList.add(new MeasurementSchema("s2", TSDataType.INT64));
+    schemaList.add(new MeasurementSchema("s3", TSDataType.INT64));
+
+    Tablet tablet1 = new Tablet(ROOT_SG1_D1, schemaList, 100);
+    Tablet tablet2 = new Tablet("root.sg1.d2", schemaList, 100);
+    Tablet tablet3 = new Tablet("root.sg1.d3", schemaList, 100);
+
+    Map<String, Tablet> tabletMap = new HashMap<>();
+    tabletMap.put(ROOT_SG1_D1, tablet1);
+    tabletMap.put("root.sg1.d2", tablet2);
+    tabletMap.put("root.sg1.d3", tablet3);
+    long[] timestamps1 = tablet1.timestamps;
+    Object[] values1 = tablet1.values;
+    long[] timestamps2 = tablet2.timestamps;
+    Object[] values2 = tablet2.values;
+    long[] timestamps3 = tablet3.timestamps;
+    Object[] values3 = tablet3.values;
+
+    for (long time = 100; time < 200; time++) {
+      int row1 = tablet1.rowSize++;
+      int row2 = tablet2.rowSize++;
+      int row3 = tablet3.rowSize++;
+      timestamps1[row1] = time;
+      timestamps2[row2] = time;
+      timestamps3[row3] = time;
+      for (int i = 0; i < 3; i++) {
+        long[] sensor1 = (long[]) values1[i];
+        sensor1[row1] = i;
+        long[] sensor2 = (long[]) values2[i];
+        sensor2[row2] = i;
+        long[] sensor3 = (long[]) values3[i];
+        sensor3[row3] = i;
+      }
+      if (tablet1.rowSize == tablet1.getMaxRowNumber()) {
+        Future<Integer> future =
+            session.asyncInsertTablets(tabletMap, true, 1000, null);
+        future.get();
+
+        tablet1.reset();
+        tablet2.reset();
+        tablet3.reset();
+      }
     }
   }
 

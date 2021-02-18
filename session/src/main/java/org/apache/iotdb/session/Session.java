@@ -27,6 +27,10 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.BiConsumer;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.iotdb.rpc.BatchExecutionException;
@@ -45,6 +49,7 @@ import org.apache.iotdb.service.rpc.thrift.TSInsertStringRecordsReq;
 import org.apache.iotdb.service.rpc.thrift.TSInsertTabletReq;
 import org.apache.iotdb.service.rpc.thrift.TSInsertTabletsReq;
 import org.apache.iotdb.service.rpc.thrift.TSProtocolVersion;
+import org.apache.iotdb.session.async.AsyncSession;
 import org.apache.iotdb.tsfile.common.conf.TSFileConfig;
 import org.apache.iotdb.tsfile.exception.write.UnSupportedDataTypeException;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
@@ -58,7 +63,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @SuppressWarnings({"java:S107", "java:S1135"}) // need enough parameters, ignore todos
-public class Session {
+public class Session implements IInsertSession {
 
   private static final Logger logger = LoggerFactory.getLogger(Session.class);
   protected static final TSProtocolVersion protocolVersion = TSProtocolVersion.IOTDB_SERVICE_PROTOCOL_V3;
@@ -482,6 +487,25 @@ public class Session {
    * insert data in one row, if you want improve your performance, please use insertInBatch method
    * or insertBatch method
    *
+   * @param timeout  asynchronous call timeout in millisecond
+   * @param callback user provided callback if failed, set to null if user does not specify.
+   * @see Session#insertRecords(List, List, List, List, List)
+   * @see Session#insertTablet(Tablet)
+   */
+  public CompletableFuture<Integer> asyncInsertRecord(
+          String deviceId, long time, List<String> measurements, List<TSDataType> types,
+          List<Object> values, long timeout,
+          SixInputConsumer<String, Long, List<String>, List<TSDataType>, List<Object>, Throwable> callback) {
+    ExecutorService singleThreadPool = Executors.newFixedThreadPool(1);
+    AsyncSession asyncHandler = new AsyncSession(singleThreadPool);
+    return asyncHandler.doAsyncInsertRecord(deviceId, time, measurements, types,
+            values, timeout, this, callback);
+  }
+
+  /**
+   * insert data in one row, if you want improve your performance, please use insertInBatch method
+   * or insertBatch method
+   *
    * @see Session#insertRecords(List, List, List, List, List)
    * @see Session#insertTablet(Tablet)
    */
@@ -507,6 +531,24 @@ public class Session {
   }
 
   /**
+   * insert data in one row asynchronously. if you want improve your performance,
+   * please use insertRecords method or insertTablet method
+   *
+   * @param timeout  asynchronous call timeout in millisecond
+   * @param callback user provided callback if failed, set to null if user does not specify.
+   * @see Session#insertRecords(List, List, List, List, List)
+   * @see Session#insertTablet(Tablet)
+   */
+  public CompletableFuture<Integer> asyncInsertRecord(
+          String deviceId, long time, List<String> measurements, List<String> values, long timeout,
+          FiveInputConsumer<String, Long, List<String>, List<String>, Throwable> callback) {
+    ExecutorService singleThreadPool = Executors.newFixedThreadPool(1);
+    AsyncSession asyncHandler = new AsyncSession(singleThreadPool);
+    return asyncHandler.doAsyncInsertRecord(deviceId, time, measurements, values,
+            timeout, this, callback);
+  }
+
+  /**
    * insert data in one row, if you want improve your performance, please use insertInBatch method
    * or insertBatch method
    *
@@ -528,6 +570,27 @@ public class Session {
     request.setMeasurements(measurements);
     request.setValues(values);
     return request;
+  }
+
+  /**
+   * Insert multiple rows in asynchronous way. This method is just like jdbc executeBatch,
+   * we pack some insert request in batch and send them to server. If you want improve your
+   * performance, please see insertTablet method.
+   * <p>
+   * Each row is independent, which could have different deviceId, time, number of measurements
+   *
+   * @param timeout  asynchronous call timeout in millisecond
+   * @param callback user provided callback if failed, set to null if user does not specify.
+   * @see Session#insertTablet(Tablet)
+   */
+  public CompletableFuture<Integer> asyncInsertRecords(
+          List<String> deviceIds, List<Long> times, List<List<String>> measurementsList,
+          List<List<String>> valuesList, long timeout,
+          FiveInputConsumer<List<String>, List<Long>, List<List<String>>, List<List<String>>, Throwable> callback) {
+    ExecutorService singleThreadPool = Executors.newFixedThreadPool(1);
+    AsyncSession asyncHandler = new AsyncSession(singleThreadPool);
+    return asyncHandler.doAsyncInsertRecords(deviceIds, times, measurementsList,
+            valuesList, timeout, this, callback);
   }
 
   /**
@@ -605,6 +668,27 @@ public class Session {
     request.addToTimestamps(time);
     request.addToMeasurementsList(measurements);
     request.addToValuesList(values);
+  }
+
+  /**
+   * Insert multiple rows in asynchronous way. This method is just like jdbc executeBatch,
+   * we pack some insert request in batch and send them to server. If you want improve your
+   * performance, please see insertTablet method.
+   * <p>
+   * Each row is independent, which could have different deviceId, time, number of measurements
+   *
+   * @param timeout  asynchronous call timeout in millisecond
+   * @param callback user provided callback if failed, set to null if user does not specify.
+   * @see Session#insertTablet(Tablet)
+   */
+  public CompletableFuture<Integer> asyncInsertRecords(
+      List<String> deviceIds, List<Long> times, List<List<String>> measurementsList,
+      List<List<TSDataType>> typesList, List<List<Object>> valuesList, long timeout,
+      SixInputConsumer<List<String>, List<Long>, List<List<String>>, List<List<TSDataType>>, List<List<Object>>, Throwable> callback) {
+    ExecutorService singleThreadPool = Executors.newFixedThreadPool(1);
+    AsyncSession asyncHandler = new AsyncSession(singleThreadPool);
+    return asyncHandler.doAsyncInsertRecords(deviceIds, times, measurementsList,
+        typesList, valuesList, timeout, this, callback);
   }
 
   /**
@@ -864,6 +948,21 @@ public class Session {
   }
 
   /**
+   * insert a Tablet asynchronously
+   * @param tablet data batch
+   * @param sorted whether times in Tablet are in ascending order
+   * @param timeout asynchronous call timeout in millisecond
+   * @param callback user provided callback if failed, set to null if user does not specify.
+   * @return async CompletableFuture
+   */
+  public CompletableFuture<Integer> asyncInsertTablet(Tablet tablet, boolean sorted, long timeout,
+                                                      BiConsumer<Tablet, Throwable> callback) {
+    ExecutorService singleThreadPool = Executors.newFixedThreadPool(1);
+    AsyncSession asyncHandler = new AsyncSession(singleThreadPool);
+    return asyncHandler.doAsyncInsertTablet(tablet, sorted, timeout, this, callback);
+  }
+
+  /**
    * insert the data of several deivces. Given a deivce, for each timestamp, the number of
    * measurements is the same.
    * <p>
@@ -896,6 +995,22 @@ public class Session {
         // ignored
       }
     }
+  }
+
+  /**
+   * insert the data of several devices asynchronously. Given a device, for each timestamp,
+   * the number of measurements is the same.
+   *
+   * @param tablets  data batch in multiple device
+   * @param sorted   whether times in each Tablet are in ascending order
+   * @param timeout  asynchronous call timeout in millisecond
+   * @param callback user provided callback if failed, set to null if user does not specify.
+   */
+  public CompletableFuture<Integer> asyncInsertTablets(Map<String, Tablet> tablets, boolean sorted,
+                                                       long timeout, BiConsumer<Map<String, Tablet>, Throwable> callback) {
+    ExecutorService singleThreadPool = Executors.newFixedThreadPool(1);
+    AsyncSession asyncHandler = new AsyncSession(singleThreadPool);
+    return asyncHandler.doAsyncInsertTablets(tablets, sorted, timeout, this, callback);
   }
 
   private void insertTabletsWithLeaderCache(Map<String, Tablet> tablets, boolean sorted) throws

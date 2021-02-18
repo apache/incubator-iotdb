@@ -33,6 +33,8 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
@@ -500,6 +502,101 @@ public class IoTDBSessionComplexIT {
     session.close();
   }
 
+  @Test
+  public void testAsynchronousInsert() throws ClassNotFoundException, SQLException,
+      IoTDBConnectionException, StatementExecutionException, ExecutionException, InterruptedException {
+    session = new Session("127.0.0.1", 6667, "root", "root");
+    try {
+      session.open();
+    } catch (IoTDBConnectionException e) {
+      e.printStackTrace();
+    }
+    List<String> standard = Arrays.asList(
+        "Time", "root.sg1.d1.s1", "root.sg1.d1.s2", "root.sg1.d1.s3", "root.sg1.d2.s1",
+        "root.sg1.d2.s2", "root.sg1.d2.s3");
+    List<String> standardAfterDelete = Arrays.asList(
+        "Time", "root.sg1.d1.s2", "root.sg1.d1.s3", "root.sg1.d2.s1", "root.sg1.d2.s2",
+        "root.sg1.d2.s3");
+
+    session.setStorageGroup("root.sg1");
+
+    createTimeseries();
+
+    asyncInsertRecord("root.sg1.d1", 0, 100, 1000);
+
+    // sql test
+    insertViaSQL();
+
+    queryByDevice("root.sg1.d1");
+
+    deleteData();
+
+    queryAll(standard);
+
+    deleteTimeseries();
+
+    queryAll(standardAfterDelete);
+
+    asyncInsertRecords("root.sg1.d2", 0, 500, 100, 1000);
+
+    queryByDevice("root.sg1.d2");
+
+    // special characters
+    session.createTimeseries("root.sg1.d1.1_2", TSDataType.INT64, TSEncoding.RLE,
+        CompressionType.SNAPPY);
+    session.createTimeseries("root.sg1.d1.\"1.2.3\"", TSDataType.INT64, TSEncoding.RLE,
+        CompressionType.SNAPPY);
+    session.createTimeseries("root.sg1.d1.\"1.2.4\"", TSDataType.INT64, TSEncoding.RLE,
+        CompressionType.SNAPPY);
+
+    session.setStorageGroup("root.1");
+    session.createTimeseries("root.1.2.3", TSDataType.INT64, TSEncoding.RLE,
+        CompressionType.SNAPPY);
+
+    // Add another storage group to test the deletion of storage group
+    session.setStorageGroup("root.sg2");
+    session.createTimeseries("root.sg2.d1.s1", TSDataType.INT64, TSEncoding.RLE,
+        CompressionType.SNAPPY);
+
+    deleteStorageGroupTest();
+
+    // set storage group but do not create timeseries
+    session.setStorageGroup("root.sg3");
+    asyncInsertTablet("root.sg3.d1", 0, 100, 100, 1000);
+
+    // create timeseries but do not set storage group
+    session.createTimeseries("root.sg4.d1.s1", TSDataType.INT64, TSEncoding.RLE,
+        CompressionType.SNAPPY);
+    session.createTimeseries("root.sg4.d1.s2", TSDataType.INT64, TSEncoding.RLE,
+        CompressionType.SNAPPY);
+    session.createTimeseries("root.sg4.d1.s3", TSDataType.INT64, TSEncoding.RLE,
+        CompressionType.SNAPPY);
+    asyncInsertTablet("root.sg4.d1", 0, 100, 100, 1000);
+
+    // do not set storage group and create timeseries
+    asyncInsertTablet("root.sg5.d1", 0, 100, 100, 1000);
+
+    session.close();
+  }
+
+  @Test
+  public void testAsynchronousInsertTimeout()
+      throws StatementExecutionException, IoTDBConnectionException, ExecutionException, InterruptedException {
+    session = new Session("127.0.0.1", 6667, "root", "root");
+    try {
+      session.open();
+    } catch (IoTDBConnectionException e) {
+      e.printStackTrace();
+    }
+
+    session.setStorageGroup("root.sg1");
+
+    createTimeseries();
+
+    int result = asyncInsertRecordsTimeout("root.sg1.d1", 0, 1000, 5000);
+    Assert.assertEquals(0, result);
+  }
+
   private void createTimeseries() throws StatementExecutionException, IoTDBConnectionException {
     session.createTimeseries("root.sg1.d1.s1", TSDataType.INT64, TSEncoding.RLE,
         CompressionType.SNAPPY);
@@ -552,6 +649,109 @@ public class IoTDBSessionComplexIT {
     }
 
     session.insertRecords(deviceIds, timestamps, measurementsList, typesList, valuesList);
+  }
+
+  private void asyncInsertRecord(String deviceId, long startTime, long endTime, long timeout)
+      throws ExecutionException, InterruptedException {
+    List<String> measurements = new ArrayList<>();
+    List<TSDataType> types = new ArrayList<>();
+    measurements.add("s1");
+    measurements.add("s2");
+    measurements.add("s3");
+    types.add(TSDataType.INT64);
+    types.add(TSDataType.INT64);
+    types.add(TSDataType.INT64);
+
+    for (long time = startTime; time < endTime; time++) {
+      List<Object> values = new ArrayList<>();
+      values.add(1L);
+      values.add(2L);
+      values.add(3L);
+      CompletableFuture<Integer> future = session
+          .asyncInsertRecord(deviceId, time, measurements, types, values, timeout,null);
+      future.get();
+    }
+  }
+
+  private void asyncInsertRecords(String deviceId, long startTime, long endTime,
+                                  long recordSplitTime, long timeout) throws ExecutionException, InterruptedException {
+    List<String> measurements = new ArrayList<>();
+    measurements.add("s1");
+    measurements.add("s2");
+    measurements.add("s3");
+    List<String> deviceIds = new ArrayList<>();
+    List<List<String>> measurementsList = new ArrayList<>();
+    List<List<Object>> valuesList = new ArrayList<>();
+    List<Long> timestamps = new ArrayList<>();
+    List<List<TSDataType>> typesList = new ArrayList<>();
+
+    for (long time = startTime; time < endTime; time++) {
+      List<Object> values = new ArrayList<>();
+      List<TSDataType> types = new ArrayList<>();
+      values.add(1L);
+      values.add(2L);
+      values.add(3L);
+      types.add(TSDataType.INT64);
+      types.add(TSDataType.INT64);
+      types.add(TSDataType.INT64);
+
+      deviceIds.add(deviceId);
+      measurementsList.add(measurements);
+      valuesList.add(values);
+      typesList.add(types);
+      timestamps.add(time);
+      if (time != 0 && time % recordSplitTime == 0) {
+        CompletableFuture<Integer> future = session
+            .asyncInsertRecords(deviceIds, timestamps, measurementsList, typesList, valuesList, timeout,
+                null);
+        future.get();
+        deviceIds.clear();
+        measurementsList.clear();
+        valuesList.clear();
+        timestamps.clear();
+      }
+    }
+
+    CompletableFuture<Integer> future = session
+        .asyncInsertRecords(deviceIds, timestamps, measurementsList, typesList, valuesList, timeout,
+            null);
+    future.get();
+  }
+
+  private int asyncInsertRecordsTimeout(String deviceId, long startTime, long endTime, long timeout)
+      throws ExecutionException, InterruptedException {
+    List<String> measurements = new ArrayList<>();
+    measurements.add("s1");
+    measurements.add("s2");
+    measurements.add("s3");
+    List<String> deviceIds = new ArrayList<>();
+    List<List<String>> measurementsList = new ArrayList<>();
+    List<List<Object>> valuesList = new ArrayList<>();
+    List<Long> timestamps = new ArrayList<>();
+    List<List<TSDataType>> typesList = new ArrayList<>();
+
+
+    for (long time = startTime; time < endTime; time++) {
+      List<Object> values = new ArrayList<>();
+      List<TSDataType> types = new ArrayList<>();
+      values.add(1L);
+      values.add(2L);
+      values.add(3L);
+      types.add(TSDataType.INT64);
+      types.add(TSDataType.INT64);
+      types.add(TSDataType.INT64);
+
+      deviceIds.add(deviceId);
+      measurementsList.add(measurements);
+      valuesList.add(values);
+      typesList.add(types);
+      timestamps.add(time);
+    }
+
+    CompletableFuture<Integer> future = session
+        .asyncInsertRecords(deviceIds, timestamps, measurementsList, typesList, valuesList, timeout,
+            null);
+    return future.get();
   }
 
   private void rawDataQuery()
@@ -626,6 +826,40 @@ public class IoTDBSessionComplexIT {
 
     if (tablet.rowSize != 0) {
       session.insertTablet(tablet);
+      tablet.reset();
+    }
+  }
+
+  private void asyncInsertTablet(String deviceId, long startTime, long endTime, int maxTabletRow,
+                                 long timeout) throws ExecutionException, InterruptedException {
+
+    List<MeasurementSchema> schemaList = new ArrayList<>();
+    schemaList.add(new MeasurementSchema("s1", TSDataType.INT64, TSEncoding.RLE));
+    schemaList.add(new MeasurementSchema("s2", TSDataType.INT64, TSEncoding.RLE));
+    schemaList.add(new MeasurementSchema("s3", TSDataType.INT64, TSEncoding.RLE));
+
+    Tablet tablet = new Tablet(deviceId, schemaList, maxTabletRow);
+
+    long[] timestamps = tablet.timestamps;
+    Object[] values = tablet.values;
+
+    for (long time = startTime; time < endTime; time++) {
+      int row = tablet.rowSize++;
+      timestamps[row] = time;
+      for (int i = 0; i < 3; i++) {
+        long[] sensor = (long[]) values[i];
+        sensor[row] = i;
+      }
+      if (tablet.rowSize == tablet.getMaxRowNumber()) {
+        CompletableFuture<Integer> future = session.asyncInsertTablet(tablet, true, timeout, null);
+        future.get();
+        tablet.reset();
+      }
+    }
+
+    if (tablet.rowSize != 0) {
+      CompletableFuture<Integer> future = session.asyncInsertTablet(tablet, true, 3, null);
+      future.get();
       tablet.reset();
     }
   }
