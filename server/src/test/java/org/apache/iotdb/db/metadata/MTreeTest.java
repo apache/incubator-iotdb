@@ -187,9 +187,9 @@ public class MTreeTest {
           .getAllTimeseriesPathWithAlias(new PartialPath("root.a.*.s0"), 0, 0).left;
       assertEquals(2, result2.size());
       assertEquals("root.a.d0.s0", result2.get(0).getFullPath());
-      assertFalse(result2.get(0).isMeasurementAliasExists());
+      assertTrue(result2.get(0).isMeasurementAliasExists());
       assertEquals("root.a.d1.s0", result2.get(1).getFullPath());
-      assertFalse(result2.get(1).isMeasurementAliasExists());
+      assertTrue(result2.get(1).isMeasurementAliasExists());
 
       result2 = root
           .getAllTimeseriesPathWithAlias(new PartialPath("root.a.*.temperature"), 0, 0).left;
@@ -517,13 +517,20 @@ public class MTreeTest {
           TSFileDescriptor.getInstance().getConfig().getCompressor(), Collections.emptyMap(), null);
       root.createTimeseries(new PartialPath("root.sg1.a.b.c"), TSDataType.INT32, TSEncoding.RLE,
           TSFileDescriptor.getInstance().getConfig().getCompressor(), Collections.emptyMap(), null);
-      assertTrue(root.isPathExist(new PartialPath("root.sg1.a.b")));
-      assertTrue(root.isPathExist(new PartialPath("root.sg1.a.b.c")));
+      assertTrue(root.isTimeSeriesExist(new PartialPath("root.sg1.a.b")));
+      assertTrue(root.isTimeSeriesExist(new PartialPath("root.sg1.a.b.c")));
 
       root.deleteTimeseriesAndReturnEmptyStorageGroup(new PartialPath("root.sg1.a.b.c"));
+      assertFalse(root.isTimeSeriesExist(new PartialPath("root.sg1.a.b.c")));
+      assertTrue(root.isTimeSeriesExist(new PartialPath("root.sg1.a.b")));
 
-      assertFalse(root.isPathExist(new PartialPath("root.sg1.a.b.c")));
-      assertTrue(root.isPathExist(new PartialPath("root.sg1.a.b")));
+      root.createTimeseries(new PartialPath("root.sg1.aa.bb"), TSDataType.INT32, TSEncoding.RLE,
+          TSFileDescriptor.getInstance().getConfig().getCompressor(), Collections.emptyMap(), null);
+      root.createTimeseries(new PartialPath("root.sg1.aa.bb.cc"), TSDataType.INT32, TSEncoding.RLE,
+          TSFileDescriptor.getInstance().getConfig().getCompressor(), Collections.emptyMap(), null);
+      root.deleteTimeseriesAndReturnEmptyStorageGroup(new PartialPath("root.sg1.aa.bb"));
+      assertFalse(root.isTimeSeriesExist(new PartialPath("root.sg1.aa.bb")));
+      assertTrue(root.isTimeSeriesExist(new PartialPath("root.sg1.aa.bb.cc")));
 
     } catch (MetadataException e1) {
       fail(e1.getMessage());

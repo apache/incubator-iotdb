@@ -121,7 +121,7 @@ public class LogReplayer {
   private void replayDelete(DeletePlan deletePlan) throws IOException, MetadataException {
     List<PartialPath> paths = deletePlan.getPaths();
     for (PartialPath path : paths) {
-      for (PartialPath device : IoTDB.metaManager.getDevices(path.getDevicePath())) {
+      for (PartialPath device : IoTDB.metaManager.getMatchDevices(path)) {
         recoverMemTable
             .delete(path, device, deletePlan.getDeleteStartTime(),
                 deletePlan.getDeleteEndTime());

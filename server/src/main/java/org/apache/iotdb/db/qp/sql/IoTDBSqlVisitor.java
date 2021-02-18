@@ -1890,7 +1890,7 @@ public class IoTDBSqlVisitor extends SqlBaseBaseVisitor<Operator> {
     createTimeSeriesOperator.setDataType(tsDataType);
 
     final IoTDBDescriptor ioTDBDescriptor = IoTDBDescriptor.getInstance();
-    TSEncoding encoding = ioTDBDescriptor.getDefualtEncodingByType(tsDataType);
+    TSEncoding encoding = ioTDBDescriptor.getDefaultEncodingByType(tsDataType);
     if (Objects.nonNull(ctx.encoding())) {
       String encodingString = ctx.encoding().getChild(0).getText().toUpperCase();
       encoding = TSEncoding.valueOf(encodingString);

@@ -20,6 +20,7 @@ package org.apache.iotdb.db.metadata;
 
 import static java.util.stream.Collectors.toList;
 import static org.apache.iotdb.db.utils.EncodingInferenceUtils.getDefaultEncoding;
+import static org.apache.iotdb.db.conf.IoTDBConstant.PATH_WILDCARD;
 import static org.apache.iotdb.tsfile.common.constant.TsFileConstant.PATH_SEPARATOR;
 
 import java.io.File;
@@ -38,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.Executors;
@@ -70,6 +72,7 @@ import org.apache.iotdb.db.qp.physical.PhysicalPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
+import org.apache.iotdb.db.qp.physical.sys.AlterTimeSeriesBasicInfoPlan;
 import org.apache.iotdb.db.qp.physical.sys.ChangeAliasPlan;
 import org.apache.iotdb.db.qp.physical.sys.ChangeTagOffsetPlan;
 import org.apache.iotdb.db.qp.physical.sys.CreateTimeSeriesPlan;
@@ -84,14 +87,12 @@ import org.apache.iotdb.db.query.dataset.ShowDevicesResult;
 import org.apache.iotdb.db.query.dataset.ShowTimeSeriesResult;
 import org.apache.iotdb.db.rescon.MemTableManager;
 import org.apache.iotdb.db.rescon.PrimitiveArrayManager;
-import org.apache.iotdb.db.utils.EncodingInferenceUtils;
 import org.apache.iotdb.db.utils.RandomDeleteCache;
 import org.apache.iotdb.db.utils.SchemaUtils;
 import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.db.utils.TypeInferenceUtils;
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
 import org.apache.iotdb.tsfile.exception.cache.CacheException;
-import org.apache.iotdb.tsfile.exception.write.UnSupportedDataTypeException;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
@@ -370,9 +371,32 @@ public class MManager {
         ChangeTagOffsetPlan changeTagOffsetPlan = (ChangeTagOffsetPlan) plan;
         changeOffset(changeTagOffsetPlan.getPath(), changeTagOffsetPlan.getOffset());
         break;
+      case ALTER_TIMESERIES_BASIC_INFO:
+        AlterTimeSeriesBasicInfoPlan alterTimeSeriesBasicInfoPlan = (AlterTimeSeriesBasicInfoPlan) plan;
+        changeTimeSeriesBasicInfo(alterTimeSeriesBasicInfoPlan.getPath(),
+            alterTimeSeriesBasicInfoPlan.getDataType(), alterTimeSeriesBasicInfoPlan.getEncodingType(),
+            alterTimeSeriesBasicInfoPlan.getCompressor());
+        break;
       default:
         logger.error("Unrecognizable command {}", plan.getOperatorType());
     }
+  }
+
+  private void changeTimeSeriesBasicInfo(PartialPath path,
+      TSDataType dataType, TSEncoding encoding, CompressionType compressor) throws MetadataException {
+    MeasurementMNode leafMNode;
+    MNode nodeByPath = mtree.getNodeByPath(path);
+    if (nodeByPath instanceof MeasurementMNode) {
+      leafMNode = (MeasurementMNode) nodeByPath;
+      leafMNode.setSchema(new MeasurementSchema(leafMNode.getName(), dataType, encoding, compressor, null));
+    } else {
+      MNode parent = nodeByPath.getParent();
+      MeasurementMNode newNode = new MeasurementMNode(parent, nodeByPath.getName(), null,
+          dataType, getDefaultEncoding(dataType),
+          compressor, null);
+      parent.replaceChild(newNode.getName(), newNode);
+    }
+
   }
 
   public void createTimeseries(CreateTimeSeriesPlan plan) throws MetadataException {
@@ -461,7 +485,11 @@ public class MManager {
       createTimeseries(
           new CreateTimeSeriesPlan(path, dataType, encoding, compressor, props, null, null, null));
     } catch (PathAlreadyExistException | AliasAlreadyExistException e) {
-      // ignore
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "Ignore PathAlreadyExistException and AliasAlreadyExistException when Concurrent inserting"
+                + " a non-exist time series {}", path);
+      }
     }
   }
 
@@ -481,6 +509,14 @@ public class MManager {
       if (allTimeseries.isEmpty()) {
         throw new PathNotExistException(prefixPath.getFullPath());
       }
+
+      if (!prefixPath.getMeasurement().equals(PATH_WILDCARD)) {
+        allTimeseries = allTimeseries.stream()
+            .filter(ts -> ts.getFullPath().endsWith(prefixPath.getMeasurement()) ||
+                ts.getMeasurementAlias().equals(prefixPath.getMeasurement()))
+            .collect(toList());
+      }
+
       // Monitor storage group seriesPath is not allowed to be deleted
       allTimeseries.removeIf(p -> p.startsWith(MonitorConstants.STAT_STORAGE_GROUP_ARRAY));
 
@@ -684,7 +720,13 @@ public class MManager {
     MNode deviceNode = getNodeByPath(deviceId);
     MeasurementMNode[] mNodes = new MeasurementMNode[measurements.length];
     for (int i = 0; i < mNodes.length; i++) {
-      mNodes[i] = ((MeasurementMNode) deviceNode.getChild(measurements[i]));
+      MNode child = deviceNode.getChild(measurements[i]);
+      if (child instanceof MeasurementMNode) {
+        mNodes[i] = ((MeasurementMNode) child);
+      } else {
+        mNodes[i] = null;
+      }
+
       if (mNodes[i] == null && !IoTDBDescriptor.getInstance().getConfig().isEnablePartialInsert()) {
         throw new MetadataException(measurements[i] + " does not exist in " + deviceId);
       }
@@ -705,6 +747,18 @@ public class MManager {
 
   public List<ShowDevicesResult> getDevices(ShowDevicesPlan plan) throws MetadataException {
     return mtree.getDevices(plan);
+  }
+
+  public Set<PartialPath> getMatchDevices(PartialPath path) throws MetadataException {
+    mtree.checkPartialPath(path);
+
+    if (path.getFullPath().contains("*")) {
+      return mtree.getDevices(path.getDevicePath());
+    }
+
+    Set<PartialPath> res = new TreeSet<>();
+    res.add(path.getDevicePath());
+    return res;
   }
 
   /**
@@ -973,8 +1027,35 @@ public class MManager {
 
   }
 
-  protected MeasurementMNode getMeasurementMNode(MNode deviceMNode, String measurement) {
-    return (MeasurementMNode) deviceMNode.getChild(measurement);
+  protected MeasurementMNode getMeasurementMNode(MNode deviceMNode, String measurement, TSDataType dataType)
+      throws MetadataException {
+    MNode child = deviceMNode.getChild(measurement);
+    if (child == null) {
+      return null;
+    }
+
+    return changeMNodeToMeasurementMNode(child, dataType);
+  }
+
+  protected MeasurementMNode changeMNodeToMeasurementMNode(MNode node, TSDataType dataType) throws MetadataException {
+    if (node instanceof MeasurementMNode) {
+      return (MeasurementMNode) node;
+    }
+
+    MNode parent = node.getParent();
+    MeasurementMNode measurementMNode = new MeasurementMNode(parent, node.getName(), null,
+        dataType, getDefaultEncoding(dataType),
+        TSFileDescriptor.getInstance().getConfig().getCompressor(), null);
+    parent.replaceChild(node.getName(), measurementMNode);
+
+    // persist to meta log
+    try {
+      logWriter.alterTimeSeriesBasicInfo(measurementMNode.getPartialPath(),
+          dataType, getDefaultEncoding(dataType), TSFileDescriptor.getInstance().getConfig().getCompressor());
+    } catch (IOException e) {
+      throw new MetadataException(String.format("alter the basic info of %s failed", measurementMNode.getFullPath()));
+    }
+    return measurementMNode;
   }
 
   public MeasurementSchema getSeriesSchema(PartialPath device, String measurement)
@@ -1762,28 +1843,30 @@ public class MManager {
     MNode deviceMNode = getDeviceNodeWithAutoCreate(deviceId);
 
     // 2. get schema of each measurement
+    // if do not has measurement
+    MeasurementMNode measurementMNode;
+    TSDataType dataType;
     for (int i = 0; i < measurementList.length; i++) {
       try {
-        // if do not has measurement
-        MeasurementMNode measurementMNode;
+        dataType = getTypeInLoc(plan, i);
         if (!deviceMNode.hasChild(measurementList[i])) {
           // could not create it
           if (!config.isAutoCreateSchemaEnabled()) {
             // but measurement not in MTree and cannot auto-create, try the cache
-            measurementMNode = getMeasurementMNode(deviceMNode, measurementList[i]);
+            measurementMNode = getMeasurementMNode(deviceMNode, measurementList[i], dataType);
             if (measurementMNode == null) {
               throw new PathNotExistException(deviceId + PATH_SEPARATOR + measurementList[i]);
             }
           } else {
-            // create it
-
-            TSDataType dataType = getTypeInLoc(plan, i);
             // create it, may concurrent created by multiple thread
             internalCreateTimeseries(deviceId.concatNode(measurementList[i]), dataType);
             measurementMNode = (MeasurementMNode) deviceMNode.getChild(measurementList[i]);
           }
         } else {
-          measurementMNode = getMeasurementMNode(deviceMNode, measurementList[i]);
+          measurementMNode = getMeasurementMNode(deviceMNode, measurementList[i], dataType);
+          if (measurementMNode == null) {
+            throw new PathNotExistException(deviceId + PATH_SEPARATOR + measurementList[i]);
+          }
         }
 
         // check type is match
@@ -1838,20 +1921,12 @@ public class MManager {
    */
   private void internalCreateTimeseries(PartialPath path, TSDataType dataType)
       throws MetadataException {
-    try {
       createTimeseries(
           path,
           dataType,
           getDefaultEncoding(dataType),
           TSFileDescriptor.getInstance().getConfig().getCompressor(),
           Collections.emptyMap());
-    } catch (PathAlreadyExistException | AliasAlreadyExistException e) {
-      if (logger.isDebugEnabled()) {
-        logger.debug(
-            "Ignore PathAlreadyExistException and AliasAlreadyExistException when Concurrent inserting"
-                + " a non-exist time series {}", path);
-      }
-    }
   }
 
   /**

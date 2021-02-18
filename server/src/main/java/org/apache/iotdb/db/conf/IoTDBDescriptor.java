@@ -923,7 +923,7 @@ public class IoTDBDescriptor {
   /**
    * Get default encode algorithm by data type
    */
-  public TSEncoding getDefualtEncodingByType(TSDataType dataType) {
+  public TSEncoding getDefaultEncodingByType(TSDataType dataType) {
     switch (dataType) {
       case BOOLEAN:
         return conf.getDefaultBooleanEncoding();

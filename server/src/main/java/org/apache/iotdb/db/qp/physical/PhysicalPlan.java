@@ -31,6 +31,7 @@ import org.apache.iotdb.db.qp.logical.Operator;
 import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
 import org.apache.iotdb.db.qp.physical.crud.DeletePlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertMultiTabletPlan;
+import org.apache.iotdb.db.qp.physical.sys.AlterTimeSeriesBasicInfoPlan;
 import org.apache.iotdb.db.qp.physical.sys.AlterTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
@@ -353,6 +354,10 @@ public abstract class PhysicalPlan {
           plan = new StorageGroupMNodePlan();
           plan.deserialize(buffer);
           break;
+        case ALTER_TIMESERIES_BASIC_INFO:
+          plan = new AlterTimeSeriesBasicInfoPlan();
+          plan.deserialize(buffer);
+          break;
         default:
           throw new IOException("unrecognized log type " + type);
       }
@@ -367,7 +372,7 @@ public abstract class PhysicalPlan {
     DELETE_STORAGE_GROUP, SHOW_TIMESERIES, DELETE_TIMESERIES, LOAD_CONFIGURATION, CREATE_MULTI_TIMESERIES,
     ALTER_TIMESERIES, FLUSH, CREATE_INDEX, DROP_INDEX,
     CHANGE_TAG_OFFSET, CHANGE_ALIAS, MNODE, MEASUREMENT_MNODE, STORAGE_GROUP_MNODE,
-    BATCH_INSERT_ONE_DEVICE, MULTI_BATCH_INSERT
+    BATCH_INSERT_ONE_DEVICE, MULTI_BATCH_INSERT, ALTER_TIMESERIES_BASIC_INFO
   }
 
   public long getIndex() {

@@ -50,6 +50,7 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
@@ -229,16 +230,24 @@ public class MTree implements Serializable {
     // synchronize check and add, we need addChild and add Alias become atomic operation
     // only write on mtree will be synchronized
     synchronized (this) {
-      if (cur.hasChild(leafName)) {
-        throw new PathAlreadyExistException(path.getFullPath());
+      MNode child = cur.getChild(leafName);
+      if (child instanceof MeasurementMNode) {
+          throw new PathAlreadyExistException(path.getFullPath());
       }
-      if (alias != null && cur.hasChild(alias)) {
-        throw new AliasAlreadyExistException(path.getFullPath(), alias);
+      if (alias != null) {
+        MNode childByAlias = cur.getChild(alias);
+        if (childByAlias instanceof MeasurementMNode) {
+          throw new AliasAlreadyExistException(path.getFullPath(), alias);
+        }
       }
+
       MeasurementMNode leaf = new MeasurementMNode(cur, leafName, alias, dataType, encoding,
           compressor, props);
-
-      cur.addChild(leafName, leaf);
+      if (child != null) {
+        cur.replaceChild(leaf.getName(), leaf);
+      } else {
+        cur.addChild(leafName, leaf);
+      }
 
       // link alias to LeafMNode
       if (alias != null) {
@@ -254,6 +263,13 @@ public class MTree implements Serializable {
       throw new IllegalPathException(String
           .format("The timeseries name contains unsupported character. %s",
               timeseries));
+    }
+  }
+
+  protected void checkPartialPath(PartialPath partialPath) throws MetadataException {
+    String[] nodes = partialPath.getNodes();
+    if (nodes.length == 0 || !nodes[0].equals(root.getName())) {
+      throw new IllegalPathException(partialPath.getFullPath());
     }
   }
 
@@ -332,19 +348,47 @@ public class MTree implements Serializable {
    * @param path a full path or a prefix path
    */
   boolean isPathExist(PartialPath path) {
+    Object[] res = judgePathExistAndGetLastNode(path);
+    return (boolean) res[0];
+  }
+
+  /**
+   * Check whether the given timeseries exists.
+   *
+   * @param path a timeseries path
+   */
+  boolean isTimeSeriesExist(PartialPath path) {
+    Object[] res = judgePathExistAndGetLastNode(path);
+    boolean pathExist = (boolean) res[0];
+    if (pathExist) {
+      return res[1] instanceof MeasurementMNode;
+    }
+
+    return false;
+  }
+
+  /**
+   * @param path a full path or a prefix path
+   *
+   * @return res[0] refers to flag indicating if path exists; res[1] refers to lastNode
+   */
+  Object[] judgePathExistAndGetLastNode(PartialPath path) {
+    Object[] res = {false, null};
     String[] nodeNames = path.getNodes();
     MNode cur = root;
     if (!nodeNames[0].equals(root.getName())) {
-      return false;
+      return res;
     }
     for (int i = 1; i < nodeNames.length; i++) {
       String childName = nodeNames[i];
       cur = cur.getChild(childName);
       if (cur == null) {
-        return false;
+        return res;
       }
     }
-    return true;
+    res[0] = true;
+    res[1] = cur;
+    return res;
   }
 
   /**
@@ -469,7 +513,17 @@ public class MTree implements Serializable {
     if (nodes.length == 0 || !IoTDBConstant.PATH_ROOT.equals(nodes[0])) {
       throw new IllegalPathException(path.getFullPath());
     }
-    // delete the last node of path
+
+    // judge whether it has children
+    if (MapUtils.isNotEmpty(curNode.getChildren())) {
+      // it has children, then itself should be converted into MNode type.
+      MeasurementMNode cur = (MeasurementMNode) curNode;
+      MNode mNode = new MNode(cur.getParent(), cur.getName());
+      cur.getParent().replaceChild(cur.getName(), mNode);
+      return new Pair<>(null, cur);
+    }
+
+    // it has no children, then delete itself directly.
     curNode.getParent().deleteChild(curNode.getName());
     MeasurementMNode deletedNode = (MeasurementMNode) curNode;
     if (deletedNode.getAlias() != null) {
@@ -1072,6 +1126,7 @@ public class MTree implements Serializable {
       }
 
       PartialPath nodePath = node.getPartialPath();
+      nodePath.setMeasurementAlias(((MeasurementMNode) node).getAlias());
       String[] tsRow = new String[7];
       tsRow[0] = ((MeasurementMNode) node).getAlias();
       MeasurementSchema measurementSchema = ((MeasurementMNode) node).getSchema();
