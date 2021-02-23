@@ -269,6 +269,11 @@ org.ops4j.pax.jdbc:pax-jdbc-common:1.4.5
 org.xerial.snappy:snappy-java:1.1.7.2
 io.airlift.airline:0.8
 net.minidev:accessors-smart:1.2
+github.com/apache/iotdb-client-go@v0.0.0-20210121135451-b5e80e0720c8
+github.com/prometheus/prometheus@v2.5.0+incompatible
+google.golang.org/genproto@v0.0.0-20210122163508-8081c04a3579
+google.golang.org/grpc@v1.35.0
+gopkg.in/yaml.v2@v2.4.0
 
 
 BSD 2-Clause
@@ -281,6 +286,9 @@ BSD 3-Clause
 org.antlr:antlr-runtime:4.8-1
 org.ow2.asm:asm:5.0.4
 org.jline:jline:3.10.0
+github.com/golang/snappy@v0.0.2
+github.com/grpc-ecosystem/grpc-gateway@v1.16.0
+github.com/gogo/protobuf@v1.3.2
 
 
 MIT License
@@ -289,6 +297,7 @@ org.slf4j:slf4j-api
 me.tongfei:progressbar:0.7.3
 com.bugsnag:bugsnag:3.6.1
 org.slf4j:jcl-over-slf4j:1.7.25
+github.com/cespare/xxhash@v1.1.0
 
 
 EPL 1.0

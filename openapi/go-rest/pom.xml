@@ -29,7 +29,6 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>go-rest</artifactId>
     <packaging>pom</packaging>
-
     <build>
         <plugins>
             <!-- for generated go module -->
@@ -71,6 +70,4 @@
             </plugin>
         </plugins>
     </build>
-
-
 </project>

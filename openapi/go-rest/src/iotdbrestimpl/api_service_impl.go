@@ -24,8 +24,13 @@ package iotdbrestimpl
 import (
 	"context"
 	"errors"
-	"net/http"
+	"github.com/apache/iotdb-client-go/client"
+	"github.com/apache/iotdb/openapi/go-rest/src/util"
+	"github.com/gogo/protobuf/proto"
+	"github.com/golang/snappy"
 	. "github.com/iotdbrest"
+	"github.com/prometheus/prometheus/prompb"
+	"net/http"
 )
 
 // DefaultApiService is a service that implents the logic for the DefaultApiServicer
@@ -83,27 +88,62 @@ func (s *DefaultApiService) PostV1GrafanaNode(ctx context.Context, requestBody [
 
 // PostV1PrometheusQuery - Serve for queries from Prometheus
 func (s *DefaultApiService) PostV1PrometheusQuery(ctx context.Context, userAgent string, xPrometheusRemoteReadVersion string, body map[string]interface{}) (ImplResponse, error) {
-	// TODO - update PostV1PrometheusQuery with the required logic for this service method.
-	// Add api_default_service_go to the .openapi-generator-ignore to avoid overwriting this service implementation when updating open api generation.
-
-	//TODO: Uncomment the next line to return response Response(200, map[string]interface{}{}) or use other options such as http.Ok ...
-	//return Response(200, map[string]interface{}{}), nil
-
-	return Response(http.StatusNotImplemented, nil), errors.New("PostV1PrometheusQuery method not implemented")
+	util.Session.Open(false, 0)
+	req := body["prometheusReadRequest"].(prompb.ReadRequest)
+	var promResults []*prompb.QueryResult
+	for _, query := range req.Queries {
+		var (
+			tagKeyValues = make(map[string]string)
+			metricName string
+			dvId string
+			sensor string
+		)
+		startTime := query.StartTimestampMs + util.StartTimeDeviation
+		endTime := query.EndTimestampMs
+		for _,label := range query.GetMatchers() {
+			metricName, tagKeyValues = util.AddDoubleQuotes(label.Name, label.Value, metricName, tagKeyValues)
+		}
+		if util.MetricTagOrder[metricName] == nil {
+			continue
+		} else {
+			sgName := util.TransMetricToSg(metricName)
+			dvId, sensor = util.TransReadSchema(tagKeyValues, metricName, sgName)
+			if dvId == util.NullString && sensor == util.NullString {
+				continue
+			}
+		}
+		sql := util.TransToPointQuery(sensor, dvId, startTime, endTime)
+		queryDataSet, _ := util.Session.ExecuteQueryStatement(sql,0)
+		promResults = util.TransResultToPrometheus(queryDataSet,promResults)
+	}
+	resp := prompb.ReadResponse{Results: promResults}
+	data, _ := proto.Marshal(&resp)
+	got := snappy.Encode(nil, data)
+	util.Session.Close()
+	return Response(http.StatusAccepted, got), nil
 }
 
 // PostV1PrometheusReceive - Serve for writing data by Prometheus
 func (s *DefaultApiService) PostV1PrometheusReceive(ctx context.Context, userAgent string, xPrometheusRemoteWriteVersion string, body map[string]interface{}) (ImplResponse, error) {
-	// TODO - update PostV1PrometheusReceive with the required logic for this service method.
-	// Add api_default_service_go to the .openapi-generator-ignore to avoid overwriting this service implementation when updating open api generation.
+	util.Session.Open(false, 0)
+	req := body["prometheusWriteRequest"].(prompb.WriteRequest)
+	for _, ts := range req.Timeseries {
+		var (
+			tagKeyValues = make(map[string]string)
+			metricName string
+		)
+		for _ , label := range ts.Labels {
+			metricName, tagKeyValues = util.AddDoubleQuotes(label.Name, label.Value, metricName, tagKeyValues)
+		}
+		sgName := util.TransMetricToSg(metricName)
+		dvId, sensor := util.TransWriteSchema(tagKeyValues, metricName, sgName)
+		time := ts.Samples[0].Timestamp
+		value := ts.Samples[0].Value
+		util.Session.InsertRecord(dvId, []string{sensor}, []client.TSDataType{client.DOUBLE}, []interface{}{value}, time)
 
-	//TODO: Uncomment the next line to return response Response(200, InlineResponse200{}) or use other options such as http.Ok ...
-	//return Response(200, InlineResponse200{}), nil
-
-	//TODO: Uncomment the next line to return response Response(401, string{}) or use other options such as http.Ok ...
-	//return Response(401, string{}), nil
-
-	return Response(http.StatusNotImplemented, nil), errors.New("PostV1PrometheusReceive method not implemented")
+	}
+	util.Session.Close()
+	return Response(http.StatusAccepted, nil), nil
 }
 
 // TryPing - Your GET endpoint

@@ -23,4 +23,15 @@ go 1.13
 
 replace github.com/iotdbrest => ../target/gen/iotdbrest
 
-require github.com/iotdbrest v0.0.0-00010101000000-000000000000
+require (
+	github.com/apache/iotdb-client-go v0.0.0-20210121135451-b5e80e0720c8
+	github.com/cespare/xxhash v1.1.0
+	github.com/gogo/protobuf v1.3.2
+	github.com/golang/snappy v0.0.2
+	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
+	github.com/iotdbrest v0.0.0-00010101000000-000000000000
+	github.com/prometheus/prometheus v2.5.0+incompatible
+	google.golang.org/genproto v0.0.0-20210122163508-8081c04a3579 // indirect
+	google.golang.org/grpc v1.35.0 // indirect
+	gopkg.in/yaml.v2 v2.4.0
+)

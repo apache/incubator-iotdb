@@ -17,25 +17,24 @@
  * under the License.
  */
 
-package main
+package util
 
 import (
-	"github.com/apache/iotdb/openapi/go-rest/src/iotdbrestimpl"
-	"github.com/apache/iotdb/openapi/go-rest/src/util"
-	"github.com/iotdbrest"
-	"log"
-	"net/http"
+	"github.com/apache/iotdb-client-go/client"
 )
 
-func main() {
-	util.Config.ReadConf()
-	util.Session.Open(false, 0)
-	util.RecoverSchema()
-	util.Session.Close()
-	DefaultApiService := iotdbrestimpl.NewDefaultApiService()
-	DefaultApiController := iotdbrest.NewDefaultApiController(DefaultApiService)
+var (
+	Session        *client.Session
+	DeviceId       = "root.system_p.label_info"
+	MetricTagOrder = make(map[string]map[string]int32)
+	Timestamp      int64
+	Config         conf
+	MetricOrderTag = make(map[string]map[int32]string)
+)
 
-	router := iotdbrest.NewRouter(DefaultApiController)
 
-	log.Fatal(http.ListenAndServe(":5667", router))
-}
+
+
+
+
+

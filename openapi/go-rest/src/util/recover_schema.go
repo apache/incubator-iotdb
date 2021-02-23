@@ -17,25 +17,28 @@
  * under the License.
  */
 
-package main
+package util
 
-import (
-	"github.com/apache/iotdb/openapi/go-rest/src/iotdbrestimpl"
-	"github.com/apache/iotdb/openapi/go-rest/src/util"
-	"github.com/iotdbrest"
-	"log"
-	"net/http"
-)
+func RecoverSchema() {
+	dataSet, _ := Session.ExecuteQueryStatement("select * from root.system_p.label_info", 1000)
+	for {
+		haseNext, _ := dataSet.Next()
+		if haseNext {
+			Timestamp++
+			record, _ := dataSet.GetRowRecord()
+			metricName := record.GetFields()[0].GetText()
+			tagName := record.GetFields()[1].GetText()
+			tagOrder := record.GetFields()[2].GetInt32()
 
-func main() {
-	util.Config.ReadConf()
-	util.Session.Open(false, 0)
-	util.RecoverSchema()
-	util.Session.Close()
-	DefaultApiService := iotdbrestimpl.NewDefaultApiService()
-	DefaultApiController := iotdbrest.NewDefaultApiController(DefaultApiService)
+			if MetricTagOrder[metricName] == nil {
+				MetricTagOrder[metricName] = make(map[string]int32)
+				MetricOrderTag[metricName] = make(map[int32]string)
+			}
 
-	router := iotdbrest.NewRouter(DefaultApiController)
-
-	log.Fatal(http.ListenAndServe(":5667", router))
+			MetricTagOrder[metricName][tagName] = tagOrder
+			MetricOrderTag[metricName][tagOrder] = tagName
+		} else {
+			break
+		}
+	}
 }

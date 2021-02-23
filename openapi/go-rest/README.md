@@ -41,13 +41,65 @@ To see how to make this your own, look here:
 2. go to `go-rest` module, fix issues that current openapi-generator causes:
   1. `"mime/multipart"` is forget to be imported in `router.go` (target/gen/iotdbrest/router.go)
   2. `github.com/gorilla/mux` should not be imported in `api_default.go` file. (target/gen/iotdbrest/api_default.go)
-
+  3. A small amount of code needs to be changed in `api_default.go` file. (target/gen/iotdbrest/api_default.go)
+    
+    In func PostV1PrometheusReceive
+    change
+    ```
+    if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+    		w.WriteHeader(http.StatusBadRequest)
+    		return
+    }
+    ```
+    to 
+    ```  
+    compressed, _ := ioutil.ReadAll(r.Body)
+    reqBuf, _ := snappy.Decode(nil, compressed)
+    var req prompb.WriteRequest
+    if err := proto.Unmarshal(reqBuf, &req); err != nil {
+    	w.WriteHeader(http.StatusBadRequest)
+    	return
+    }
+    (*body)["prometheusWriteRequest"] = req
+    ```
+   
+    In func PostV1PrometheusQuery
+    change
+    ```
+    if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+    		w.WriteHeader(http.StatusBadRequest)
+    		return
+    }
+    ...
+    //If no error, encode the body and the result code
+    EncodeJSONResponse(result.Body, &result.Code, w)
+    ```
+    to 
+    ```  
+    compressed, _ := ioutil.ReadAll(r.Body)
+    reqBuf, _ := snappy.Decode(nil, compressed)
+    var req prompb.ReadRequest
+    if err := proto.Unmarshal(reqBuf, &req); err != nil {
+        http.Error(w, err.Error(), http.StatusBadRequest)
+        return
+    }
+    (*body)["prometheusReadRequest"] = req
+    ...
+    //If no error, encode the body and the result code
+    w.Write(result.Body.([]byte))
+    ```
 ### Running the server
 To run the server, follow these simple steps:
 
 ```
 cd src
-go run main.go
+go build
+
+windows
+./src.exe
+
+linux
+./src
 ```
 
 To run the server in a docker container

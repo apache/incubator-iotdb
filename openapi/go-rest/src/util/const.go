@@ -17,25 +17,32 @@
  * under the License.
  */
 
-package main
+package util
 
-import (
-	"github.com/apache/iotdb/openapi/go-rest/src/iotdbrestimpl"
-	"github.com/apache/iotdb/openapi/go-rest/src/util"
-	"github.com/iotdbrest"
-	"log"
-	"net/http"
+// const in iotdb
+const (
+	SgPrefix = "system_p_sg"
+	NodesSeparator = "."
+	Wildcard = "*"
+	Root = "root"
+	Select = "select "
+	From = " from "
+	Where = " where "
+	Time = " time "
+	Ge = " >= "
+	Le = " <= "
+	And = " and "
+	// When there is no label in some positions,this position will be replaced by ph
+	Placeholder = "ph"
 )
 
-func main() {
-	util.Config.ReadConf()
-	util.Session.Open(false, 0)
-	util.RecoverSchema()
-	util.Session.Close()
-	DefaultApiService := iotdbrestimpl.NewDefaultApiService()
-	DefaultApiController := iotdbrest.NewDefaultApiController(DefaultApiService)
+// const in prometheus
+const (
+	MetricKey = "__name__"
+	StartTimeDeviation int64 = 300000
+)
 
-	router := iotdbrest.NewRouter(DefaultApiController)
+const (
+	NullString = ""
+)
 
-	log.Fatal(http.ListenAndServe(":5667", router))
-}
