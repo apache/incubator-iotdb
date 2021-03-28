@@ -255,7 +255,6 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
       status = false;
       loginMessage = e.getMessage();
     }
-
     TSStatus tsStatus;
     long sessionId = -1;
     if (status) {
@@ -635,6 +634,8 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
           processor.parseSQLToPhysicalPlan(
               statement, sessionIdZoneIdMap.get(req.getSessionId()), req.fetchSize);
 
+      physicalPlan.setLoginUserName(sessionIdUsernameMap.get(req.getSessionId()));
+
       return physicalPlan.isQuery()
           ? internalExecuteQueryStatement(
               statement,
@@ -665,6 +666,8 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
       PhysicalPlan physicalPlan =
           processor.parseSQLToPhysicalPlan(
               statement, sessionIdZoneIdMap.get(req.getSessionId()), req.fetchSize);
+
+      physicalPlan.setLoginUserName(sessionIdUsernameMap.get(req.getSessionId()));
 
       return physicalPlan.isQuery()
           ? internalExecuteQueryStatement(
@@ -697,6 +700,7 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
 
       PhysicalPlan physicalPlan =
           processor.rawDataQueryReqToPhysicalPlan(req, sessionIdZoneIdMap.get(req.getSessionId()));
+      physicalPlan.setLoginUserName(sessionIdUsernameMap.get(req.getSessionId()));
       return physicalPlan.isQuery()
           ? internalExecuteQueryStatement(
               "",
@@ -852,6 +856,10 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
       if (!(plan instanceof ShowQueryProcesslistPlan)) {
         queryTimeManager.unRegisterQuery(queryId);
       }
+
+      LOGGER.info(
+          "{}, {}, {}", plan.getOperatorType(), plan.getLoginUserName(), config.getRpcAddress());
+
       return resp;
     } catch (Exception e) {
       releaseQueryResourceNoExceptions(queryId);
@@ -1882,6 +1890,7 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
 
   private TSStatus checkAuthority(PhysicalPlan plan, long sessionId) {
     List<PartialPath> paths = plan.getPaths();
+    plan.setLoginUserName(sessionIdUsernameMap.get(sessionId));
     try {
       if (!checkAuthorization(paths, plan, sessionIdUsernameMap.get(sessionId))) {
         return RpcUtils.getStatus(

@@ -619,7 +619,7 @@ public class CMManager extends MManager {
     PartitionGroup partitionGroup =
         metaGroupMember.getPartitionTable().route(storageGroupName.getFullPath(), 0);
     List<String> unregisteredSeriesList = getUnregisteredSeriesList(seriesList, partitionGroup);
-    logger.debug("Unregisterd series of {} are {}", seriesList, unregisteredSeriesList);
+    logger.debug("Unregistered series of {} are {}", seriesList, unregisteredSeriesList);
 
     return createTimeseries(unregisteredSeriesList, seriesList, insertPlan);
   }

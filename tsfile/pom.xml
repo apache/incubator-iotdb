@@ -38,6 +38,11 @@
     </properties>
     <dependencies>
         <dependency>
+            <groupId>org.apache.iotdb</groupId>
+            <artifactId>metrics-interface</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
         </dependency>

@@ -40,6 +40,7 @@ import org.apache.iotdb.db.rescon.SystemInfo;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.sync.receiver.SyncServerManager;
 import org.apache.iotdb.db.writelog.manager.MultiFileLogNodeManager;
+import org.apache.iotdb.metrics.MetricService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +52,7 @@ public class IoTDB implements IoTDBMBean {
   private static final Logger logger = LoggerFactory.getLogger(IoTDB.class);
   private final String mbeanName =
       String.format("%s:%s=%s", IoTDBConstant.IOTDB_PACKAGE, IoTDBConstant.JMX_TYPE, "IoTDB");
-  private RegisterManager registerManager = new RegisterManager();
+  private final RegisterManager registerManager = new RegisterManager();
   public static MManager metaManager = MManager.getInstance();
 
   public static IoTDB getInstance() {
@@ -132,7 +133,7 @@ public class IoTDB implements IoTDBMBean {
       try {
         Thread.sleep(1000);
       } catch (InterruptedException e) {
-        logger.warn("IoTDB failed to set up for:" + e.getMessage());
+        logger.warn("IoTDB failed to set up.", e);
         Thread.currentThread().interrupt();
         return;
       }
@@ -150,6 +151,7 @@ public class IoTDB implements IoTDBMBean {
     logger.info("Deactivating IoTDB...");
     registerManager.deregisterAll();
     JMXService.deregisterMBean(mbeanName);
+    MetricService.stop();
     logger.info("IoTDB is deactivated.");
   }
 

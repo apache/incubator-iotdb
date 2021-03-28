@@ -100,6 +100,7 @@
         <module>cross-tests</module>
         <module>zeppelin-interpreter</module>
         <module>client-py</module>
+        <module>metrics</module>
         <module>compile-tools</module>
         <module>client-cpp</module>
     </modules>
@@ -133,8 +134,8 @@
         <org.slf4j.version>1.7.25</org.slf4j.version>
         <guava.version>24.1.1</guava.version>
         <jline.version>2.14.5</jline.version>
+        <metrics.version>4.1.2</metrics.version>
         <jetty.version>9.4.35.v20201120</jetty.version>
-        <metrics.version>3.2.6</metrics.version>
         <javax.xml.bind.version>2.4.0-b180725.0427</javax.xml.bind.version>
         <felix.version>5.1.1</felix.version>
         <!-- URL of the ASF SonarQube server -->
@@ -497,6 +498,14 @@
             <groupId>org.mockito</groupId>
             <artifactId>mockito-all</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
         </dependency>
     </dependencies>
     <build>

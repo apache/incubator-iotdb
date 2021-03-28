@@ -19,26 +19,22 @@
     under the License.
 
 -->
-<assembly>
-    <id>server</id>
-    <formats>
-        <format>dir</format>
-        <format>zip</format>
-    </formats>
-    <includeBaseDirectory>false</includeBaseDirectory>
-    <dependencySets>
-        <dependencySet>
-            <outputDirectory>lib</outputDirectory>
-        </dependencySet>
-    </dependencySets>
-    <fileSets>
-        <fileSet>
-            <directory>src/assembly/resources</directory>
-            <outputDirectory>${file.separator}</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>${maven.multiModuleProjectDirectory}/metrics/interface/src/assembly/resources</directory>
-            <outputDirectory>${file.separator}</outputDirectory>
-        </fileSet>
-    </fileSets>
-</assembly>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.apache.iotdb</groupId>
+        <artifactId>iotdb-parent</artifactId>
+        <version>0.12.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+    <artifactId>iotdb-metrics</artifactId>
+    <packaging>pom</packaging>
+    <name>metric module</name>
+    <description>Metrics interface for IoTDB</description>
+    <url>https://github.com/thulab/iotdb/tree/master/tsfile</url>
+    <modules>
+        <module>interface</module>
+        <module>micrometer-metrics</module>
+        <module>dropwizard-metrics</module>
+    </modules>
+</project>
