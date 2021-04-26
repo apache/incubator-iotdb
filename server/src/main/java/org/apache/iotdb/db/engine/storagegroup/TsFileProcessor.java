@@ -855,7 +855,7 @@ public class TsFileProcessor {
       try {
         writer.mark();
         MemTableFlushTask flushTask =
-            new MemTableFlushTask(memTableToFlush, writer, storageGroupName);
+            new MemTableFlushTask(memTableToFlush, writer, storageGroupName, sequence);
         flushTask.syncFlushMemTable();
       } catch (Exception e) {
         if (writer == null) {

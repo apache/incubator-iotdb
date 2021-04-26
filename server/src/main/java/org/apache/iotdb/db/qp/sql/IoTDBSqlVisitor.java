@@ -279,7 +279,7 @@ public class IoTDBSqlVisitor extends SqlBaseBaseVisitor<Operator> {
     if (ctx.property(0) != null) {
       for (PropertyContext property : properties) {
         String k = property.ID().getText().toUpperCase();
-        String v = property.propertyValue().getText().toUpperCase();
+        String v = property.propertyValue().getText();
         v = IndexUtils.removeQuotation(v);
         props.put(k, v);
       }

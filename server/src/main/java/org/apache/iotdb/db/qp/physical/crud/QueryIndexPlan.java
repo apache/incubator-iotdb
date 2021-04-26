@@ -28,6 +28,7 @@ public class QueryIndexPlan extends RawDataQueryPlan {
 
   private Map<String, Object> props;
   private IndexType indexType;
+  private boolean alignedByTime = false;
 
   public QueryIndexPlan() {
     super();
@@ -48,6 +49,14 @@ public class QueryIndexPlan extends RawDataQueryPlan {
 
   public void setProps(Map<String, Object> props) {
     this.props = props;
+  }
+
+  public boolean isAlignedByTime() {
+    return alignedByTime;
+  }
+
+  public void setAlignedByTime(boolean alignedByTime) {
+    this.alignedByTime = alignedByTime;
   }
 
   @Override

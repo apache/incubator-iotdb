@@ -221,7 +221,8 @@ public class TsFileRecoverPerformer {
             new MemTableFlushTask(
                 recoverMemTable,
                 restorableTsFileIOWriter,
-                tsFileResource.getTsFile().getParentFile().getParentFile().getName());
+                tsFileResource.getTsFile().getParentFile().getParentFile().getName(),
+                sequence);
         tableFlushTask.syncFlushMemTable();
         tsFileResource.updatePlanIndexes(recoverMemTable.getMinPlanIndex());
         tsFileResource.updatePlanIndexes(recoverMemTable.getMaxPlanIndex());

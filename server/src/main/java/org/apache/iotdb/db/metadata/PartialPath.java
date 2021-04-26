@@ -156,6 +156,15 @@ public class PartialPath extends Path implements Comparable<Path> {
     return true;
   }
 
+  public boolean isFullPath() {
+    for (String node : nodes) {
+      if (node.equals(IoTDBConstant.PATH_WILDCARD)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   @Override
   public String getFullPath() {
     if (fullPath != null) {
@@ -311,5 +320,18 @@ public class PartialPath extends Path implements Comparable<Path> {
       }
     }
     return ret;
+  }
+
+  public void toLowerCase() {
+    for (int i = 0; i < nodes.length; i++) {
+      nodes[i] = nodes[i].toLowerCase();
+    }
+    fullPath = String.join(TsFileConstant.PATH_SEPARATOR, nodes);
+    if (measurementAlias != null) {
+      measurementAlias = measurementAlias.toLowerCase();
+    }
+    if (tsAlias != null) {
+      tsAlias = tsAlias.toLowerCase();
+    }
   }
 }

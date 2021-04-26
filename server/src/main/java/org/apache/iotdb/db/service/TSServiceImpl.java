@@ -39,6 +39,7 @@ import org.apache.iotdb.db.exception.metadata.StorageGroupNotSetException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.exception.query.QueryTimeoutRuntimeException;
 import org.apache.iotdb.db.exception.runtime.SQLParserException;
+import org.apache.iotdb.db.index.read.IndexQueryDataSet;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.metrics.server.SqlArgument;
 import org.apache.iotdb.db.qp.Planner;
@@ -59,6 +60,7 @@ import org.apache.iotdb.db.qp.physical.crud.InsertRowsOfOneDevicePlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowsPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
 import org.apache.iotdb.db.qp.physical.crud.LastQueryPlan;
+import org.apache.iotdb.db.qp.physical.crud.QueryIndexPlan;
 import org.apache.iotdb.db.qp.physical.crud.QueryPlan;
 import org.apache.iotdb.db.qp.physical.crud.RawDataQueryPlan;
 import org.apache.iotdb.db.qp.physical.crud.SetDeviceTemplatePlan;
@@ -811,6 +813,13 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
         resp.setIgnoreTimeStamp(false);
       }
 
+      if (plan instanceof QueryIndexPlan) {
+        resp.setColumns(
+            newDataSet.getPaths().stream().map(Path::getFullPath).collect(Collectors.toList()));
+        resp.setDataTypeList(
+            newDataSet.getDataTypes().stream().map(Enum::toString).collect(Collectors.toList()));
+        resp.setColumnNameIndexMap(((IndexQueryDataSet) newDataSet).getPathToIndex());
+      }
       if (newDataSet instanceof DirectNonAlignDataSet) {
         resp.setNonAlignQueryDataSet(fillRpcNonAlignReturnData(fetchSize, newDataSet, username));
       } else {
@@ -1039,6 +1048,10 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
                       .getConfigurations()
                       .getOutputDataType());
         }
+        break;
+      case QUERY_INDEX:
+        // For query index, we don't know the columns before actual query.
+        // It will be deferred after obtaining query result set.
         break;
       default:
         throw new TException("unsupported query type: " + plan.getOperatorType());

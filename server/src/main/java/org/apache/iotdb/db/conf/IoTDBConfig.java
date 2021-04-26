@@ -23,6 +23,7 @@ import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
 import org.apache.iotdb.db.engine.merge.selector.MergeFileStrategy;
 import org.apache.iotdb.db.engine.storagegroup.timeindex.TimeIndexLevel;
 import org.apache.iotdb.db.exception.LoadConfigurationException;
+import org.apache.iotdb.db.index.IndexProcessor;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.service.TSServiceImpl;
 import org.apache.iotdb.rpc.RpcTransportFactory;
@@ -268,11 +269,11 @@ public class IoTDBConfig {
   /**
    * If we enable the memory-control mechanism during index building , {@code indexBufferSize}
    * refers to the byte-size of memory buffer threshold. For each index processor, all indexes in
-   * one {@linkplain org.apache.iotdb.db.index.IndexFileProcessor IndexFileProcessor} share a total
-   * common buffer size. With the memory-control mechanism, the occupied memory of all raw data and
-   * index structures will be counted. If the memory buffer size reaches this threshold, the indexes
-   * will be flushed to the disk file. As a result, data in one series may be divided into more than
-   * one part and indexed separately.
+   * one {@linkplain IndexProcessor IndexProcessor} share a total common buffer size. With the
+   * memory-control mechanism, the occupied memory of all raw data and index structures will be
+   * counted. If the memory buffer size reaches this threshold, the indexes will be flushed to the
+   * disk file. As a result, data in one series may be divided into more than one part and indexed
+   * separately.
    */
   private long indexBufferSize = 128 * 1024 * 1024L;
 
@@ -282,6 +283,10 @@ public class IoTDBConfig {
    */
   private int defaultIndexWindowRange = 10;
 
+  /**
+   * the default value of max size of the index unusable segments, used in SubMatchIndexUsability
+   */
+  private int defaultMaxSizeOfUnusableSegments = 20;
   /** index directory. */
   private String indexRootFolder = "data" + File.separator + "index";
 
@@ -658,6 +663,8 @@ public class IoTDBConfig {
 
   /** the number of virtual storage groups per user-defined storage group */
   private int virtualStorageGroupNum = 1;
+
+  private int maxIndexQueryResultSize = 5;
 
   public IoTDBConfig() {
     // empty constructor
@@ -2072,6 +2079,22 @@ public class IoTDBConfig {
 
   public void setDefaultIndexWindowRange(int defaultIndexWindowRange) {
     this.defaultIndexWindowRange = defaultIndexWindowRange;
+  }
+
+  public int getMaxIndexQueryResultSize() {
+    return this.maxIndexQueryResultSize;
+  }
+
+  public void setMaxIndexQueryResultSize(int maxIndexQueryResultSize) {
+    this.maxIndexQueryResultSize = maxIndexQueryResultSize;
+  }
+
+  public int getDefaultMaxSizeOfUnusableSegments() {
+    return defaultMaxSizeOfUnusableSegments;
+  }
+
+  public void setDefaultMaxSizeOfUnusableSegments(int defaultSizeOfUsableSegments) {
+    this.defaultMaxSizeOfUnusableSegments = defaultSizeOfUsableSegments;
   }
 
   public int getVirtualStorageGroupNum() {

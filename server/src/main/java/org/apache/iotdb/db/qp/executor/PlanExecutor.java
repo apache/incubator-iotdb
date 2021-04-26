@@ -42,11 +42,15 @@ import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.TriggerExecutionException;
 import org.apache.iotdb.db.exception.TriggerManagementException;
 import org.apache.iotdb.db.exception.UDFRegistrationException;
+import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.metadata.PathNotExistException;
 import org.apache.iotdb.db.exception.metadata.StorageGroupNotSetException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
+import org.apache.iotdb.db.index.IndexManager;
+import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.metadata.MetaUtils;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.metadata.mnode.MNode;
@@ -83,6 +87,7 @@ import org.apache.iotdb.db.qp.physical.sys.AuthorPlan;
 import org.apache.iotdb.db.qp.physical.sys.CountPlan;
 import org.apache.iotdb.db.qp.physical.sys.CreateAlignedTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.CreateFunctionPlan;
+import org.apache.iotdb.db.qp.physical.sys.CreateIndexPlan;
 import org.apache.iotdb.db.qp.physical.sys.CreateMultiTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.CreateTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.CreateTriggerPlan;
@@ -90,6 +95,7 @@ import org.apache.iotdb.db.qp.physical.sys.DataAuthPlan;
 import org.apache.iotdb.db.qp.physical.sys.DeleteStorageGroupPlan;
 import org.apache.iotdb.db.qp.physical.sys.DeleteTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.DropFunctionPlan;
+import org.apache.iotdb.db.qp.physical.sys.DropIndexPlan;
 import org.apache.iotdb.db.qp.physical.sys.DropTriggerPlan;
 import org.apache.iotdb.db.qp.physical.sys.FlushPlan;
 import org.apache.iotdb.db.qp.physical.sys.KillQueryPlan;
@@ -201,6 +207,7 @@ public class PlanExecutor implements IPlanExecutor {
   protected IQueryRouter queryRouter;
   // for administration
   private IAuthorizer authorizer;
+  private IndexManager indexManager;
 
   private static final String INSERT_MEASUREMENTS_FAILED_MESSAGE = "failed to insert measurements ";
 
@@ -208,6 +215,7 @@ public class PlanExecutor implements IPlanExecutor {
     queryRouter = new QueryRouter();
     try {
       authorizer = BasicAuthorizer.getInstance();
+      indexManager = IndexManager.getInstance();
     } catch (AuthException e) {
       throw new QueryProcessException(e.getMessage());
     }
@@ -335,9 +343,9 @@ public class PlanExecutor implements IPlanExecutor {
       case STOP_TRIGGER:
         return operateStopTrigger((StopTriggerPlan) plan);
       case CREATE_INDEX:
-        throw new QueryProcessException("Create index hasn't been supported yet");
+        return createIndex((CreateIndexPlan) plan);
       case DROP_INDEX:
-        throw new QueryProcessException("Drop index hasn't been supported yet");
+        return dropIndex((DropIndexPlan) plan);
       case KILL:
         try {
           operateKillQuery((KillQueryPlan) plan);
@@ -527,7 +535,7 @@ public class PlanExecutor implements IPlanExecutor {
         GroupByTimePlan groupByTimePlan = (GroupByTimePlan) queryPlan;
         queryDataSet = queryRouter.groupBy(groupByTimePlan, context);
       } else if (queryPlan instanceof QueryIndexPlan) {
-        throw new QueryProcessException("Query index hasn't been supported yet");
+        queryDataSet = queryRouter.indexQuery((QueryIndexPlan) queryPlan, context);
       } else if (queryPlan instanceof AggregationPlan) {
         AggregationPlan aggregationPlan = (AggregationPlan) queryPlan;
         queryDataSet = queryRouter.aggregate(aggregationPlan, context);
@@ -1858,5 +1866,34 @@ public class PlanExecutor implements IPlanExecutor {
       }
     }
     return noExistSg;
+  }
+
+  private boolean createIndex(CreateIndexPlan createIndexPlan) throws QueryProcessException {
+    List<PartialPath> paths = createIndexPlan.getPaths();
+    List<PartialPath> partialPaths = new ArrayList<>(paths);
+    long startTime = createIndexPlan.getTime();
+    IndexType indexType = createIndexPlan.getIndexType();
+    Map<String, String> props = createIndexPlan.getProps();
+    IndexInfo indexInfo = new IndexInfo(indexType, startTime, props);
+    try {
+      IndexManager.getInstance().createIndex(partialPaths, indexInfo);
+    } catch (MetadataException e) {
+      throw new IndexManagerException(e);
+    }
+    return true;
+  }
+
+  private boolean dropIndex(DropIndexPlan dropIndexPlan) throws QueryProcessException {
+    List<PartialPath> paths = dropIndexPlan.getPaths();
+    List<PartialPath> partialPaths = new ArrayList<>(paths);
+    IndexType indexType = dropIndexPlan.getIndexType();
+    try {
+      IndexManager.getInstance().dropIndex(partialPaths, indexType);
+    } catch (MetadataException e) {
+      throw new IndexManagerException(e);
+    } catch (IOException e2) {
+      throw new IndexManagerException(e2.getMessage());
+    }
+    return true;
   }
 }

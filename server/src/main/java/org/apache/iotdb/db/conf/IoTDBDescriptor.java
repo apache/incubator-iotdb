@@ -405,6 +405,18 @@ public class IoTDBDescriptor {
         conf.setConcurrentQueryThread(Runtime.getRuntime().availableProcessors());
       }
 
+      conf.setMaxIndexQueryResultSize(
+          Integer.parseInt(
+              properties.getProperty(
+                  "max_index_query_result_size",
+                  Integer.toString(conf.getMaxIndexQueryResultSize()))));
+
+      conf.setDefaultMaxSizeOfUnusableSegments(
+          Integer.parseInt(
+              properties.getProperty(
+                  "default_max_size_of_unusable_segments",
+                  Integer.toString(conf.getDefaultMaxSizeOfUnusableSegments()))));
+
       conf.setmManagerCacheSize(
           Integer.parseInt(
               properties

@@ -128,6 +128,30 @@ public class ReadWriteIOUtils {
     }
   }
 
+  public static int write(Map<String, String> map, OutputStream stream) throws IOException {
+    int length = 0;
+    write(map.size(), stream);
+    length += 4;
+    for (Entry<String, String> entry : map.entrySet()) {
+      length += write(entry.getKey(), stream);
+      length += write(entry.getValue(), stream);
+    }
+    return length;
+  }
+
+  public static Map<String, String> readMap(InputStream inputStream) throws IOException {
+    int length = readInt(inputStream);
+    Map<String, String> map = new HashMap<>(length);
+    for (int i = 0; i < length; i++) {
+      // key
+      String key = readString(inputStream);
+      // value
+      String value = readString(inputStream);
+      map.put(key, value);
+    }
+    return map;
+  }
+
   public static int write(Map<String, String> map, ByteBuffer buffer) {
     int length = 0;
     byte[] bytes;
@@ -699,6 +723,29 @@ public class ReadWriteIOUtils {
     byte[] bytes = new byte[byteLength];
     buffer.get(bytes);
     return bytes;
+  }
+
+  /**
+   * read bytes from an inputStream where the length is specified at the head of the inputStream.
+   * Make sure {@code inputStream} contains an integer numeric (the first 4 bytes) indicating the
+   * length of the following data.
+   *
+   * @param inputStream contains a length and a stream
+   * @return bytebuffer
+   * @throws IOException if the read length doesn't equal to the self description length.
+   */
+  public static ByteBuffer readByteBufferWithSelfDescriptionLength(InputStream inputStream)
+      throws IOException {
+    int length = readInt(inputStream);
+    byte[] bytes = new byte[length];
+    int readLen = inputStream.read(bytes);
+    if (readLen != length) {
+      throw new IOException(String.format(RETURN_ERROR, length, readLen));
+    }
+    ByteBuffer byteBuffer = ByteBuffer.allocate(length);
+    byteBuffer.put(bytes);
+    byteBuffer.flip();
+    return byteBuffer;
   }
 
   /** read bytes from buffer with offset position to the end of buffer. */

@@ -20,14 +20,17 @@
 package org.apache.iotdb.db.query.executor;
 
 import org.apache.iotdb.db.exception.StorageEngineException;
+import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
+import org.apache.iotdb.db.index.read.QueryIndexExecutor;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.physical.crud.AggregationPlan;
 import org.apache.iotdb.db.qp.physical.crud.FillQueryPlan;
 import org.apache.iotdb.db.qp.physical.crud.GroupByTimeFillPlan;
 import org.apache.iotdb.db.qp.physical.crud.GroupByTimePlan;
 import org.apache.iotdb.db.qp.physical.crud.LastQueryPlan;
+import org.apache.iotdb.db.qp.physical.crud.QueryIndexPlan;
 import org.apache.iotdb.db.qp.physical.crud.RawDataQueryPlan;
 import org.apache.iotdb.db.qp.physical.crud.UDTFPlan;
 import org.apache.iotdb.db.query.context.QueryContext;
@@ -139,7 +142,7 @@ public class QueryRouter implements IQueryRouter {
 
     AggregationExecutor engineExecutor = getAggregationExecutor(aggregationPlan);
 
-    QueryDataSet dataSet = null;
+    QueryDataSet dataSet;
 
     if (optimizedExpression != null
         && optimizedExpression.getType() != ExpressionType.GLOBAL_TIME) {
@@ -271,6 +274,13 @@ public class QueryRouter implements IQueryRouter {
       throws StorageEngineException, QueryProcessException, IOException {
     LastQueryExecutor lastQueryExecutor = getLastQueryExecutor(lastQueryPlan);
     return lastQueryExecutor.execute(context, lastQueryPlan);
+  }
+
+  @Override
+  public QueryDataSet indexQuery(QueryIndexPlan queryPlan, QueryContext context)
+      throws QueryIndexException, StorageEngineException {
+    QueryIndexExecutor executor = new QueryIndexExecutor(queryPlan, context);
+    return executor.executeIndexQuery();
   }
 
   protected LastQueryExecutor getLastQueryExecutor(LastQueryPlan lastQueryPlan) {
