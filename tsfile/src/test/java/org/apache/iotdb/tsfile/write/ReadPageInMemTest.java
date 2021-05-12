@@ -24,6 +24,8 @@ import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.exception.write.WriteProcessException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.RecordUtils;
 import org.apache.iotdb.tsfile.write.record.TSRecord;
@@ -42,7 +44,9 @@ import static org.junit.Assert.fail;
 public class ReadPageInMemTest {
 
   private String filePath = TestConstant.BASE_OUTPUT_PATH.concat("TsFileReadPageInMem");
-  private File file = new File(filePath);
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
+  private File file = fsFactory.getFile(filePath);
   private TSFileConfig conf = TSFileDescriptor.getInstance().getConfig();
   private TsFileWriter innerWriter;
   private Schema schema = null;
@@ -94,7 +98,7 @@ public class ReadPageInMemTest {
     defaultMaxStringLength = conf.getMaxStringLength();
     conf.setMaxStringLength(2);
     schema = getSchema();
-    innerWriter = new TsFileWriter(new File(filePath), schema, conf);
+    innerWriter = new TsFileWriter(fsFactory.getFile(filePath), schema, conf);
   }
 
   @After

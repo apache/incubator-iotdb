@@ -39,7 +39,7 @@ class HDFSConfUtil {
   private static final Logger logger = LoggerFactory.getLogger(HDFSConfUtil.class);
 
   static Configuration setConf(Configuration conf) {
-    if (!tsFileConfig.getTSFileStorageFs().equals(FSType.HDFS)) {
+    if (!tsFileConfig.isFSSupported(FSType.HDFS)) {
       return conf;
     }
     try {
@@ -101,5 +101,16 @@ class HDFSConfUtil {
     }
 
     return conf;
+  }
+
+  static String getHDFSPrefix() {
+    String[] hdfsIps = TSFileDescriptor.getInstance().getConfig().getHdfsIp();
+    String prefix = "hdfs://";
+    if (hdfsIps.length > 1) {
+      prefix += TSFileDescriptor.getInstance().getConfig().getDfsNameServices();
+    } else {
+      prefix += hdfsIps[0] + ":" + TSFileDescriptor.getInstance().getConfig().getHdfsPort();
+    }
+    return prefix;
   }
 }

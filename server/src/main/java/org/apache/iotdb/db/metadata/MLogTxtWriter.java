@@ -26,7 +26,6 @@ import org.apache.iotdb.db.qp.physical.sys.MeasurementMNodePlan;
 import org.apache.iotdb.db.qp.physical.sys.StorageGroupMNodePlan;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.write.schema.IMeasurementSchema;
 
 import org.slf4j.Logger;
@@ -205,7 +204,7 @@ public class MLogTxtWriter implements AutoCloseable {
       return;
     } else if (!logFile.exists() && tmpLogFile.exists()) {
       // if old mlog doesn't exsit but mlog.tmp exists, rename tmp file to mlog
-      FSFactoryProducer.getFSFactory().moveFile(tmpLogFile, logFile);
+      SystemFileFactory.INSTANCE.moveFile(tmpLogFile, logFile);
       return;
     }
 

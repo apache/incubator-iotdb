@@ -115,7 +115,7 @@ public class FlinkTsFileBatchSink {
             .filter(s -> !s.equals(QueryConstant.RESERVED_TIME))
             .map(s -> new Path(s, true))
             .collect(Collectors.toList());
-    String[] result = TsFileUtils.readTsFile(path, paths);
+    String[] result = TsFileUtils.readTsFile(new File(path), paths);
     for (String row : result) {
       System.out.println(row);
     }

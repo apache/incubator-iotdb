@@ -20,6 +20,7 @@ package org.apache.iotdb.db.utils;
 
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.constant.TestConstant;
 import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
@@ -31,6 +32,7 @@ import org.apache.iotdb.tsfile.exception.write.WriteProcessException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.ReadOnlyTsFile;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Path;
@@ -57,6 +59,8 @@ import java.util.List;
 import java.util.Map;
 
 public class TsFileRewriteToolTest {
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
 
   private String path = null;
 
@@ -210,7 +214,7 @@ public class TsFileRewriteToolTest {
 
     for (int i = 0; i < splitResource.size(); i++) {
       try {
-        queryAndCheckTsFileWithOneDevice(splitResource.get(i).getTsFilePath(), i, deviceSensorsMap);
+        queryAndCheckTsFileWithOneDevice(splitResource.get(i).getTsFile(), i, deviceSensorsMap);
         long partitionId = splitResource.get(i).getTimePartition();
         Assert.assertEquals(i, partitionId);
       } catch (IOException e) {
@@ -221,7 +225,7 @@ public class TsFileRewriteToolTest {
 
   private void createOneTsFileWithOnlyOnePage(HashMap<String, List<String>> deviceSensorsMap) {
     try {
-      File f = FSFactoryProducer.getFSFactory().getFile(path);
+      File f = fsFactory.getFile(path);
       TsFileWriter tsFileWriter = new TsFileWriter(f);
       // add measurements into file schema
       try {
@@ -262,7 +266,7 @@ public class TsFileRewriteToolTest {
 
   private void createOneTsFile(HashMap<String, List<String>> deviceSensorsMap) {
     try {
-      File f = FSFactoryProducer.getFSFactory().getFile(path);
+      File f = fsFactory.getFile(path);
       TsFileWriter tsFileWriter = new TsFileWriter(f);
       // add measurements into file schema
       try {
@@ -297,9 +301,8 @@ public class TsFileRewriteToolTest {
   }
 
   public void queryAndCheckTsFileWithOneDevice(
-      String tsFilePath, int index, HashMap<String, List<String>> deviceSensorsMap)
-      throws IOException {
-    try (TsFileSequenceReader reader = new TsFileSequenceReader(tsFilePath);
+      File tsFile, int index, HashMap<String, List<String>> deviceSensorsMap) throws IOException {
+    try (TsFileSequenceReader reader = new TsFileSequenceReader(tsFile);
         ReadOnlyTsFile readTsFile = new ReadOnlyTsFile(reader)) {
       ArrayList<Path> paths = new ArrayList<>();
 

@@ -54,7 +54,7 @@ public class TsFileGeneratorForTest {
   private static int rowCount;
   private static int chunkGroupSize;
   private static int pageSize;
-  private static FSFactory fsFactory = FSFactoryProducer.getFSFactory();
+  private static FSFactory fsFactory = FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
 
   public static void generateFile(int rowCount, int chunkGroupSize, int pageSize)
       throws IOException {

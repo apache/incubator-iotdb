@@ -22,6 +22,8 @@ import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.exception.write.WriteProcessException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.ReadOnlyTsFile;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Path;
@@ -55,6 +57,8 @@ public class SameMeasurementsWithDifferentDataTypesTest {
   private String TEMPLATE_1 = "template1";
   private String TEMPLATE_2 = "template2";
   private String tsfilePath = TestConstant.BASE_OUTPUT_PATH.concat("test.tsfile");
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
 
   @Before
   public void before() throws IOException, WriteProcessException {
@@ -63,7 +67,7 @@ public class SameMeasurementsWithDifferentDataTypesTest {
 
   @After
   public void after() {
-    File file = new File(tsfilePath);
+    File file = fsFactory.getFile(tsfilePath);
     try {
       Files.deleteIfExists(file.toPath());
     } catch (IOException e) {
@@ -77,7 +81,7 @@ public class SameMeasurementsWithDifferentDataTypesTest {
     pathList.add(new Path("d1", "s1"));
     pathList.add(new Path("d2", "s1"));
     QueryExpression queryExpression = QueryExpression.create(pathList, null);
-    TsFileSequenceReader fileReader = new TsFileSequenceReader(tsfilePath);
+    TsFileSequenceReader fileReader = new TsFileSequenceReader(fsFactory.getFile(tsfilePath));
     ReadOnlyTsFile readOnlyTsFile = new ReadOnlyTsFile(fileReader);
     QueryDataSet dataSet = readOnlyTsFile.query(queryExpression);
     int i = 0;
@@ -95,7 +99,7 @@ public class SameMeasurementsWithDifferentDataTypesTest {
   }
 
   private void writeFile(String tsfilePath) throws IOException, WriteProcessException {
-    File f = new File(tsfilePath);
+    File f = fsFactory.getFile(tsfilePath);
     try {
       Files.deleteIfExists(f.toPath());
     } catch (IOException e) {

@@ -16,10 +16,11 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.iotdb.db.conf.directories.strategy;
+package org.apache.iotdb.db.engine.tier.directories.strategy;
 
 import org.apache.iotdb.db.exception.DiskSpaceInsufficientException;
 import org.apache.iotdb.db.utils.CommonUtils;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,7 +58,7 @@ public class RandomOnDiskUsableSpaceStrategy extends DirectoryStrategy {
   public List<Long> getFolderUsableSpaceList() {
     List<Long> spaceList = new ArrayList<>();
     for (int i = 0; i < folders.size(); i++) {
-      String folder = folders.get(i);
+      FSPath folder = folders.get(i);
       spaceList.add(CommonUtils.getUsableSpace(folder));
     }
     return spaceList;

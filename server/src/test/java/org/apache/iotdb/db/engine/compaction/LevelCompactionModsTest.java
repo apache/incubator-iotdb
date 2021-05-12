@@ -51,7 +51,7 @@ public class LevelCompactionModsTest extends LevelCompactionTest {
   @Before
   public void setUp() throws IOException, WriteProcessException, MetadataException {
     super.setUp();
-    tempSGDir = new File(TestConstant.BASE_OUTPUT_PATH.concat("tempSG"));
+    tempSGDir = fsFactory.getFile(TestConstant.BASE_OUTPUT_PATH.concat("tempSG"));
     tempSGDir.mkdirs();
   }
 
@@ -71,7 +71,9 @@ public class LevelCompactionModsTest extends LevelCompactionTest {
     Modification modification1;
     Modification modification2;
     try (ModificationFile sourceModificationFile =
-        new ModificationFile(sourceTsFileResource.getTsFilePath() + ModificationFile.FILE_SUFFIX)) {
+        new ModificationFile(
+            fsFactory.getFile(
+                sourceTsFileResource.getTsFilePath() + ModificationFile.FILE_SUFFIX))) {
       modification1 = new Deletion(new PartialPath(deviceIds[0], "sensor0"), 0, 0);
       modification2 = new Deletion(new PartialPath(deviceIds[0], "sensor1"), Long.MAX_VALUE, 0);
       sourceModificationFile.write(modification1);
@@ -83,7 +85,9 @@ public class LevelCompactionModsTest extends LevelCompactionTest {
     levelCompactionTsFileManagement.renameLevelFilesMods(
         filterModifications, sourceTsFileResources, targetTsFileResource);
     try (ModificationFile targetModificationFile =
-        new ModificationFile(targetTsFileResource.getTsFilePath() + ModificationFile.FILE_SUFFIX)) {
+        new ModificationFile(
+            fsFactory.getFile(
+                targetTsFileResource.getTsFilePath() + ModificationFile.FILE_SUFFIX))) {
       Collection<Modification> modifications = targetModificationFile.getModifications();
       assertEquals(1, modifications.size());
       assertEquals(modification2, modifications.stream().findFirst().get());
@@ -104,7 +108,9 @@ public class LevelCompactionModsTest extends LevelCompactionTest {
     Modification modification1;
     Modification modification2;
     try (ModificationFile sourceModificationFile =
-        new ModificationFile(sourceTsFileResource.getTsFilePath() + ModificationFile.FILE_SUFFIX)) {
+        new ModificationFile(
+            fsFactory.getFile(
+                sourceTsFileResource.getTsFilePath() + ModificationFile.FILE_SUFFIX))) {
       modification1 =
           new Deletion(
               new PartialPath(deviceIds[0], "sensor0"),
@@ -126,7 +132,9 @@ public class LevelCompactionModsTest extends LevelCompactionTest {
     levelCompactionTsFileManagement.renameLevelFilesMods(
         filterModifications, sourceTsFileResources, targetTsFileResource);
     try (ModificationFile targetModificationFile =
-        new ModificationFile(targetTsFileResource.getTsFilePath() + ModificationFile.FILE_SUFFIX)) {
+        new ModificationFile(
+            fsFactory.getFile(
+                targetTsFileResource.getTsFilePath() + ModificationFile.FILE_SUFFIX))) {
       Collection<Modification> modifications = targetModificationFile.getModifications();
       assertEquals(1, modifications.size());
       assertEquals(Long.MAX_VALUE, modifications.stream().findFirst().get().getFileOffset());

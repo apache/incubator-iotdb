@@ -35,13 +35,17 @@ import org.apache.iotdb.db.sync.sender.manage.SyncFileManager;
 import org.apache.iotdb.db.sync.sender.recover.ISyncSenderLogger;
 import org.apache.iotdb.db.sync.sender.recover.SyncSenderLogAnalyzer;
 import org.apache.iotdb.db.sync.sender.recover.SyncSenderLogger;
+import org.apache.iotdb.db.utils.FileUtils;
 import org.apache.iotdb.db.utils.SyncUtils;
 import org.apache.iotdb.rpc.RpcTransportFactory;
 import org.apache.iotdb.service.sync.thrift.ConfirmInfo;
 import org.apache.iotdb.service.sync.thrift.SyncService;
 import org.apache.iotdb.service.sync.thrift.SyncStatus;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
+import org.apache.iotdb.tsfile.utils.FSUtils;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
@@ -71,14 +75,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -243,34 +241,34 @@ public class SyncClient implements ISyncClient {
     syncSchema();
 
     // 3. Sync all data
-    String[] dataDirs = ioTDBConfig.getDataDirs();
-    logger.info("There are {} data dirs to be synced.", dataDirs.length);
-    for (int i = 0; i < dataDirs.length; i++) {
-      String dataDir = dataDirs[i];
-      logger.info(
-          "Start to sync data in data dir {}, the process is {}/{}",
-          dataDir,
-          i + 1,
-          dataDirs.length);
+    FSPath[][] dataDirs = ioTDBConfig.getDataDirs();
+    int dataDirNum = Arrays.stream(dataDirs).mapToInt(arr -> arr.length).sum();
+    logger.info("There are {} data dirs to be synced.", dataDirNum);
+    int idx = 0;
+    for (FSPath[] tierDataDirs : dataDirs) {
+      for (int i = 0; i < tierDataDirs.length; i++) {
+        idx = idx + 1;
+        FSPath dataDir = tierDataDirs[i];
+        logger.info(
+            "Start to sync data in data dir {}, the process is {}/{}", dataDir, idx, dataDirNum);
 
-      config.update(dataDir);
-      syncFileManager.getValidFiles(dataDir);
-      allSG = syncFileManager.getAllSGs();
-      lastLocalFilesMap = syncFileManager.getLastLocalFilesMap();
-      deletedFilesMap = syncFileManager.getDeletedFilesMap();
-      toBeSyncedFilesMap = syncFileManager.getToBeSyncedFilesMap();
-      checkRecovery();
-      if (SyncUtils.isEmpty(deletedFilesMap) && SyncUtils.isEmpty(toBeSyncedFilesMap)) {
-        logger.info("There has no data to sync in data dir {}", dataDir);
-        continue;
+        config.update(dataDir);
+        syncFileManager.getValidFiles(dataDir);
+        allSG = syncFileManager.getAllSGs();
+        lastLocalFilesMap = syncFileManager.getLastLocalFilesMap();
+        deletedFilesMap = syncFileManager.getDeletedFilesMap();
+        toBeSyncedFilesMap = syncFileManager.getToBeSyncedFilesMap();
+        checkRecovery();
+        if (SyncUtils.isEmpty(deletedFilesMap) && SyncUtils.isEmpty(toBeSyncedFilesMap)) {
+          logger.info("There has no data to sync in data dir {}", dataDir);
+          clearBlackLists();
+          continue;
+        }
+        sync();
+        endSync();
+        logger.info(
+            "Finish to sync data in data dir {}, the process is {}/{}", dataDir, idx, dataDirNum);
       }
-      sync();
-      endSync();
-      logger.info(
-          "Finish to sync data in data dir {}, the process is {}/{}",
-          dataDir,
-          i + 1,
-          dataDirs.length);
     }
 
     // 4. notify receiver that synchronization finish
@@ -574,7 +572,8 @@ public class SyncClient implements ISyncClient {
       try {
         File snapshotFile = makeFileSnapshot(tsfile);
         // firstly sync .resource file, then sync tsfile
-        syncSingleFile(new File(snapshotFile.getAbsolutePath() + TsFileResource.RESOURCE_SUFFIX));
+        syncSingleFile(
+            FSPath.parse(snapshotFile).postConcat(TsFileResource.RESOURCE_SUFFIX).toFile());
         syncSingleFile(snapshotFile);
         lastLocalFilesMap.get(sgName).get(vgId).get(timeRangeId).add(tsfile);
         syncLog.finishSyncTsfile(tsfile);
@@ -669,15 +668,18 @@ public class SyncClient implements ISyncClient {
 
   private void endSync() throws IOException {
     File currentLocalFile = getCurrentLogFile();
-    File lastLocalFile = new File(config.getLastFileInfoPath());
+    File lastLocalFile = config.getLastFileInfoPath().toFile();
 
     // 1. Write file list to currentLocalFile
-    try (BufferedWriter bw = new BufferedWriter(new FileWriter(currentLocalFile))) {
+    FSFactory fsFactory = FSFactoryProducer.getFSFactory(FSUtils.getFSType(currentLocalFile));
+    try (BufferedWriter bw =
+        fsFactory.getBufferedWriter(currentLocalFile.getAbsolutePath(), false)) {
       for (Map<Long, Map<Long, Set<File>>> vgCurrentLocalFiles : lastLocalFilesMap.values()) {
         for (Map<Long, Set<File>> currentLocalFiles : vgCurrentLocalFiles.values()) {
           for (Set<File> files : currentLocalFiles.values()) {
             for (File file : files) {
-              bw.write(file.getAbsolutePath());
+              bw.write(FSPath.parse(file).getAbsoluteFSPath().getRawFSPath());
+              logger.error(FSPath.parse(file).getRawFSPath());
               bw.newLine();
             }
             bw.flush();
@@ -690,17 +692,33 @@ public class SyncClient implements ISyncClient {
 
     // 2. Rename currentLocalFile to lastLocalFile
     lastLocalFile.delete();
-    FileUtils.moveFile(currentLocalFile, lastLocalFile);
+    fsFactory.moveFile(currentLocalFile, lastLocalFile);
 
     // 3. delete snapshot directory
     try {
-      FileUtils.deleteDirectory(new File(config.getSnapshotPath()));
-    } catch (IOException e) {
+      FileUtils.deleteDirectory(config.getSnapshotPath().toFile());
+    } catch (Exception e) {
       logger.error("Can not clear snapshot directory {}", config.getSnapshotPath(), e);
     }
 
-    // 4. delete sync log file
+    // 4. delete deleted files blacklist & to-be-synced files blacklist
+    clearBlackLists();
+
+    // 5. delete sync log file
     getSyncLogFile().delete();
+  }
+
+  private void clearBlackLists() {
+    File deletedBlackList =
+        config.getDeletedBlackListPath().postConcat(SyncConstant.TMP_FILE_SUFFIX).toFile();
+    if (deletedBlackList.exists()) {
+      deletedBlackList.delete();
+    }
+    File toBeSyncedBlackList =
+        config.getToBeSyncedBlackListPath().postConcat(SyncConstant.TMP_FILE_SUFFIX).toFile();
+    if (toBeSyncedBlackList.exists()) {
+      toBeSyncedBlackList.delete();
+    }
   }
 
   private File getSchemaPosFile() {
@@ -729,11 +747,11 @@ public class SyncClient implements ISyncClient {
   }
 
   private File getSyncLogFile() {
-    return new File(config.getSenderFolderPath(), SyncConstant.SYNC_LOG_NAME);
+    return config.getSenderFolderPath().getChildFile(SyncConstant.SYNC_LOG_NAME);
   }
 
   private File getCurrentLogFile() {
-    return new File(config.getSenderFolderPath(), SyncConstant.CURRENT_LOCAL_FILE_NAME);
+    return config.getSenderFolderPath().getChildFile(SyncConstant.CURRENT_LOCAL_FILE_NAME);
   }
 
   public void setConfig(SyncSenderConfig config) {

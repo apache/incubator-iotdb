@@ -21,6 +21,8 @@ package org.apache.iotdb.tsfile.file.metadata;
 import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.file.metadata.utils.TestHelper;
 import org.apache.iotdb.tsfile.file.metadata.utils.Utils;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -37,13 +39,15 @@ import java.nio.channels.FileChannel;
 public class TsFileMetadataTest {
 
   final String PATH = TestConstant.BASE_OUTPUT_PATH.concat("output1.tsfile");
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
 
   @Before
   public void setUp() {}
 
   @After
   public void tearDown() {
-    File file = new File(PATH);
+    File file = fsFactory.getFile(PATH);
     if (file.exists()) {
       file.delete();
     }
@@ -61,7 +65,7 @@ public class TsFileMetadataTest {
     FileInputStream fileInputStream = null;
     TsFileMetadata metaData = null;
     try {
-      fileInputStream = new FileInputStream(new File(PATH));
+      fileInputStream = new FileInputStream(fsFactory.getFile(PATH));
       FileChannel channel = fileInputStream.getChannel();
       ByteBuffer buffer = ByteBuffer.allocate((int) channel.size());
       channel.read(buffer);
@@ -83,7 +87,7 @@ public class TsFileMetadataTest {
   }
 
   private void serialized(TsFileMetadata metaData) {
-    File file = new File(PATH);
+    File file = fsFactory.getFile(PATH);
     if (file.exists()) {
       file.delete();
     }

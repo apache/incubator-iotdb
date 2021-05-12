@@ -18,9 +18,12 @@
  */
 package org.apache.iotdb.tsfile.read.controller;
 
+import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.file.header.ChunkHeader;
 import org.apache.iotdb.tsfile.file.metadata.ChunkMetadata;
 import org.apache.iotdb.tsfile.file.metadata.IChunkMetadata;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Chunk;
 import org.apache.iotdb.tsfile.read.common.Path;
@@ -37,6 +40,8 @@ import java.util.List;
 public class ChunkLoaderTest {
 
   private static final String FILE_PATH = TsFileGeneratorForTest.outputDataFile;
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
   private TsFileSequenceReader fileReader;
 
   @Before
@@ -52,7 +57,7 @@ public class ChunkLoaderTest {
 
   @Test
   public void test() throws IOException {
-    fileReader = new TsFileSequenceReader(FILE_PATH);
+    fileReader = new TsFileSequenceReader(fsFactory.getFile(FILE_PATH));
     MetadataQuerierByFileImpl metadataQuerierByFile = new MetadataQuerierByFileImpl(fileReader);
     List<IChunkMetadata> chunkMetadataList =
         metadataQuerierByFile.getChunkMetaDataList(new Path("d2", "s1"));

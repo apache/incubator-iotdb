@@ -47,6 +47,7 @@ import org.apache.iotdb.tsfile.read.controller.MetadataQuerierByFileImpl;
 import org.apache.iotdb.tsfile.read.reader.TsFileInput;
 import org.apache.iotdb.tsfile.read.reader.page.PageReader;
 import org.apache.iotdb.tsfile.utils.BloomFilter;
+import org.apache.iotdb.tsfile.utils.FSUtils;
 import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.apache.iotdb.tsfile.write.schema.IMeasurementSchema;
@@ -85,7 +86,7 @@ public class TsFileSequenceReader implements AutoCloseable {
   protected static final TSFileConfig config = TSFileDescriptor.getInstance().getConfig();
   private static final String METADATA_INDEX_NODE_DESERIALIZE_ERROR =
       "Something error happened while deserializing MetadataIndexNode of file {}";
-  protected String file;
+  protected File file;
   protected TsFileInput tsFileInput;
   protected long fileMetadataPos;
   protected int fileMetadataSize;
@@ -108,7 +109,7 @@ public class TsFileSequenceReader implements AutoCloseable {
    * @param file the data file
    * @throws IOException If some I/O error occurs
    */
-  public TsFileSequenceReader(String file) throws IOException {
+  public TsFileSequenceReader(File file) throws IOException {
     this(file, true);
   }
 
@@ -118,12 +119,14 @@ public class TsFileSequenceReader implements AutoCloseable {
    * @param file -given file name
    * @param loadMetadataSize -whether load meta data size
    */
-  public TsFileSequenceReader(String file, boolean loadMetadataSize) throws IOException {
+  public TsFileSequenceReader(File file, boolean loadMetadataSize) throws IOException {
     if (resourceLogger.isDebugEnabled()) {
       resourceLogger.debug("{} reader is opened. {}", file, getClass().getName());
     }
     this.file = file;
-    tsFileInput = FSFactoryProducer.getFileInputFactory().getTsFileInput(file);
+    tsFileInput =
+        FSFactoryProducer.getFileInputFactory(FSUtils.getFSType(file))
+            .getTsFileInput(file.getAbsolutePath());
     try {
       if (loadMetadataSize) {
         loadMetadataSize();
@@ -135,7 +138,7 @@ public class TsFileSequenceReader implements AutoCloseable {
   }
 
   // used in merge resource
-  public TsFileSequenceReader(String file, boolean loadMetadata, boolean cacheDeviceMetadata)
+  public TsFileSequenceReader(File file, boolean loadMetadata, boolean cacheDeviceMetadata)
       throws IOException {
     this(file, loadMetadata);
     this.cacheDeviceMetadata = cacheDeviceMetadata;
@@ -922,7 +925,11 @@ public class TsFileSequenceReader implements AutoCloseable {
   }
 
   public String getFileName() {
-    return this.file;
+    return this.file.getAbsolutePath();
+  }
+
+  public File getFile() {
+    return file;
   }
 
   public long fileSize() throws IOException {
@@ -994,7 +1001,7 @@ public class TsFileSequenceReader implements AutoCloseable {
       List<ChunkGroupMetadata> chunkGroupMetadataList,
       boolean fastFinish)
       throws IOException {
-    File checkFile = FSFactoryProducer.getFSFactory().getFile(this.file);
+    File checkFile = this.file;
     long fileSize;
     if (!checkFile.exists()) {
       return TsFileCheckStatus.FILE_NOT_FOUND;

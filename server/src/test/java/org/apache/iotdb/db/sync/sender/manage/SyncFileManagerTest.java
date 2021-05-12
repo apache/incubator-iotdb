@@ -19,8 +19,8 @@
 package org.apache.iotdb.db.sync.sender.manage;
 
 import org.apache.iotdb.db.conf.IoTDBConstant;
-import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
+import org.apache.iotdb.db.engine.tier.TierManager;
 import org.apache.iotdb.db.exception.DiskSpaceInsufficientException;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
@@ -31,6 +31,7 @@ import org.apache.iotdb.db.sync.conf.SyncSenderDescriptor;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.db.utils.FilePathUtils;
 import org.apache.iotdb.db.utils.SyncUtils;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 
 import org.junit.After;
 import org.junit.Before;
@@ -53,15 +54,13 @@ public class SyncFileManagerTest {
   private static final Logger logger = LoggerFactory.getLogger(SyncFileManagerTest.class);
   private ISyncFileManager manager = SyncFileManager.getInstance();
   private SyncSenderConfig config = SyncSenderDescriptor.getInstance().getConfig();
-  private String dataDir;
+  private FSPath dataDir;
 
   @Before
   public void setUp() throws DiskSpaceInsufficientException {
     EnvironmentUtils.envSetUp();
-    dataDir =
-        new File(DirectoryManager.getInstance().getNextFolderForSequenceFile())
-            .getParentFile()
-            .getAbsolutePath();
+    FSPath seqDir = TierManager.getInstance().getAllSequenceFileFolders().get(0);
+    dataDir = new FSPath(seqDir.getFsType(), seqDir.toFile().getParentFile().getAbsolutePath());
     config.update(dataDir);
   }
 
@@ -86,7 +85,7 @@ public class SyncFileManagerTest {
             .computeIfAbsent(0L, k -> new HashSet<>());
         String rand = r.nextInt(10000) + TSFILE_SUFFIX;
         String fileName =
-            FilePathUtils.regularizePath(dataDir)
+            FilePathUtils.regularizePath(dataDir.getPath())
                 + IoTDBConstant.SEQUENCE_FLODER_NAME
                 + File.separator
                 + getSgName(i)
@@ -96,7 +95,7 @@ public class SyncFileManagerTest {
                 + "0"
                 + File.separator
                 + rand;
-        File file = new File(fileName);
+        File file = new FSPath(dataDir.getFsType(), fileName).toFile();
         allFileList.get(getSgName(i)).get(0L).get(0L).add(file);
         if (!file.getParentFile().exists()) {
           file.getParentFile().mkdirs();
@@ -136,7 +135,7 @@ public class SyncFileManagerTest {
             .computeIfAbsent(0L, k -> new HashSet<>());
         String rand = r.nextInt(10000) + TSFILE_SUFFIX;
         String fileName =
-            FilePathUtils.regularizePath(dataDir)
+            FilePathUtils.regularizePath(dataDir.getPath())
                 + IoTDBConstant.SEQUENCE_FLODER_NAME
                 + File.separator
                 + getSgName(i)
@@ -146,7 +145,7 @@ public class SyncFileManagerTest {
                 + "0"
                 + File.separator
                 + rand;
-        File file = new File(fileName);
+        File file = new FSPath(dataDir.getFsType(), fileName).toFile();
         allFileList.get(getSgName(i)).get(0L).get(0L).add(file);
         correctToBeSyncedFiles.get(getSgName(i)).get(0L).get(0L).add(file);
         if (!file.getParentFile().exists()) {
@@ -190,7 +189,7 @@ public class SyncFileManagerTest {
             .computeIfAbsent(0L, k -> new HashSet<>());
         String rand = r.nextInt(10000) + TSFILE_SUFFIX;
         String fileName =
-            FilePathUtils.regularizePath(dataDir)
+            FilePathUtils.regularizePath(dataDir.getPath())
                 + IoTDBConstant.SEQUENCE_FLODER_NAME
                 + File.separator
                 + getSgName(i)
@@ -201,7 +200,7 @@ public class SyncFileManagerTest {
                 + File.separator
                 + File.separator
                 + rand;
-        File file = new File(fileName);
+        File file = new FSPath(dataDir.getFsType(), fileName).toFile();
         allFileList.get(getSgName(i)).get(0L).get(0L).add(file);
         correctToBeSyncedFiles.get(getSgName(i)).get(0L).get(0L).add(file);
         if (!file.getParentFile().exists()) {
@@ -273,7 +272,7 @@ public class SyncFileManagerTest {
             .computeIfAbsent(0L, k -> new HashSet<>());
         String rand = String.valueOf(r.nextInt(10000));
         String fileName =
-            FilePathUtils.regularizePath(dataDir)
+            FilePathUtils.regularizePath(dataDir.getPath())
                 + IoTDBConstant.SEQUENCE_FLODER_NAME
                 + File.separator
                 + getSgName(i)
@@ -284,7 +283,7 @@ public class SyncFileManagerTest {
                 + File.separator
                 + File.separator
                 + rand;
-        File file = new File(fileName);
+        File file = new FSPath(dataDir.getFsType(), fileName).toFile();
         allFileList.get(getSgName(i)).get(0L).get(0L).add(file);
         if (!file.getParentFile().exists()) {
           file.getParentFile().mkdirs();
@@ -331,7 +330,7 @@ public class SyncFileManagerTest {
   private void updateLastLocalFiles(
       Map<String, Map<Long, Map<Long, Set<File>>>> lastLocalFilesMap) {
     try (BufferedWriter bw =
-        new BufferedWriter(new FileWriter(new File(config.getLastFileInfoPath())))) {
+        new BufferedWriter(new FileWriter(config.getLastFileInfoPath().toFile()))) {
       for (Map<Long, Map<Long, Set<File>>> currentLocalFiles : lastLocalFilesMap.values()) {
         for (Map<Long, Set<File>> vgFiles : currentLocalFiles.values()) {
           for (Set<File> files : vgFiles.values()) {

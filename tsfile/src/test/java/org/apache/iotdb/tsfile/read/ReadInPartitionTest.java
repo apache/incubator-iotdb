@@ -18,8 +18,11 @@
  */
 package org.apache.iotdb.tsfile.read;
 
+import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.exception.filter.QueryFilterOptimizationException;
 import org.apache.iotdb.tsfile.file.metadata.ChunkMetadata;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.read.common.RowRecord;
 import org.apache.iotdb.tsfile.read.common.TimeRange;
@@ -57,6 +60,8 @@ import java.util.List;
 public class ReadInPartitionTest {
 
   private static final String FILE_PATH = TsFileGeneratorForTest.outputDataFile;
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
   private static ReadOnlyTsFile roTsFile = null;
   private ArrayList<TimeRange> d1s6timeRangeList = new ArrayList<>();
   private ArrayList<TimeRange> d2s1timeRangeList = new ArrayList<>();
@@ -65,7 +70,7 @@ public class ReadInPartitionTest {
   @Before
   public void before() throws IOException {
     TsFileGeneratorForTest.generateFile(10000, 1024, 100);
-    TsFileSequenceReader reader = new TsFileSequenceReader(FILE_PATH);
+    TsFileSequenceReader reader = new TsFileSequenceReader(fsFactory.getFile(FILE_PATH));
     roTsFile = new ReadOnlyTsFile(reader);
 
     // Because the size of the generated chunkGroupMetaData may differ under

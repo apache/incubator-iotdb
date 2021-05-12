@@ -144,7 +144,7 @@ public class SlotManagerTest {
       assertEquals(SENDING, recovered.getStatus(3));
       assertEquals(SENT, recovered.getStatus(4));
     } finally {
-      EnvironmentUtils.cleanDir(dummyMemberDir.getPath());
+      EnvironmentUtils.cleanDir(dummyMemberDir);
     }
   }
   //

@@ -26,8 +26,9 @@ import org.apache.iotdb.db.exception.SyncDeviceOwnerConflictException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.sync.conf.SyncConstant;
 import org.apache.iotdb.db.utils.FileLoaderUtils;
+import org.apache.iotdb.db.utils.FileUtils;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 
-import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +44,7 @@ public class FileLoader implements IFileLoader {
 
   public static final int WAIT_TIME = 100;
 
-  private String syncFolderPath;
+  private FSPath syncFolder;
 
   private String senderName;
 
@@ -55,22 +56,22 @@ public class FileLoader implements IFileLoader {
 
   private volatile boolean endSync = false;
 
-  private FileLoader(String senderName, String syncFolderPath) throws IOException {
+  private FileLoader(String senderName, FSPath syncFolder) throws IOException {
     this.senderName = senderName;
-    this.syncFolderPath = syncFolderPath;
-    this.loadLog = new LoadLogger(new File(syncFolderPath, SyncConstant.LOAD_LOG_NAME));
+    this.syncFolder = syncFolder;
+    this.loadLog = new LoadLogger(syncFolder.getChildFile(SyncConstant.LOAD_LOG_NAME));
   }
 
-  public static FileLoader createFileLoader(String senderName, String syncFolderPath)
+  public static FileLoader createFileLoader(String senderName, FSPath syncFolder)
       throws IOException {
-    FileLoader fileLoader = new FileLoader(senderName, syncFolderPath);
+    FileLoader fileLoader = new FileLoader(senderName, syncFolder);
     FileLoaderManager.getInstance().addFileLoader(senderName, fileLoader);
     FileLoaderManager.getInstance().addLoadTaskRunner(fileLoader.loadTaskRunner);
     return fileLoader;
   }
 
   public static FileLoader createFileLoader(File syncFolder) throws IOException {
-    return createFileLoader(syncFolder.getName(), syncFolder.getAbsolutePath());
+    return createFileLoader(syncFolder.getName(), FSPath.parse(syncFolder));
   }
 
   private Runnable loadTaskRunner =
@@ -170,9 +171,9 @@ public class FileLoader implements IFileLoader {
   public void cleanUp() {
     try {
       loadLog.close();
-      new File(syncFolderPath, SyncConstant.SYNC_LOG_NAME).delete();
-      new File(syncFolderPath, SyncConstant.LOAD_LOG_NAME).delete();
-      FileUtils.deleteDirectory(new File(syncFolderPath, SyncConstant.RECEIVER_DATA_FOLDER_NAME));
+      syncFolder.getChildFile(SyncConstant.SYNC_LOG_NAME).delete();
+      syncFolder.getChildFile(SyncConstant.LOAD_LOG_NAME).delete();
+      FileUtils.deleteDirectory(syncFolder.getChildFile(SyncConstant.RECEIVER_DATA_FOLDER_NAME));
       FileLoaderManager.getInstance().removeFileLoader(senderName);
       LOGGER.info("Sync loading process for {} has finished.", senderName);
     } catch (IOException e) {

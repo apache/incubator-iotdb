@@ -225,7 +225,7 @@ public class SeqTsFileRecoverTest {
       assertEquals(19, resource.getEndTime("root.sg.device" + i));
     }
 
-    ReadOnlyTsFile readOnlyTsFile = new ReadOnlyTsFile(new TsFileSequenceReader(tsF.getPath()));
+    ReadOnlyTsFile readOnlyTsFile = new ReadOnlyTsFile(new TsFileSequenceReader(tsF));
     List<Path> pathList = new ArrayList<>();
     for (int j = 0; j < 10; j++) {
       for (int k = 0; k < 10; k++) {
@@ -292,7 +292,7 @@ public class SeqTsFileRecoverTest {
       assertEquals(19, resource.getEndTime("root.sg.device" + i));
     }
 
-    ReadOnlyTsFile readOnlyTsFile = new ReadOnlyTsFile(new TsFileSequenceReader(tsF.getPath()));
+    ReadOnlyTsFile readOnlyTsFile = new ReadOnlyTsFile(new TsFileSequenceReader(tsF));
     List<Path> pathList = new ArrayList<>();
     for (int j = 0; j < 10; j++) {
       for (int k = 0; k < 10; k++) {

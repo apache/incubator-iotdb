@@ -23,15 +23,19 @@ import org.apache.iotdb.db.engine.merge.task.MergeTask;
 import org.apache.iotdb.db.engine.modification.ModificationFile;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.service.IoTDB;
+import org.apache.iotdb.db.sync.conf.SyncConstant;
 import org.apache.iotdb.db.sync.conf.SyncSenderDescriptor;
 import org.apache.iotdb.tsfile.common.constant.TsFileConstant;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
+import org.apache.iotdb.tsfile.utils.FSUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -40,12 +44,14 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import static org.apache.iotdb.tsfile.common.constant.TsFileConstant.TSFILE_SUFFIX;
 
 public class SyncFileManager implements ISyncFileManager {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SyncFileManager.class);
+  private final Pattern positiveIntPattern = Pattern.compile("\\d+");
 
   /**
    * All storage groups on the disk where the current sync task is executed logicalSg -> <virtualSg,
@@ -91,17 +97,18 @@ public class SyncFileManager implements ISyncFileManager {
 
   @SuppressWarnings("squid:S3776") // Suppress high Cognitive Complexity warning
   @Override
-  public void getCurrentLocalFiles(String dataDir) {
+  public void getCurrentLocalFiles(FSPath dataDir) {
     LOGGER.info("Start to get current local files in data folder {}", dataDir);
 
     currentSealedLocalFilesMap = new HashMap<>();
     // get all files in data dir sequence folder
     Map<String, Map<Long, Map<Long, Set<File>>>> currentAllLocalFiles = new HashMap<>();
-    if (!new File(dataDir + File.separatorChar + IoTDBConstant.SEQUENCE_FLODER_NAME).exists()) {
+    File seqFolder =
+        dataDir.postConcat(File.separatorChar + IoTDBConstant.SEQUENCE_FLODER_NAME).toFile();
+    if (!seqFolder.exists()) {
       return;
     }
-    File[] allSgFolders =
-        new File(dataDir + File.separatorChar + IoTDBConstant.SEQUENCE_FLODER_NAME).listFiles();
+    File[] allSgFolders = seqFolder.listFiles();
     for (File sgFolder : allSgFolders) {
       if (!sgFolder.getName().startsWith(IoTDBConstant.PATH_ROOT)
           || sgFolder.getName().equals(TsFileConstant.TMP_SUFFIX)) {
@@ -110,12 +117,18 @@ public class SyncFileManager implements ISyncFileManager {
       allSGs.putIfAbsent(sgFolder.getName(), new HashMap<>());
       currentAllLocalFiles.putIfAbsent(sgFolder.getName(), new HashMap<>());
       for (File virtualSgFolder : sgFolder.listFiles()) {
+        if (!positiveIntPattern.matcher(virtualSgFolder.getName()).matches()) {
+          continue;
+        }
         try {
           Long vgId = Long.parseLong(virtualSgFolder.getName());
           allSGs.get(sgFolder.getName()).putIfAbsent(vgId, new HashSet<>());
           currentAllLocalFiles.get(sgFolder.getName()).putIfAbsent(vgId, new HashMap<>());
 
           for (File timeRangeFolder : virtualSgFolder.listFiles()) {
+            if (!positiveIntPattern.matcher(timeRangeFolder.getName()).matches()) {
+              continue;
+            }
             Long timeRangeId = Long.parseLong(timeRangeFolder.getName());
             currentAllLocalFiles
                 .get(sgFolder.getName())
@@ -129,7 +142,7 @@ public class SyncFileManager implements ISyncFileManager {
                             .get(sgFolder.getName())
                             .get(vgId)
                             .get(timeRangeId)
-                            .add(new File(timeRangeFolder.getAbsolutePath(), file.getName())));
+                            .add(file.getAbsoluteFile()));
           }
         } catch (Exception e) {
           LOGGER.error(
@@ -165,24 +178,27 @@ public class SyncFileManager implements ISyncFileManager {
   }
 
   private boolean checkFileValidity(File file) {
-    return new File(file.getAbsolutePath() + TsFileResource.RESOURCE_SUFFIX).exists()
-        && !new File(file.getAbsolutePath() + ModificationFile.FILE_SUFFIX).exists()
-        && !new File(file.getAbsolutePath() + MergeTask.MERGE_SUFFIX).exists();
+    FSFactory fsFactory = FSFactoryProducer.getFSFactory(FSUtils.getFSType(file));
+    return fsFactory.getFile(file.getAbsolutePath() + TsFileResource.RESOURCE_SUFFIX).exists()
+        && !fsFactory.getFile(file.getAbsolutePath() + ModificationFile.FILE_SUFFIX).exists()
+        && !fsFactory.getFile(file.getAbsolutePath() + MergeTask.MERGE_SUFFIX).exists();
   }
 
   @Override
-  public void getLastLocalFiles(File lastLocalFileInfo) throws IOException {
+  public void getLastLocalFiles(FSPath lastLocalFilePath) throws IOException {
     LOGGER.info(
         "Start to get last local files from last local file info {}",
-        lastLocalFileInfo.getAbsoluteFile());
+        lastLocalFilePath.getRawFSPath());
     lastLocalFilesMap = new HashMap<>();
+    File lastLocalFileInfo = lastLocalFilePath.toFile();
     if (!lastLocalFileInfo.exists()) {
       return;
     }
-    try (BufferedReader reader = new BufferedReader(new FileReader(lastLocalFileInfo))) {
+    FSFactory fsFactory = FSFactoryProducer.getFSFactory(lastLocalFilePath.getFsType());
+    try (BufferedReader reader = fsFactory.getBufferedReader(lastLocalFileInfo.getAbsolutePath())) {
       String filePath;
       while ((filePath = reader.readLine()) != null) {
-        File file = new File(filePath);
+        File file = FSPath.parse(filePath).toFile();
         Long timeRangeId = Long.parseLong(file.getParentFile().getName());
         Long vgId = Long.parseLong(file.getParentFile().getParentFile().getName());
         String sgName = file.getParentFile().getParentFile().getParentFile().getName();
@@ -195,15 +211,81 @@ public class SyncFileManager implements ISyncFileManager {
             .add(file);
       }
     }
+    filterToBeSyncedFiles(
+        SyncSenderDescriptor.getInstance().getConfig().getToBeSyncedBlackListPath());
+    filterDeletedFiles(SyncSenderDescriptor.getInstance().getConfig().getDeletedBlackListPath());
+  }
+
+  private void filterToBeSyncedFiles(FSPath blacklistFilePath) throws IOException {
+    File blacklistFile = blacklistFilePath.toFile();
+    if (!blacklistFile.exists()) {
+      return;
+    }
+    LOGGER.info(
+        "Start to get to-be-synced files blacklist from blacklist file {}",
+        blacklistFilePath.getRawFSPath());
+    File tmpBlacklistFile = blacklistFilePath.postConcat(SyncConstant.TMP_FILE_SUFFIX).toFile();
+    FSFactory fsFactory = FSFactoryProducer.getFSFactory(blacklistFilePath.getFsType());
+    fsFactory.moveFile(blacklistFile, tmpBlacklistFile);
+    // analyze tmp black list
+    try (BufferedReader reader = fsFactory.getBufferedReader(tmpBlacklistFile.getAbsolutePath())) {
+      String filePath;
+      while ((filePath = reader.readLine()) != null) {
+        File file = FSPath.parse(filePath).toFile();
+        Long timeRangeId = Long.parseLong(file.getParentFile().getName());
+        Long vgId = Long.parseLong(file.getParentFile().getParentFile().getName());
+        String sgName = file.getParentFile().getParentFile().getParentFile().getName();
+        allSGs.putIfAbsent(sgName, new HashMap<>());
+        allSGs.get(sgName).putIfAbsent(vgId, new HashSet<>());
+        // pretend this file is already synced
+        if (file.exists()) {
+          lastLocalFilesMap
+              .computeIfAbsent(sgName, k -> new HashMap<>())
+              .computeIfAbsent(vgId, k -> new HashMap<>())
+              .computeIfAbsent(timeRangeId, k -> new HashSet<>())
+              .add(file);
+        }
+      }
+    }
+  }
+
+  private void filterDeletedFiles(FSPath blacklistFilePath) throws IOException {
+    File blacklistFile = blacklistFilePath.toFile();
+    if (!blacklistFile.exists()) {
+      return;
+    }
+    LOGGER.info(
+        "Start to get deleted files blacklist from blacklist file {}",
+        blacklistFilePath.getRawFSPath());
+    File tmpBlacklistFile = blacklistFilePath.postConcat(SyncConstant.TMP_FILE_SUFFIX).toFile();
+    FSFactory fsFactory = FSFactoryProducer.getFSFactory(blacklistFilePath.getFsType());
+    fsFactory.moveFile(blacklistFile, tmpBlacklistFile);
+    // analyze tmp black list
+    try (BufferedReader reader = fsFactory.getBufferedReader(tmpBlacklistFile.getAbsolutePath())) {
+      String filePath;
+      while ((filePath = reader.readLine()) != null) {
+        File file = FSPath.parse(filePath).toFile();
+        Long timeRangeId = Long.parseLong(file.getParentFile().getName());
+        Long vgId = Long.parseLong(file.getParentFile().getParentFile().getName());
+        String sgName = file.getParentFile().getParentFile().getParentFile().getName();
+        // pretend this file is already synced as deleted
+        if (!file.exists()) {
+          lastLocalFilesMap
+              .computeIfAbsent(sgName, k -> new HashMap<>())
+              .computeIfAbsent(vgId, k -> new HashMap<>())
+              .computeIfAbsent(timeRangeId, k -> new HashSet<>())
+              .remove(file);
+        }
+      }
+    }
   }
 
   @SuppressWarnings("squid:S3776") // Suppress high Cognitive Complexity warning
   @Override
-  public void getValidFiles(String dataDir) throws IOException {
+  public void getValidFiles(FSPath dataDir) throws IOException {
     allSGs = new HashMap<>();
     getCurrentLocalFiles(dataDir);
-    getLastLocalFiles(
-        new File(SyncSenderDescriptor.getInstance().getConfig().getLastFileInfoPath()));
+    getLastLocalFiles(SyncSenderDescriptor.getInstance().getConfig().getLastFileInfoPath());
     toBeSyncedFilesMap = new HashMap<>();
     deletedFilesMap = new HashMap<>();
     for (String sgName : allSGs.keySet()) {

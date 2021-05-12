@@ -20,7 +20,6 @@ package org.apache.iotdb.db.writelog.node;
 
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.qp.physical.PhysicalPlan;
 import org.apache.iotdb.db.writelog.io.ILogReader;
@@ -87,7 +86,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
   public ExclusiveWriteLogNode(String identifier) {
     this.identifier = identifier;
     this.logDirectory =
-        DirectoryManager.getInstance().getWALFolder() + File.separator + this.identifier;
+        IoTDBDescriptor.getInstance().getConfig().getWalDir() + File.separator + this.identifier;
     if (SystemFileFactory.INSTANCE.getFile(logDirectory).mkdirs()) {
       logger.info("create the WAL folder {}.", logDirectory);
     }

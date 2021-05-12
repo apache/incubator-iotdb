@@ -16,11 +16,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.iotdb.db.conf.directories.strategy;
+package org.apache.iotdb.db.engine.tier.directories.strategy;
 
 import org.apache.iotdb.db.constant.TestConstant;
 import org.apache.iotdb.db.exception.DiskSpaceInsufficientException;
 import org.apache.iotdb.db.utils.CommonUtils;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 
 import org.junit.After;
 import org.junit.Before;
@@ -47,14 +48,14 @@ import static org.junit.Assert.fail;
 @PrepareForTest(CommonUtils.class)
 public class DirectoryStrategyTest {
 
-  List<String> dataDirList;
+  List<FSPath> dataDirList;
   Set<Integer> fullDirIndexSet;
 
   @Before
   public void setUp() throws IOException {
     dataDirList = new ArrayList<>();
     for (int i = 0; i < 5; i++) {
-      dataDirList.add(TestConstant.OUTPUT_DATA_DIR + i);
+      dataDirList.add(new FSPath(TestConstant.DEFAULT_TEST_FS, TestConstant.OUTPUT_DATA_DIR + i));
     }
 
     fullDirIndexSet = new HashSet<>();

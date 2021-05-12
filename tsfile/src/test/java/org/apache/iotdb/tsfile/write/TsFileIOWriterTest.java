@@ -27,6 +27,8 @@ import org.apache.iotdb.tsfile.file.metadata.TimeSeriesMetadataTest;
 import org.apache.iotdb.tsfile.file.metadata.TsFileMetadata;
 import org.apache.iotdb.tsfile.file.metadata.statistics.Statistics;
 import org.apache.iotdb.tsfile.file.metadata.utils.TestHelper;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
@@ -44,11 +46,12 @@ import java.io.IOException;
 public class TsFileIOWriterTest {
 
   private static String tsfile = TestConstant.BASE_OUTPUT_PATH.concat("tsfileIOWriterTest.tsfile");
+  private static FSFactory fsFactory = FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
   private static String deviceId = "device1";
 
   @Before
   public void before() throws IOException {
-    TsFileIOWriter writer = new TsFileIOWriter(new File(tsfile));
+    TsFileIOWriter writer = new TsFileIOWriter(fsFactory.getFile(tsfile));
 
     // file schema
     MeasurementSchema measurementSchema = TestHelper.createSimpleMeasurementSchema("sensor01");
@@ -82,7 +85,7 @@ public class TsFileIOWriterTest {
 
   @After
   public void after() {
-    File file = new File(tsfile);
+    File file = fsFactory.getFile(tsfile);
     if (file.exists()) {
       file.delete();
     }
@@ -90,7 +93,7 @@ public class TsFileIOWriterTest {
 
   @Test
   public void endFileTest() throws IOException {
-    TsFileSequenceReader reader = new TsFileSequenceReader(tsfile);
+    TsFileSequenceReader reader = new TsFileSequenceReader(fsFactory.getFile(tsfile));
 
     // magic_string
     Assert.assertEquals(TSFileConfig.MAGIC_STRING, reader.readHeadMagic());

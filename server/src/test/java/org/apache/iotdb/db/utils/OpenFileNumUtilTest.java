@@ -21,6 +21,7 @@ package org.apache.iotdb.db.utils;
 
 import org.apache.iotdb.db.constant.TestConstant;
 import org.apache.iotdb.db.utils.OpenFileNumUtil.OpenFileNumStatistics;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
@@ -67,11 +68,11 @@ public class OpenFileNumUtilTest {
   public void setUp() {
     int testProcessID = getProcessID();
     openFileNumUtil.setPid(testProcessID);
-    String dataFilePath = OpenFileNumStatistics.DIGEST_OPEN_FILE_NUM.getPath().get(0);
+    FSPath dataFilePath = OpenFileNumStatistics.DIGEST_OPEN_FILE_NUM.getPath().get(0);
     String userDir = System.getProperty("user.dir");
     currDir = userDir + File.separator + TestConstant.BASE_OUTPUT_PATH + testProcessID;
     testDataDirRoot = new File(currDir);
-    currDir = currDir + File.separator + dataFilePath;
+    currDir = currDir + File.separator + dataFilePath.getPath();
     File testDataDir = new File(currDir);
     if (!testDataDir.isDirectory() && !testDataDir.mkdirs()) {
       logger.error("Create test file dir {} failed.", testDataDir.getPath());

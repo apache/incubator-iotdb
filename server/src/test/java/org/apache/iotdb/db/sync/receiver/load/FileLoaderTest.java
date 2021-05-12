@@ -20,11 +20,11 @@ package org.apache.iotdb.db.sync.receiver.load;
 
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.engine.storagegroup.virtualSg.HashVirtualPartitioner;
+import org.apache.iotdb.db.engine.tier.TierManager;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
@@ -33,6 +33,7 @@ import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.service.IoTDB;
 import org.apache.iotdb.db.sync.conf.SyncConstant;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 
 import org.junit.After;
 import org.junit.Before;
@@ -59,7 +60,7 @@ public class FileLoaderTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(FileLoaderTest.class);
   private static final String SG_NAME = "root.sg";
-  private String dataDir;
+  private FSPath dataDir;
   private IFileLoader fileLoader;
 
   @Before
@@ -68,10 +69,8 @@ public class FileLoaderTest {
     HashVirtualPartitioner.getInstance().setStorageGroupNum(1);
     EnvironmentUtils.closeStatMonitor();
     EnvironmentUtils.envSetUp();
-    dataDir =
-        new File(DirectoryManager.getInstance().getNextFolderForSequenceFile())
-            .getParentFile()
-            .getAbsolutePath();
+    FSPath seqDir = TierManager.getInstance().getAllSequenceFileFolders().get(0);
+    dataDir = new FSPath(seqDir.getFsType(), seqDir.toFile().getParentFile().getAbsolutePath());
     initMetadata();
   }
 
@@ -225,6 +224,7 @@ public class FileLoaderTest {
     // add some tsfiles
     Random r = new Random(0);
     long time = System.currentTimeMillis();
+    FSPath seqFolder = TierManager.getInstance().getAllSequenceFileFolders().get(0);
     for (int i = 0; i < 3; i++) {
       for (int j = 0; j < 25; j++) {
         allFileList.putIfAbsent(SG_NAME + i, new ArrayList<>());
@@ -248,12 +248,10 @@ public class FileLoaderTest {
 
         File syncFile = new File(fileName);
         File dataFile =
-            new File(
-                DirectoryManager.getInstance().getNextFolderForSequenceFile(),
+            seqFolder.getChildFile(
                 syncFile.getParentFile().getName() + File.separator + syncFile.getName());
         File loadDataFile =
-            new File(
-                DirectoryManager.getInstance().getNextFolderForSequenceFile(),
+            seqFolder.getChildFile(
                 syncFile.getParentFile().getParentFile().getParentFile().getName()
                     + File.separator
                     + "0"
@@ -342,11 +340,14 @@ public class FileLoaderTest {
       for (File snapFile : files) {
         if (!snapFile.getName().endsWith(TsFileResource.RESOURCE_SUFFIX)) {
           File dataFile =
-              new File(
-                  DirectoryManager.getInstance().getNextFolderForSequenceFile()
+              seqFolder.getChildFile(
+                  snapFile.getParentFile().getParentFile().getParentFile().getName()
                       + File.separator
-                      + snapFile.getParentFile().getParentFile().getParentFile().getName(),
-                  "0" + File.separator + "0" + File.separator + snapFile.getName());
+                      + "0"
+                      + File.separator
+                      + "0"
+                      + File.separator
+                      + snapFile.getName());
           correctLoadedFileMap.get(sg).remove(dataFile.getAbsolutePath());
           snapFile.delete();
           fileLoader.addDeletedFileName(snapFile);
@@ -393,12 +394,10 @@ public class FileLoaderTest {
   }
 
   private File getReceiverFolderFile() {
-    return new File(
-        dataDir
-            + File.separatorChar
-            + SyncConstant.SYNC_RECEIVER
-            + File.separatorChar
-            + "127.0.0.1_5555");
+    return dataDir
+        .postConcat(
+            File.separatorChar + SyncConstant.SYNC_RECEIVER + File.separatorChar + "127.0.0.1_5555")
+        .toFile();
   }
 
   private File getSnapshotFolder() {

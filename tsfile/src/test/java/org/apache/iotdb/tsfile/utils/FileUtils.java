@@ -18,7 +18,9 @@
  */
 package org.apache.iotdb.tsfile.utils;
 
+import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 
 import java.io.File;
 
@@ -27,9 +29,11 @@ import java.io.File;
  * conversion among B, KB, MB etc.
  */
 public class FileUtils {
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
 
   public static double getLocalFileByte(String filePath, Unit unit) {
-    File f = FSFactoryProducer.getFSFactory().getFile(filePath);
+    File f = fsFactory.getFile(filePath);
     return getLocalFileByte(f, unit);
   }
 

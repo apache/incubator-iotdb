@@ -16,46 +16,41 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.iotdb.db.conf.directories.strategy;
+package org.apache.iotdb.db.engine.tier.directories.strategy;
 
 import org.apache.iotdb.db.exception.DiskSpaceInsufficientException;
 import org.apache.iotdb.db.utils.CommonUtils;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 
-import java.io.IOException;
-
-public class MinFolderOccupiedSpaceFirstStrategy extends DirectoryStrategy {
+public class MaxDiskUsableSpaceFirstStrategy extends DirectoryStrategy {
 
   @Override
   public int nextFolderIndex() throws DiskSpaceInsufficientException {
-    return getMinOccupiedSpaceFolder();
+    return getMaxSpaceFolder();
   }
 
-  private int getMinOccupiedSpaceFolder() throws DiskSpaceInsufficientException {
-    int minIndex = -1;
-    long minSpace = Long.MAX_VALUE;
+  /** get max space folder. */
+  public int getMaxSpaceFolder() throws DiskSpaceInsufficientException {
+    int maxIndex = -1;
+    long maxSpace = 0;
 
     for (int i = 0; i < folders.size(); i++) {
-      String folder = folders.get(i);
+      FSPath folder = folders.get(i);
       if (!CommonUtils.hasSpace(folder)) {
         continue;
       }
 
-      long space = 0;
-      try {
-        space = CommonUtils.getOccupiedSpace(folder);
-      } catch (IOException e) {
-        logger.error("Cannot calculate occupied space for path {}.", folder, e);
-      }
-      if (space < minSpace) {
-        minSpace = space;
-        minIndex = i;
+      long space = CommonUtils.getUsableSpace(folder);
+      if (space > maxSpace) {
+        maxSpace = space;
+        maxIndex = i;
       }
     }
 
-    if (minIndex == -1) {
+    if (maxIndex == -1) {
       throw new DiskSpaceInsufficientException(folders);
     }
 
-    return minIndex;
+    return maxIndex;
   }
 }

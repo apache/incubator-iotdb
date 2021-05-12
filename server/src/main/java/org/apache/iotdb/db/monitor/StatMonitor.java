@@ -44,6 +44,7 @@ import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 import org.apache.iotdb.tsfile.read.TimeValuePair;
 import org.apache.iotdb.tsfile.write.record.TSRecord;
 import org.apache.iotdb.tsfile.write.record.datapoint.LongDataPoint;
@@ -258,8 +259,10 @@ public class StatMonitor implements StatMonitorMBean, IService {
   public long getDataSizeInByte() {
     try {
       long totalSize = 0;
-      for (String dataDir : config.getDataDirs()) {
-        totalSize += FileUtils.sizeOfDirectory(SystemFileFactory.INSTANCE.getFile(dataDir));
+      for (FSPath[] tierDataDirs : config.getDataDirs()) {
+        for (FSPath dataDir : tierDataDirs) {
+          totalSize += FileUtils.sizeOfDirectory(dataDir.toFile());
+        }
       }
       return totalSize;
     } catch (Exception e) {

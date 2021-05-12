@@ -19,6 +19,8 @@
 
 package org.apache.iotdb.tsfile.constant;
 
+import org.apache.iotdb.tsfile.fileSystem.FSType;
+
 import java.io.File;
 import java.util.Random;
 
@@ -27,4 +29,5 @@ public class TestConstant {
   public static final float float_min_delta = 0.00001f;
   public static final double double_min_delta = 0.00001d;
   public static final Random random = new Random(System.currentTimeMillis());
+  public static final FSType DEFAULT_TEST_FS = FSType.LOCAL;
 }

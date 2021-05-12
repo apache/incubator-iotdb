@@ -24,6 +24,7 @@ import org.apache.iotdb.tsfile.read.common.Chunk;
 import org.apache.iotdb.tsfile.read.common.TimeRange;
 import org.apache.iotdb.tsfile.read.controller.IChunkLoader;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -111,10 +112,10 @@ public class VectorChunkMetadata implements IChunkMetadata {
   }
 
   @Override
-  public void setFilePath(String filePath) {
-    timeChunkMetadata.setFilePath(filePath);
+  public void setFile(File file) {
+    timeChunkMetadata.setFile(file);
     for (IChunkMetadata chunkMetadata : valueChunkMetadataList) {
-      chunkMetadata.setFilePath(filePath);
+      chunkMetadata.setFile(file);
     }
   }
 

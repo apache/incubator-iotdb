@@ -22,6 +22,8 @@ import org.apache.iotdb.tsfile.common.conf.TSFileConfig;
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
 import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.file.metadata.TimeseriesMetadata;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.FileGenerator;
 
@@ -39,6 +41,8 @@ public class TimeSeriesMetadataReadTest {
 
   private static final String FILE_PATH =
       TestConstant.BASE_OUTPUT_PATH.concat("TimeSeriesMetadataReadTest.tsfile");
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
   private final TSFileConfig conf = TSFileDescriptor.getInstance().getConfig();
   private int maxDegreeOfIndexNode;
 
@@ -58,7 +62,7 @@ public class TimeSeriesMetadataReadTest {
 
   @Test
   public void testReadTimeseriesMetadata() throws IOException {
-    TsFileSequenceReader reader = new TsFileSequenceReader(FILE_PATH);
+    TsFileSequenceReader reader = new TsFileSequenceReader(fsFactory.getFile(FILE_PATH));
     Path path = new Path("d1", "s1");
     Set<String> set = new HashSet<>();
     set.add("s1");

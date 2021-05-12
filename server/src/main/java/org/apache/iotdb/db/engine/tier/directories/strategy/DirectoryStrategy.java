@@ -16,11 +16,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.iotdb.db.conf.directories.strategy;
+package org.apache.iotdb.db.engine.tier.directories.strategy;
 
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.DiskSpaceInsufficientException;
 import org.apache.iotdb.db.utils.CommonUtils;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +38,7 @@ public abstract class DirectoryStrategy {
   protected static final Logger logger = LoggerFactory.getLogger(DirectoryStrategy.class);
 
   /** All the folders of data files, should be init once the subclass is created. */
-  List<String> folders = new ArrayList<>();
+  List<FSPath> folders = new ArrayList<>();
 
   /**
    * To init folders. Do not recommend to overwrite. This method guarantees that at least one folder
@@ -45,9 +46,9 @@ public abstract class DirectoryStrategy {
    *
    * @param folders the folders from conf
    */
-  public void setFolders(List<String> folders) throws DiskSpaceInsufficientException {
+  public void setFolders(List<FSPath> folders) throws DiskSpaceInsufficientException {
     boolean hasSpace = false;
-    for (String folder : folders) {
+    for (FSPath folder : folders) {
       if (CommonUtils.hasSpace(folder)) {
         hasSpace = true;
         break;

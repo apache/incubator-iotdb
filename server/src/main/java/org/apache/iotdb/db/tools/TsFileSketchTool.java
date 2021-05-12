@@ -26,13 +26,14 @@ import org.apache.iotdb.tsfile.file.metadata.ChunkMetadata;
 import org.apache.iotdb.tsfile.file.metadata.MetadataIndexEntry;
 import org.apache.iotdb.tsfile.file.metadata.TimeseriesMetadata;
 import org.apache.iotdb.tsfile.file.metadata.TsFileMetadata;
-import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Chunk;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.BloomFilter;
 import org.apache.iotdb.tsfile.utils.Pair;
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -50,14 +51,15 @@ public class TsFileSketchTool {
     System.out.println("TsFile path:" + filename);
     System.out.println("Sketch save path:" + outFile);
     try (PrintWriter pw = new PrintWriter(new FileWriter(outFile))) {
-      long length = FSFactoryProducer.getFSFactory().getFile(filename).length();
+      File file = FSPath.parse(filename).toFile();
+      long length = file.length();
       printlnBoth(
           pw, "-------------------------------- TsFile Sketch --------------------------------");
       printlnBoth(pw, "file path: " + filename);
       printlnBoth(pw, "file length: " + length);
 
       // get metadata information
-      try (TsFileSequenceReader reader = new TsFileSequenceReader(filename)) {
+      try (TsFileSequenceReader reader = new TsFileSequenceReader(file)) {
         TsFileMetadata tsFileMetaData = reader.readFileMetadata();
         List<ChunkGroupMetadata> allChunkGroupMetadata = new ArrayList<>();
         reader.selfCheck(null, allChunkGroupMetadata, false);

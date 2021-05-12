@@ -64,7 +64,7 @@ public class TsFileOnlineUpgradeTool extends TsFileRewriteTool {
   public TsFileOnlineUpgradeTool(TsFileResource resourceToBeUpgraded) throws IOException {
     super(resourceToBeUpgraded);
     String file = oldTsFile.getAbsolutePath();
-    reader = new TsFileSequenceReaderForV2(file);
+    reader = new TsFileSequenceReaderForV2(oldTsFile);
   }
 
   /**

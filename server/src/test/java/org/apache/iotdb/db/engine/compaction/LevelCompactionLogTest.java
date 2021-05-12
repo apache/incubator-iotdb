@@ -25,7 +25,6 @@ import org.apache.iotdb.db.engine.compaction.level.LevelCompactionTsFileManageme
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.tsfile.exception.write.WriteProcessException;
-import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
@@ -47,7 +46,7 @@ public class LevelCompactionLogTest extends LevelCompactionTest {
   @Before
   public void setUp() throws IOException, WriteProcessException, MetadataException {
     super.setUp();
-    tempSGDir = new File(TestConstant.BASE_OUTPUT_PATH.concat("tempSG"));
+    tempSGDir = fsFactory.getFile(TestConstant.BASE_OUTPUT_PATH.concat("tempSG"));
     tempSGDir.mkdirs();
   }
 
@@ -73,9 +72,7 @@ public class LevelCompactionLogTest extends LevelCompactionTest {
     while (compactionMergeWorking) {
       // wait
     }
-    File logFile =
-        FSFactoryProducer.getFSFactory()
-            .getFile(tempSGDir.getPath(), COMPACTION_TEST_SG + COMPACTION_LOG_NAME);
+    File logFile = fsFactory.getFile(tempSGDir.getPath(), COMPACTION_TEST_SG + COMPACTION_LOG_NAME);
     assertFalse(logFile.exists());
   }
 

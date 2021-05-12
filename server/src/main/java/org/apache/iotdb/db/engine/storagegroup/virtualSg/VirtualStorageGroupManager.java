@@ -85,6 +85,15 @@ public class VirtualStorageGroupManager {
     }
   }
 
+  /** push check tier migration down to all sg */
+  public void checkTierMigration() {
+    for (StorageGroupProcessor storageGroupProcessor : virtualStorageGroupProcessor) {
+      if (storageGroupProcessor != null) {
+        storageGroupProcessor.checkTierMigration();
+      }
+    }
+  }
+
   /**
    * get processor from device id
    *

@@ -24,6 +24,7 @@ import org.apache.iotdb.tsfile.file.metadata.ChunkMetadata;
 import org.apache.iotdb.tsfile.file.metadata.TsFileMetadata;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
+import org.apache.iotdb.tsfile.utils.FSUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,15 +47,17 @@ public class ForceAppendTsFileWriter extends TsFileIOWriter {
     if (logger.isDebugEnabled()) {
       logger.debug("{} writer is opened.", file.getName());
     }
-    this.out = FSFactoryProducer.getFileOutputFactory().getTsFileOutput(file.getPath(), true);
     this.file = file;
+    this.out =
+        FSFactoryProducer.getFileOutputFactory(FSUtils.getFSType(this.file))
+            .getTsFileOutput(file.getPath(), true);
 
     // file doesn't exist
     if (file.length() == 0 || !file.exists()) {
       throw new TsFileNotCompleteException("File " + file.getPath() + " is not a complete TsFile");
     }
 
-    try (TsFileSequenceReader reader = new TsFileSequenceReader(file.getAbsolutePath(), true)) {
+    try (TsFileSequenceReader reader = new TsFileSequenceReader(file, true)) {
 
       // this tsfile is not complete
       if (!reader.isComplete()) {

@@ -18,10 +18,11 @@
  */
 package org.apache.iotdb.db.conf;
 
-import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
 import org.apache.iotdb.db.engine.merge.selector.MergeFileStrategy;
 import org.apache.iotdb.db.engine.storagegroup.timeindex.TimeIndexLevel;
+import org.apache.iotdb.db.engine.tier.TierManager;
+import org.apache.iotdb.db.engine.tier.migration.IMigrationStrategy;
 import org.apache.iotdb.db.exception.LoadConfigurationException;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.service.TSServiceImpl;
@@ -31,12 +32,14 @@ import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
 import org.apache.iotdb.tsfile.common.constant.TsFileConstant;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 import org.apache.iotdb.tsfile.fileSystem.FSType;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.nio.file.Paths;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -49,8 +52,11 @@ public class IoTDBConfig {
   static final String CONFIG_NAME = "iotdb-engine.properties";
   private static final Logger logger = LoggerFactory.getLogger(IoTDBConfig.class);
   private static final String MULTI_DIR_STRATEGY_PREFIX =
-      "org.apache.iotdb.db.conf.directories.strategy.";
+      "org.apache.iotdb.db.engine.tier.directories.strategy.";
   private static final String DEFAULT_MULTI_DIR_STRATEGY = "MaxDiskUsableSpaceFirstStrategy";
+  private static final String MIGRATION_STRATEGY_PREFIX =
+      "org.apache.iotdb.db.engine.tier.migration.";
+  private static final String DEFAULT_MIGRATION_STRATEGY = "PinnedStrategy";
 
   // e.g., a31+/$%#&[]{}3e4
   private static final String ID_MATCHER =
@@ -230,14 +236,22 @@ public class IoTDBConfig {
   private String triggerDir =
       IoTDBConstant.EXT_FOLDER_NAME + File.separator + IoTDBConstant.TRIGGER_FOLDER_NAME;
 
-  /** Data directory of data. It can be settled as dataDirs = {"data1", "data2", "data3"}; */
-  private String[] dataDirs = {"data" + File.separator + "data"};
+  /**
+   * Data directories of data. It can be settled as dataDirs = {{"tier1/data1", "tier1/data2"},
+   * {"tier2/data1", "tier2/data2"}};
+   */
+  private FSPath[][] dataDirs = {
+    {
+      new FSPath(FSType.LOCAL, DEFAULT_BASE_DIR + File.separator + "data"),
+      new FSPath(FSType.HDFS, DEFAULT_BASE_DIR + File.separator + "data")
+    }
+  };
 
   /** Strategy of multiple directories. */
-  private String multiDirStrategyClassName = null;
+  private String[] multiDirStrategyClassNames = {DEFAULT_MULTI_DIR_STRATEGY};
 
   /** Wal directory. */
-  private String walDir = DEFAULT_BASE_DIR + File.separator + "wal";
+  private String walDir = DEFAULT_BASE_DIR + File.separator + IoTDBConstant.WAL_FOLDER_NAME;
 
   /** Maximum MemTable number. Invalid when enableMemControl is true. */
   private int maxMemtableNumber = 0;
@@ -287,7 +301,8 @@ public class IoTDBConfig {
   private int defaultIndexWindowRange = 10;
 
   /** index directory. */
-  private String indexRootFolder = "data" + File.separator + "index";
+  private String indexRootFolder =
+      DEFAULT_BASE_DIR + File.separator + IoTDBConstant.INDEX_FOLDER_NAME;
 
   /** When a TsFile's file size (in byte) exceed this, the TsFile is forced closed. Unit: byte */
   private long tsFileSizeThreshold = 1L;
@@ -536,7 +551,7 @@ public class IoTDBConfig {
   private FSType systemFileStorageFs = FSType.LOCAL;
 
   /** Default TSfile storage is in local file system */
-  private FSType tsFileStorageFs = FSType.LOCAL;
+  private FSType[] tsFileStorageFs = {FSType.LOCAL};
 
   /** Default core-site.xml file path is /etc/hadoop/conf/core-site.xml */
   private String coreSitePath = "/etc/hadoop/conf/core-site.xml";
@@ -683,6 +698,15 @@ public class IoTDBConfig {
   /** the number of virtual storage groups per user-defined storage group */
   private int virtualStorageGroupNum = 1;
 
+  /** whether enable tiered storage */
+  private boolean enableTieredStorage = false;
+
+  /** Strategy of multiple directories. */
+  private String[] tierMigrationStrategyClassNames = {DEFAULT_MIGRATION_STRATEGY};
+
+  /** How many threads will be set up to perform migration tasks. */
+  private int migrationThreadNum = 1;
+
   public IoTDBConfig() {
     // empty constructor
   }
@@ -794,7 +818,8 @@ public class IoTDBConfig {
 
   void updatePath() {
     formulateFolders();
-    confirmMultiDirStrategy();
+    confirmMultiDirStrategies();
+    confirmTierMigrationStrategies();
   }
 
   /** if the folders are relative paths, add IOTDB_HOME as the path prefix */
@@ -808,39 +833,45 @@ public class IoTDBConfig {
     extDir = addHomeDir(extDir);
     udfDir = addHomeDir(udfDir);
     triggerDir = addHomeDir(triggerDir);
+    queryDir = addHomeDir(queryDir);
 
-    if (TSFileDescriptor.getInstance().getConfig().getTSFileStorageFs().equals(FSType.HDFS)) {
-      String hdfsDir = getHdfsDir();
-      queryDir = hdfsDir + File.separatorChar + queryDir;
-      for (int i = 0; i < dataDirs.length; i++) {
-        dataDirs[i] = hdfsDir + File.separatorChar + dataDirs[i];
-      }
-    } else {
-      queryDir = addHomeDir(queryDir);
-      for (int i = 0; i < dataDirs.length; i++) {
-        dataDirs[i] = addHomeDir(dataDirs[i]);
+    String hdfsDir = getHdfsDir();
+    for (int i = 0; i < dataDirs.length; i++) {
+      for (int j = 0; j < dataDirs[i].length; j++) {
+        if (dataDirs[i][j].getFsType().equals(FSType.HDFS)) {
+          dataDirs[i][j] = dataDirs[i][j].preConcat(hdfsDir + File.separatorChar);
+        } else {
+          dataDirs[i][j] =
+              new FSPath(dataDirs[i][j].getFsType(), addHomeDir(dataDirs[i][j].getPath()));
+        }
       }
     }
   }
 
-  void reloadDataDirs(String[] dataDirs) throws LoadConfigurationException {
-    if (TSFileDescriptor.getInstance().getConfig().getTSFileStorageFs().equals(FSType.HDFS)) {
-      String hdfsDir = getHdfsDir();
-      for (int i = 0; i < dataDirs.length; i++) {
-        dataDirs[i] = hdfsDir + File.separatorChar + dataDirs[i];
-      }
-    } else {
-      for (int i = 0; i < dataDirs.length; i++) {
-        dataDirs[i] = addHomeDir(dataDirs[i]);
+  void reloadDataDirs(String[][] dataDirs) throws LoadConfigurationException {
+    FSPath[][] fsDataDirs = new FSPath[dataDirs.length][];
+    String hdfsDir = getHdfsDir();
+    for (int i = 0; i < dataDirs.length; i++) {
+      fsDataDirs[i] = new FSPath[dataDirs[i].length];
+      for (int j = 0; j < dataDirs[i].length; j++) {
+        fsDataDirs[i][j] = FSPath.parse(dataDirs[i][j]);
+        if (fsDataDirs[i][j].getFsType().equals(FSType.HDFS)) {
+          fsDataDirs[i][j] = fsDataDirs[i][j].preConcat(hdfsDir + File.separatorChar);
+        } else {
+          fsDataDirs[i][j] =
+              new FSPath(fsDataDirs[i][j].getFsType(), addHomeDir(fsDataDirs[i][j].getPath()));
+        }
       }
     }
-    this.dataDirs = dataDirs;
-    DirectoryManager.getInstance().updateFileFolders();
+    setDataDirs(fsDataDirs);
+    TierManager.getInstance().updateFileFolders();
   }
 
   private String addHomeDir(String dir) {
     String homeDir = System.getProperty(IoTDBConstant.IOTDB_HOME, null);
     if (!new File(dir).isAbsolute() && homeDir != null && homeDir.length() > 0) {
+      // get normalized absolute home directory
+      homeDir = Paths.get(homeDir).normalize().toAbsolutePath().toString();
       if (!homeDir.endsWith(File.separator)) {
         dir = homeDir + File.separatorChar + dir;
       } else {
@@ -848,25 +879,6 @@ public class IoTDBConfig {
       }
     }
     return dir;
-  }
-
-  private void confirmMultiDirStrategy() {
-    if (getMultiDirStrategyClassName() == null) {
-      multiDirStrategyClassName = DEFAULT_MULTI_DIR_STRATEGY;
-    }
-    if (!getMultiDirStrategyClassName().contains(TsFileConstant.PATH_SEPARATOR)) {
-      multiDirStrategyClassName = MULTI_DIR_STRATEGY_PREFIX + multiDirStrategyClassName;
-    }
-
-    try {
-      Class.forName(multiDirStrategyClassName);
-    } catch (ClassNotFoundException e) {
-      logger.warn(
-          "Cannot find given directory strategy {}, using the default value",
-          getMultiDirStrategyClassName(),
-          e);
-      setMultiDirStrategyClassName(MULTI_DIR_STRATEGY_PREFIX + DEFAULT_MULTI_DIR_STRATEGY);
-    }
   }
 
   private String getHdfsDir() {
@@ -880,8 +892,81 @@ public class IoTDBConfig {
     return hdfsDir;
   }
 
-  public String[] getDataDirs() {
+  private void confirmMultiDirStrategies() {
+    for (int i = 0; i < multiDirStrategyClassNames.length; ++i) {
+      if (multiDirStrategyClassNames[i] == null) {
+        multiDirStrategyClassNames[i] = DEFAULT_MULTI_DIR_STRATEGY;
+      }
+      if (!multiDirStrategyClassNames[i].contains(TsFileConstant.PATH_SEPARATOR)) {
+        multiDirStrategyClassNames[i] = MULTI_DIR_STRATEGY_PREFIX + multiDirStrategyClassNames[i];
+      }
+
+      try {
+        Class.forName(multiDirStrategyClassNames[i]);
+      } catch (ClassNotFoundException e) {
+        logger.warn(
+            "Cannot find given directory strategy {}, using the default value",
+            multiDirStrategyClassNames[i],
+            e);
+        multiDirStrategyClassNames[i] = MULTI_DIR_STRATEGY_PREFIX + DEFAULT_MULTI_DIR_STRATEGY;
+      }
+    }
+  }
+
+  private void confirmTierMigrationStrategies() {
+    for (int i = 0; i < tierMigrationStrategyClassNames.length; ++i) {
+      if (tierMigrationStrategyClassNames[i] == null) {
+        tierMigrationStrategyClassNames[i] = DEFAULT_MIGRATION_STRATEGY;
+      }
+      if (!tierMigrationStrategyClassNames[i].contains(TsFileConstant.PATH_SEPARATOR)) {
+        tierMigrationStrategyClassNames[i] =
+            MIGRATION_STRATEGY_PREFIX + tierMigrationStrategyClassNames[i];
+      }
+
+      try {
+        IMigrationStrategy.parse(tierMigrationStrategyClassNames[i]);
+      } catch (IllegalArgumentException e) {
+        logger.warn(
+            "Cannot find given directory strategy {}, using the default value",
+            tierMigrationStrategyClassNames[i],
+            e);
+        tierMigrationStrategyClassNames[i] = MIGRATION_STRATEGY_PREFIX + DEFAULT_MIGRATION_STRATEGY;
+      }
+    }
+  }
+
+  public FSPath[][] getDataDirs() {
     return dataDirs;
+  }
+
+  public void setDataDirs(FSPath[][] fsDataDirs) {
+    FSPath[][] validFsDataDirs = new FSPath[fsDataDirs.length][];
+    for (int i = 0; i < fsDataDirs.length; ++i) {
+      FSPath[] tierDataDirs = fsDataDirs[i];
+      // tag invalid data_dir in one tier
+      int cnt = 0;
+      for (int j = 0; j < tierDataDirs.length; ++j) {
+        if (TSFileDescriptor.getInstance().getConfig().isFSSupported(tierDataDirs[j].getFsType())) {
+          cnt++;
+        } else {
+          tierDataDirs[j] = null;
+        }
+      }
+      // remove invalid data_dir in one tier
+      if (cnt == tierDataDirs.length) {
+        validFsDataDirs[i] = tierDataDirs;
+      } else {
+        validFsDataDirs[i] = new FSPath[cnt];
+        int idx = 0;
+        for (FSPath fsPath : tierDataDirs) {
+          if (fsPath != null) {
+            validFsDataDirs[i][idx] = fsPath;
+            ++idx;
+          }
+        }
+      }
+    }
+    this.dataDirs = validFsDataDirs;
   }
 
   public int getMetricsPort() {
@@ -898,10 +983,6 @@ public class IoTDBConfig {
 
   public void setEnableMetricService(boolean enableMetricService) {
     this.enableMetricService = enableMetricService;
-  }
-
-  void setDataDirs(String[] dataDirs) {
-    this.dataDirs = dataDirs;
   }
 
   public String getRpcAddress() {
@@ -1040,12 +1121,12 @@ public class IoTDBConfig {
     this.triggerDir = triggerDir;
   }
 
-  public String getMultiDirStrategyClassName() {
-    return multiDirStrategyClassName;
+  public String[] getMultiDirStrategyClassNames() {
+    return multiDirStrategyClassNames;
   }
 
-  void setMultiDirStrategyClassName(String multiDirStrategyClassName) {
-    this.multiDirStrategyClassName = multiDirStrategyClassName;
+  public void setMultiDirStrategyClassNames(String[] multiDirStrategyClassNames) {
+    this.multiDirStrategyClassNames = multiDirStrategyClassNames;
   }
 
   public int getBatchSize() {
@@ -1798,12 +1879,27 @@ public class IoTDBConfig {
     this.systemFileStorageFs = FSType.valueOf(systemFileStorageFs);
   }
 
-  FSType getTsFileStorageFs() {
+  public FSType[] getTsFileStorageFs() {
     return tsFileStorageFs;
   }
 
-  void setTsFileStorageFs(String tsFileStorageFs) {
-    this.tsFileStorageFs = FSType.valueOf(tsFileStorageFs);
+  public String getRawTsFileStorageFs() {
+    String[] tsFileStorageFsStr = new String[tsFileStorageFs.length];
+    for (int i = 0; i < tsFileStorageFs.length; ++i) {
+      tsFileStorageFsStr[i] = tsFileStorageFs[i].name();
+    }
+    return String.join(",", tsFileStorageFsStr);
+  }
+
+  public void setTsFileStorageFs(FSType[] tsFileStorageFs) {
+    this.tsFileStorageFs = tsFileStorageFs;
+  }
+
+  void setTsFileStorageFs(String[] tsFileStorageFs) {
+    this.tsFileStorageFs = new FSType[tsFileStorageFs.length];
+    for (int i = 0; i < tsFileStorageFs.length; ++i) {
+      this.tsFileStorageFs[i] = FSType.valueOf(tsFileStorageFs[i]);
+    }
   }
 
   String getCoreSitePath() {
@@ -2161,5 +2257,29 @@ public class IoTDBConfig {
 
   public void setIoTaskQueueSizeForFlushing(int ioTaskQueueSizeForFlushing) {
     this.ioTaskQueueSizeForFlushing = ioTaskQueueSizeForFlushing;
+  }
+
+  public boolean isEnableTieredStorage() {
+    return enableTieredStorage;
+  }
+
+  void setEnableTieredStorage(boolean enableTieredStorage) {
+    this.enableTieredStorage = enableTieredStorage;
+  }
+
+  public String[] getTierMigrationStrategyClassNames() {
+    return tierMigrationStrategyClassNames;
+  }
+
+  public void setTierMigrationStrategyClassNames(String[] tierMigrationStrategyClassName) {
+    this.tierMigrationStrategyClassNames = tierMigrationStrategyClassName;
+  }
+
+  public int getMigrationThreadNum() {
+    return migrationThreadNum;
+  }
+
+  void setMigrationThreadNum(int migrationThreadNum) {
+    this.migrationThreadNum = migrationThreadNum;
   }
 }

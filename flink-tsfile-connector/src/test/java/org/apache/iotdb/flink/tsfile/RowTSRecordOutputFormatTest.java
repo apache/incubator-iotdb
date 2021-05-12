@@ -50,7 +50,7 @@ public class RowTSRecordOutputFormatTest extends RowTsFileOutputFormatTestBase {
       outputFormat.close();
     }
 
-    String[] actual = readTsFile(outputDirPath + File.separator + "1.tsfile", paths);
+    String[] actual = readTsFile(new File(outputDirPath + File.separator + "1.tsfile"), paths);
     String[] expected = {
       "1,1.2,20,null,2.3,11,19",
       "2,null,20,50,25.4,10,21",

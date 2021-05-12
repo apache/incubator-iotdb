@@ -86,7 +86,7 @@ public class LogReplayerTest {
     String logNodePrefix = "testLogNode";
     File tsFile = SystemFileFactory.INSTANCE.getFile("temp", "1-1-1.tsfile");
     File modF = SystemFileFactory.INSTANCE.getFile("test.mod");
-    ModificationFile modFile = new ModificationFile(modF.getPath());
+    ModificationFile modFile = new ModificationFile(modF);
     TsFileResource tsFileResource = new TsFileResource(tsFile);
     IMemTable memTable = new PrimitiveMemTable();
 
@@ -104,8 +104,7 @@ public class LogReplayerTest {
       }
 
       LogReplayer replayer =
-          new LogReplayer(
-              logNodePrefix, tsFile.getPath(), modFile, tsFileResource, memTable, false);
+          new LogReplayer(logNodePrefix, tsFile, modFile, tsFileResource, memTable, false);
 
       WriteLogNode node =
           MultiFileLogNodeManager.getInstance()

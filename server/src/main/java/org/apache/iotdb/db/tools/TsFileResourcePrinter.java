@@ -23,6 +23,7 @@ import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.qp.utils.DatetimeUtils;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.utils.FSUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,7 +47,7 @@ public class TsFileResourcePrinter {
     if (folderFile.isDirectory()) {
       // analyze the tsfile.resource files from a folder
       File[] files =
-          FSFactoryProducer.getFSFactory()
+          FSFactoryProducer.getFSFactory(FSUtils.getFSType(folderFile))
               .listFilesBySuffix(folderFile.getAbsolutePath(), ".tsfile.resource");
       Arrays.sort(files, Comparator.comparingLong(x -> Long.valueOf(x.getName().split("-")[0])));
 

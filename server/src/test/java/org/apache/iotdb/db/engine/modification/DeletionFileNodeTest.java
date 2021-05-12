@@ -20,12 +20,12 @@
 package org.apache.iotdb.db.engine.modification;
 
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.modification.io.LocalTextModificationAccessor;
 import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
 import org.apache.iotdb.db.engine.querycontext.ReadOnlyMemChunk;
 import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor;
+import org.apache.iotdb.db.engine.tier.TierManager;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
@@ -182,7 +182,7 @@ public class DeletionFileNodeTest {
         };
 
     File fileNodeDir =
-        new File(DirectoryManager.getInstance().getSequenceFileFolder(0), processorName);
+        TierManager.getInstance().getAllSequenceFileFolders().get(0).getChildFile(processorName);
     List<File> modFiles = new ArrayList<>();
     for (File directory : fileNodeDir.listFiles()) {
       assertTrue(directory.isDirectory());
@@ -201,8 +201,7 @@ public class DeletionFileNodeTest {
 
     assertEquals(1, modFiles.size());
 
-    LocalTextModificationAccessor accessor =
-        new LocalTextModificationAccessor(modFiles.get(0).getPath());
+    LocalTextModificationAccessor accessor = new LocalTextModificationAccessor(modFiles.get(0));
     try {
       Collection<Modification> modifications = accessor.read();
       assertEquals(3, modifications.size());
@@ -319,7 +318,7 @@ public class DeletionFileNodeTest {
         };
 
     File fileNodeDir =
-        new File(DirectoryManager.getInstance().getNextFolderForUnSequenceFile(), processorName);
+        TierManager.getInstance().getAllUnSequenceFileFolders().get(0).getChildFile(processorName);
     List<File> modFiles = new ArrayList<>();
     for (File directory : fileNodeDir.listFiles()) {
       assertTrue(directory.isDirectory());
@@ -337,8 +336,7 @@ public class DeletionFileNodeTest {
     }
     assertEquals(1, modFiles.size());
 
-    LocalTextModificationAccessor accessor =
-        new LocalTextModificationAccessor(modFiles.get(0).getPath());
+    LocalTextModificationAccessor accessor = new LocalTextModificationAccessor(modFiles.get(0));
     Collection<Modification> modifications = accessor.read();
     assertEquals(3, modifications.size());
     int i = 0;

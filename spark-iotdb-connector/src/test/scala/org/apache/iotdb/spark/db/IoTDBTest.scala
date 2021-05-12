@@ -40,7 +40,7 @@ class IoTDBTest extends FunSuite with BeforeAndAfterAll {
 
   @Before
   override protected def beforeAll(): Unit = {
-    System.setProperty(IoTDBConstant.IOTDB_CONF, "src/test/resources/")
+    System.setProperty(IoTDBConstant.IOTDB_CONF, "/Users/heimingz/IoTDB/my_iotdb/spark-iotdb-connector/target/test-classes")
     super.beforeAll()
 
     EnvironmentUtils.closeStatMonitor()

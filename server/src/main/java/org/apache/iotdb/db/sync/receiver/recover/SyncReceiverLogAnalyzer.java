@@ -26,14 +26,16 @@ import org.apache.iotdb.db.sync.receiver.load.IFileLoader;
 import org.apache.iotdb.db.sync.receiver.load.LoadLogger;
 import org.apache.iotdb.db.sync.receiver.load.LoadType;
 import org.apache.iotdb.db.utils.FilePathUtils;
+import org.apache.iotdb.db.utils.FileUtils;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
+import org.apache.iotdb.tsfile.utils.FSUtils;
 
-import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 
 public class SyncReceiverLogAnalyzer implements ISyncReceiverLogAnalyzer {
@@ -48,26 +50,30 @@ public class SyncReceiverLogAnalyzer implements ISyncReceiverLogAnalyzer {
 
   @Override
   public void recoverAll() throws IOException {
-    String[] dataDirs = IoTDBDescriptor.getInstance().getConfig().getDataDirs();
+    FSPath[][] dataDirs = IoTDBDescriptor.getInstance().getConfig().getDataDirs();
     LOGGER.info("Start to recover all sync state for sync receiver.");
-    for (String dataDir : dataDirs) {
-      if (!new File(FilePathUtils.regularizePath(dataDir) + SyncConstant.SYNC_RECEIVER).exists()) {
-        continue;
-      }
-      for (File syncFolder :
-          new File(FilePathUtils.regularizePath(dataDir) + SyncConstant.SYNC_RECEIVER)
-              .listFiles()) {
-        recover(syncFolder);
+    for (FSPath[] tierDataDirs : dataDirs) {
+      for (FSPath dataDir : tierDataDirs) {
+        String path = FilePathUtils.regularizePath(dataDir.getPath()) + SyncConstant.SYNC_RECEIVER;
+        File file = new FSPath(dataDir.getFsType(), path).toFile();
+        if (!file.exists()) {
+          continue;
+        }
+        for (File syncFolder : file.listFiles()) {
+          recover(syncFolder);
+        }
       }
     }
     LOGGER.info("Finish to recover all sync states for sync receiver.");
   }
 
   private boolean recover(File senderFolder) throws IOException {
+    FSPath senderFolderPath = FSPath.parse(senderFolder);
     // check the state
-    if (!new File(senderFolder, SyncConstant.SYNC_LOG_NAME).exists()) {
-      new File(senderFolder, SyncConstant.LOAD_LOG_NAME).delete();
-      FileUtils.deleteDirectory(new File(senderFolder, SyncConstant.RECEIVER_DATA_FOLDER_NAME));
+    if (!senderFolderPath.getChildFile(SyncConstant.SYNC_LOG_NAME).exists()) {
+      senderFolderPath.getChildFile(SyncConstant.LOAD_LOG_NAME).delete();
+      FileUtils.deleteDirectory(
+          senderFolderPath.getChildFile(SyncConstant.RECEIVER_DATA_FOLDER_NAME));
       return true;
     }
     if (FileLoaderManager.getInstance().containsFileLoader(senderFolder.getName())) {
@@ -81,25 +87,27 @@ public class SyncReceiverLogAnalyzer implements ISyncReceiverLogAnalyzer {
     } else {
       scanLogger(
           FileLoader.createFileLoader(senderFolder),
-          new File(senderFolder, SyncConstant.SYNC_LOG_NAME),
-          new File(senderFolder, SyncConstant.LOAD_LOG_NAME));
+          senderFolderPath.getChildFile(SyncConstant.SYNC_LOG_NAME),
+          senderFolderPath.getChildFile(SyncConstant.LOAD_LOG_NAME));
     }
     return !FileLoaderManager.getInstance().containsFileLoader(senderFolder.getName());
   }
 
   @Override
   public boolean recover(String senderName) throws IOException {
-    String[] dataDirs = IoTDBDescriptor.getInstance().getConfig().getDataDirs();
+    FSPath[][] dataDirs = IoTDBDescriptor.getInstance().getConfig().getDataDirs();
     boolean recoverComplete = true;
-    for (String dataDir : dataDirs) {
-      if (!new File(FilePathUtils.regularizePath(dataDir) + SyncConstant.SYNC_RECEIVER).exists()) {
-        continue;
-      }
-      for (File syncFolder :
-          new File(FilePathUtils.regularizePath(dataDir) + SyncConstant.SYNC_RECEIVER)
-              .listFiles()) {
-        if (syncFolder.getName().equals(senderName)) {
-          recoverComplete &= recover(syncFolder);
+    for (FSPath[] tierDataDirs : dataDirs) {
+      for (FSPath dataDir : tierDataDirs) {
+        String path = FilePathUtils.regularizePath(dataDir.getPath()) + SyncConstant.SYNC_RECEIVER;
+        File file = new FSPath(dataDir.getFsType(), path).toFile();
+        if (!file.exists()) {
+          continue;
+        }
+        for (File syncFolder : file.listFiles()) {
+          if (syncFolder.getName().equals(senderName)) {
+            recoverComplete &= recover(syncFolder);
+          }
         }
       }
     }
@@ -109,9 +117,13 @@ public class SyncReceiverLogAnalyzer implements ISyncReceiverLogAnalyzer {
   @Override
   public void scanLogger(IFileLoader loader, File syncLog, File loadLog) {
     LoadType loadType = LoadType.NONE;
-    try (BufferedReader syncReader = new BufferedReader(new FileReader(syncLog))) {
+    try (BufferedReader syncReader =
+        FSFactoryProducer.getFSFactory(FSUtils.getFSType(syncLog))
+            .getBufferedReader(syncLog.getAbsolutePath())) {
       String line;
-      try (BufferedReader loadReader = new BufferedReader(new FileReader(loadLog))) {
+      try (BufferedReader loadReader =
+          FSFactoryProducer.getFSFactory(FSUtils.getFSType(loadLog))
+              .getBufferedReader(loadLog.getAbsolutePath())) {
         while ((line = loadReader.readLine()) != null) {
           if (line.equals(LoadLogger.LOAD_DELETED_FILE_NAME_START)) {
             loadType = LoadType.DELETE;
@@ -131,10 +143,10 @@ public class SyncReceiverLogAnalyzer implements ISyncReceiverLogAnalyzer {
         } else {
           switch (loadType) {
             case ADD:
-              loader.addTsfile(new File(line));
+              loader.addTsfile(FSPath.parse(line).toFile());
               break;
             case DELETE:
-              loader.addDeletedFileName(new File(line));
+              loader.addDeletedFileName(FSPath.parse(line).toFile());
               break;
             default:
               LOGGER.error("Wrong load type {}", loadType);

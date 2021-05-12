@@ -19,16 +19,17 @@
 package org.apache.iotdb.db.sync.sender.recover;
 
 import org.apache.iotdb.db.sync.conf.SyncConstant;
+import org.apache.iotdb.db.utils.FileUtils;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 
-import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
@@ -36,22 +37,32 @@ import java.util.Set;
 public class SyncSenderLogAnalyzer implements ISyncSenderLogAnalyzer {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SyncSenderLogAnalyzer.class);
-  private String senderPath;
+  private final FSFactory fsFactory;
+  private FSPath senderPath;
   private File currentLocalFile;
   private File lastLocalFile;
   private File syncLogFile;
+  private File tmpDeletedBlacklistFile;
+  private File tmpToBeSyncedBlacklistFile;
 
-  public SyncSenderLogAnalyzer(String senderPath) {
+  public SyncSenderLogAnalyzer(FSPath senderPath) {
+    this.fsFactory = FSFactoryProducer.getFSFactory(senderPath.getFsType());
     this.senderPath = senderPath;
-    this.currentLocalFile = new File(senderPath, SyncConstant.CURRENT_LOCAL_FILE_NAME);
-    this.lastLocalFile = new File(senderPath, SyncConstant.LAST_LOCAL_FILE_NAME);
-    this.syncLogFile = new File(senderPath, SyncConstant.SYNC_LOG_NAME);
+    this.currentLocalFile = senderPath.getChildFile(SyncConstant.CURRENT_LOCAL_FILE_NAME);
+    this.lastLocalFile = senderPath.getChildFile(SyncConstant.LAST_LOCAL_FILE_NAME);
+    this.syncLogFile = senderPath.getChildFile(SyncConstant.SYNC_LOG_NAME);
+    this.tmpDeletedBlacklistFile =
+        senderPath.getChildFile(
+            SyncConstant.DELETED_BLACKLIST_FILE_NAME + SyncConstant.TMP_FILE_SUFFIX);
+    this.tmpToBeSyncedBlacklistFile =
+        senderPath.getChildFile(
+            SyncConstant.TO_BE_SYNCED_BLACKLIST_FILE_NAME + SyncConstant.TMP_FILE_SUFFIX);
   }
 
   @Override
   public void recover() throws IOException {
     if (currentLocalFile.exists() && !lastLocalFile.exists()) {
-      FileUtils.moveFile(currentLocalFile, lastLocalFile);
+      fsFactory.moveFile(currentLocalFile, lastLocalFile);
     } else {
       Set<String> lastLocalFiles = new HashSet<>();
       Set<String> deletedFiles = new HashSet<>();
@@ -62,7 +73,7 @@ public class SyncSenderLogAnalyzer implements ISyncSenderLogAnalyzer {
       lastLocalFiles.addAll(newFiles);
       updateLastLocalFile(lastLocalFiles);
     }
-    FileUtils.deleteDirectory(new File(senderPath, SyncConstant.DATA_SNAPSHOT_NAME));
+    FileUtils.deleteDirectory(senderPath.getChildFile(SyncConstant.DATA_SNAPSHOT_NAME));
     syncLogFile.delete();
   }
 
@@ -72,7 +83,7 @@ public class SyncSenderLogAnalyzer implements ISyncSenderLogAnalyzer {
       LOGGER.info("last local file {} doesn't exist.", lastLocalFile.getAbsolutePath());
       return;
     }
-    try (BufferedReader br = new BufferedReader(new FileReader(lastLocalFile))) {
+    try (BufferedReader br = fsFactory.getBufferedReader(lastLocalFile.getAbsolutePath())) {
       String line;
       while ((line = br.readLine()) != null) {
         lastLocalFiles.add(line);
@@ -80,6 +91,56 @@ public class SyncSenderLogAnalyzer implements ISyncSenderLogAnalyzer {
     } catch (IOException e) {
       LOGGER.error(
           "Can not load last local file list from file {}", lastLocalFile.getAbsoluteFile(), e);
+    }
+    filterToBeSyncedFiles(lastLocalFiles);
+    filterDeletedFiles(lastLocalFiles);
+  }
+
+  private void filterToBeSyncedFiles(Set<String> lastLocalFiles) {
+    if (!tmpToBeSyncedBlacklistFile.exists()) {
+      LOGGER.debug(
+          "tmp to-be-synced files blacklist {} doesn't exist.",
+          tmpToBeSyncedBlacklistFile.getAbsolutePath());
+      return;
+    }
+    try (BufferedReader br =
+        fsFactory.getBufferedReader(tmpToBeSyncedBlacklistFile.getAbsolutePath())) {
+      String line;
+      while ((line = br.readLine()) != null) {
+        File file = FSPath.parse(line).toFile();
+        if (file.exists()) {
+          lastLocalFiles.add(line);
+        }
+      }
+    } catch (IOException e) {
+      LOGGER.error(
+          "Can not load tmp to-be-synced files blacklist from file {}",
+          tmpToBeSyncedBlacklistFile.getAbsoluteFile(),
+          e);
+    }
+  }
+
+  private void filterDeletedFiles(Set<String> lastLocalFiles) {
+    if (!tmpDeletedBlacklistFile.exists()) {
+      LOGGER.debug(
+          "tmp deleted files blacklist {} doesn't exist.",
+          tmpDeletedBlacklistFile.getAbsolutePath());
+      return;
+    }
+    try (BufferedReader br =
+        fsFactory.getBufferedReader(tmpDeletedBlacklistFile.getAbsolutePath())) {
+      String line;
+      while ((line = br.readLine()) != null) {
+        File file = FSPath.parse(line).toFile();
+        if (!file.exists()) {
+          lastLocalFiles.remove(line);
+        }
+      }
+    } catch (IOException e) {
+      LOGGER.error(
+          "Can not load tmp deleted files blacklist from file {}",
+          tmpDeletedBlacklistFile.getAbsoluteFile(),
+          e);
     }
   }
 
@@ -89,7 +150,7 @@ public class SyncSenderLogAnalyzer implements ISyncSenderLogAnalyzer {
       LOGGER.info("log file {} doesn't exist.", syncLogFile.getAbsolutePath());
       return;
     }
-    try (BufferedReader br = new BufferedReader(new FileReader(syncLogFile))) {
+    try (BufferedReader br = fsFactory.getBufferedReader(syncLogFile.getAbsolutePath())) {
       String line;
       int mode = 0;
       while ((line = br.readLine()) != null) {
@@ -113,7 +174,8 @@ public class SyncSenderLogAnalyzer implements ISyncSenderLogAnalyzer {
 
   @Override
   public void updateLastLocalFile(Set<String> currentLocalFiles) throws IOException {
-    try (BufferedWriter bw = new BufferedWriter(new FileWriter(currentLocalFile))) {
+    try (BufferedWriter bw =
+        fsFactory.getBufferedWriter(currentLocalFile.getAbsolutePath(), false)) {
       for (String line : currentLocalFiles) {
         bw.write(line);
         bw.newLine();
@@ -123,6 +185,6 @@ public class SyncSenderLogAnalyzer implements ISyncSenderLogAnalyzer {
       LOGGER.error("Can not clear sync log {}", syncLogFile.getAbsoluteFile(), e);
     }
     lastLocalFile.delete();
-    FileUtils.moveFile(currentLocalFile, lastLocalFile);
+    fsFactory.moveFile(currentLocalFile, lastLocalFile);
   }
 }

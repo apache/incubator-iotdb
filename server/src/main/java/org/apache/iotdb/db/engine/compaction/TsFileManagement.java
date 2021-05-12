@@ -22,6 +22,7 @@ package org.apache.iotdb.db.engine.compaction;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.cache.ChunkCache;
 import org.apache.iotdb.db.engine.cache.TimeSeriesMetadataCache;
+import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.engine.merge.manage.MergeManager;
 import org.apache.iotdb.db.engine.merge.manage.MergeResource;
 import org.apache.iotdb.db.engine.merge.selector.IMergeFileSelector;
@@ -35,6 +36,7 @@ import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor.CloseCompac
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.exception.MergeException;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.utils.FSUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +59,7 @@ public abstract class TsFileManagement {
 
   private static final Logger logger = LoggerFactory.getLogger(TsFileManagement.class);
   protected String storageGroupName;
-  protected String storageGroupDir;
+  protected String storageGroupSysDir;
 
   /** Serialize queries, delete resource files, compaction cleanup files */
   private final ReadWriteLock compactionMergeLock = new ReentrantReadWriteLock();
@@ -79,9 +81,9 @@ public abstract class TsFileManagement {
   private final int maxOpenFileNumInEachUnseqCompaction =
       IoTDBDescriptor.getInstance().getConfig().getMaxOpenFileNumInEachUnseqCompaction();
 
-  public TsFileManagement(String storageGroupName, String storageGroupDir) {
+  public TsFileManagement(String storageGroupName, String storageGroupSysDir) {
     this.storageGroupName = storageGroupName;
-    this.storageGroupDir = storageGroupDir;
+    this.storageGroupSysDir = storageGroupSysDir;
   }
 
   public void setForceFullMerge(boolean forceFullMerge) {
@@ -273,14 +275,17 @@ public abstract class TsFileManagement {
       MergeTask mergeTask =
           new MergeTask(
               mergeResource,
-              storageGroupDir,
+              storageGroupSysDir,
               this::mergeEndAction,
               taskName,
               fullMerge,
               fileSelector.getConcurrentMergeNum(),
               storageGroupName);
+      // save modification file in sys_dir, so use SystemFileFactory
       mergingModification =
-          new ModificationFile(storageGroupDir + File.separator + MERGING_MODIFICATION_FILE_NAME);
+          new ModificationFile(
+              SystemFileFactory.INSTANCE.getFile(
+                  storageGroupSysDir + File.separator + MERGING_MODIFICATION_FILE_NAME));
       MergeManager.getINSTANCE().submitMainTask(mergeTask);
       if (logger.isInfoEnabled()) {
         logger.info(
@@ -418,7 +423,8 @@ public abstract class TsFileManagement {
       try {
         // if meet error(like file not found) in merge task, the .merge file may not be deleted
         File mergedFile =
-            FSFactoryProducer.getFSFactory().getFile(seqFile.getTsFilePath() + MERGE_SUFFIX);
+            FSFactoryProducer.getFSFactory(FSUtils.getFSType(seqFile.getTsFile()))
+                .getFile(seqFile.getTsFilePath() + MERGE_SUFFIX);
         if (mergedFile.exists()) {
           mergedFile.delete();
         }

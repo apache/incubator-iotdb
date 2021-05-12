@@ -27,6 +27,7 @@ import org.apache.iotdb.tsfile.read.controller.IChunkLoader;
 import org.apache.iotdb.tsfile.utils.RamUsageEstimator;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -71,7 +72,7 @@ public class ChunkMetadata implements Accountable, IChunkMetadata {
   // used for SeriesReader to indicate whether it is a seq/unseq timeseries metadata
   private boolean isSeq = true;
   private boolean isClosed;
-  private String filePath;
+  private File file;
   private byte mask;
 
   private ChunkMetadata() {}
@@ -96,7 +97,7 @@ public class ChunkMetadata implements Accountable, IChunkMetadata {
   public String toString() {
     return String.format(
         "measurementId: %s, datatype: %s, version: %d, Statistics: %s, deleteIntervalList: %s, filePath: %s",
-        measurementUid, tsDataType, version, statistics, deleteIntervalList, filePath);
+        measurementUid, tsDataType, version, statistics, deleteIntervalList, file);
   }
 
   public long getNumOfPoints() {
@@ -309,12 +310,12 @@ public class ChunkMetadata implements Accountable, IChunkMetadata {
     isClosed = closed;
   }
 
-  public String getFilePath() {
-    return filePath;
+  public File getFile() {
+    return file;
   }
 
-  public void setFilePath(String filePath) {
-    this.filePath = filePath;
+  public void setFile(File file) {
+    this.file = file;
   }
 
   @Override

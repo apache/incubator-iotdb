@@ -41,6 +41,7 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.read.common.Path;
+import org.apache.iotdb.tsfile.utils.FSUtils;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.apache.iotdb.tsfile.write.TsFileWriter;
 import org.apache.iotdb.tsfile.write.record.TSRecord;
@@ -224,11 +225,12 @@ public class RecoverResourceFromReaderTest {
   public void testResourceRecovery() throws StorageGroupProcessorException, IOException {
     // write a broken resourceFile
     File resourceFile =
-        FSFactoryProducer.getFSFactory()
+        FSFactoryProducer.getFSFactory(FSUtils.getFSType(resource.getTsFile()))
             .getFile(resource.getTsFile() + TsFileResource.RESOURCE_SUFFIX);
     FileUtils.deleteQuietly(resourceFile);
     try (OutputStream outputStream =
-        FSFactoryProducer.getFSFactory().getBufferedOutputStream(resourceFile.getPath())) {
+        FSFactoryProducer.getFSFactory(FSUtils.getFSType(resourceFile))
+            .getBufferedOutputStream(resourceFile.getPath())) {
       ReadWriteIOUtils.write(123, outputStream);
     }
 

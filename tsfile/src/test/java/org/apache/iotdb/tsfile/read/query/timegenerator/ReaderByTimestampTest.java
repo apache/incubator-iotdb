@@ -19,7 +19,10 @@
 package org.apache.iotdb.tsfile.read.query.timegenerator;
 
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
+import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.file.metadata.IChunkMetadata;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.BatchData;
 import org.apache.iotdb.tsfile.read.common.Path;
@@ -41,6 +44,8 @@ import java.util.List;
 public class ReaderByTimestampTest {
 
   private static final String FILE_PATH = TsFileGeneratorForSeriesReaderByTimestamp.outputDataFile;
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
   private TsFileSequenceReader fileReader;
   private MetadataQuerierByFileImpl metadataQuerierByFile;
   private int rowCount = 1000000;
@@ -49,7 +54,7 @@ public class ReaderByTimestampTest {
   public void before() throws IOException {
     TSFileDescriptor.getInstance().getConfig().setTimeEncoder("TS_2DIFF");
     TsFileGeneratorForSeriesReaderByTimestamp.generateFile(rowCount, 10 * 1024 * 1024, 10000);
-    fileReader = new TsFileSequenceReader(FILE_PATH); // TODO remove this class
+    fileReader = new TsFileSequenceReader(fsFactory.getFile(FILE_PATH)); // TODO remove this class
     metadataQuerierByFile = new MetadataQuerierByFileImpl(fileReader);
   }
 

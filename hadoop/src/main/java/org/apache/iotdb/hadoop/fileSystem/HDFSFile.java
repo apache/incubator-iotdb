@@ -20,10 +20,7 @@
 package org.apache.iotdb.hadoop.fileSystem;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +36,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.net.URL;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,25 +49,29 @@ public class HDFSFile extends File {
   private static final String UNSUPPORT_OPERATION = "Unsupported operation.";
 
   public HDFSFile(String pathname) {
+    // invalid call of super constructor, just for grammar correct
     super(pathname);
     hdfsPath = new Path(pathname);
     setConfAndGetFS();
   }
 
   public HDFSFile(String parent, String child) {
+    // invalid call of super constructor, just for grammar correct
     super(parent, child);
-    hdfsPath = new Path(parent + File.separator + child);
+    hdfsPath = new Path(parent + HDFSPath.separator + child);
     setConfAndGetFS();
   }
 
   public HDFSFile(File parent, String child) {
+    // invalid call of super constructor, just for grammar correct
     super(parent, child);
-    hdfsPath = new Path(parent.getAbsolutePath() + File.separator + child);
+    hdfsPath = new Path(parent.getAbsolutePath() + HDFSPath.separator + child);
     setConfAndGetFS();
   }
 
   public HDFSFile(URI uri) {
-    super(uri);
+    // invalid call of super constructor, just for grammar correct
+    super(uri.getPath());
     hdfsPath = new Path(uri);
     setConfAndGetFS();
   }
@@ -218,71 +220,6 @@ public class HDFSFile extends File {
     }
   }
 
-  public BufferedReader getBufferedReader(String filePath) {
-    try {
-      return new BufferedReader(new InputStreamReader(fs.open(new Path(filePath))));
-    } catch (IOException e) {
-      logger.error("Failed to get buffered reader for {}. ", filePath, e);
-      return null;
-    }
-  }
-
-  public BufferedWriter getBufferedWriter(String filePath, boolean append) {
-    try {
-      return new BufferedWriter(new OutputStreamWriter(fs.create(new Path(filePath))));
-    } catch (IOException e) {
-      logger.error("Failed to get buffered writer for {}. ", filePath, e);
-      return null;
-    }
-  }
-
-  public BufferedInputStream getBufferedInputStream(String filePath) {
-    try {
-      return new BufferedInputStream(fs.open(new Path(filePath)));
-    } catch (IOException e) {
-      logger.error("Failed to get buffered input stream for {}. ", filePath, e);
-      return null;
-    }
-  }
-
-  public BufferedOutputStream getBufferedOutputStream(String filePath) {
-    try {
-      return new BufferedOutputStream(fs.create(new Path(filePath)));
-    } catch (IOException e) {
-      logger.error("Failed to get buffered output stream for {}. ", filePath, e);
-      return null;
-    }
-  }
-
-  public File[] listFilesBySuffix(String fileFolder, String suffix) {
-    PathFilter pathFilter = path -> path.toUri().toString().endsWith(suffix);
-    List<HDFSFile> files = listFiles(fileFolder, pathFilter);
-    return files.toArray(new HDFSFile[0]);
-  }
-
-  public File[] listFilesByPrefix(String fileFolder, String prefix) {
-    PathFilter pathFilter = path -> path.toUri().toString().startsWith(prefix);
-    List<HDFSFile> files = listFiles(fileFolder, pathFilter);
-    return files.toArray(new HDFSFile[0]);
-  }
-
-  private List<HDFSFile> listFiles(String fileFolder, PathFilter pathFilter) {
-    List<HDFSFile> files = new ArrayList<>();
-    try {
-      Path path = new Path(fileFolder);
-      for (FileStatus fileStatus : fs.listStatus(path)) {
-        Path filePath = fileStatus.getPath();
-        if (pathFilter.accept(filePath)) {
-          HDFSFile file = new HDFSFile(filePath.toUri().toString());
-          files.add(file);
-        }
-      }
-    } catch (IOException e) {
-      logger.error("Failed to list files in {}. ", fileFolder);
-    }
-    return files;
-  }
-
   @Override
   public File getAbsoluteFile() {
     return new HDFSFile(getAbsolutePath());
@@ -290,7 +227,7 @@ public class HDFSFile extends File {
 
   @Override
   public String getParent() {
-    throw new UnsupportedOperationException(UNSUPPORT_OPERATION);
+    return hdfsPath.getParent().toUri().toString();
   }
 
   @Override
@@ -320,7 +257,7 @@ public class HDFSFile extends File {
 
   @Override
   public URI toURI() {
-    throw new UnsupportedOperationException(UNSUPPORT_OPERATION);
+    return hdfsPath.toUri();
   }
 
   @Override
@@ -335,12 +272,19 @@ public class HDFSFile extends File {
 
   @Override
   public boolean isFile() {
-    throw new UnsupportedOperationException(UNSUPPORT_OPERATION);
+    try {
+      return exists() && fs.getFileStatus(hdfsPath).isFile();
+    } catch (IOException e) {
+      logger.error("Fail to judge whether {} is a file. ", hdfsPath.toUri(), e);
+      return false;
+    }
   }
 
   @Override
   public boolean isHidden() {
-    throw new UnsupportedOperationException(UNSUPPORT_OPERATION);
+    String name = hdfsPath.getName();
+    if (name == null) return false;
+    return name.startsWith("_") || name.startsWith(".");
   }
 
   @Override
@@ -430,6 +374,121 @@ public class HDFSFile extends File {
 
   @Override
   public java.nio.file.Path toPath() {
-    throw new UnsupportedOperationException(UNSUPPORT_OPERATION);
+    return Paths.get(toURI());
+  }
+
+  public BufferedReader getBufferedReader(String filePath) {
+    try {
+      return new BufferedReader(new InputStreamReader(fs.open(new Path(filePath))));
+    } catch (IOException e) {
+      logger.error("Failed to get buffered reader for {}. ", filePath, e);
+      return null;
+    }
+  }
+
+  public BufferedWriter getBufferedWriter(String filePath, boolean append) {
+    try {
+      Path path = new Path(filePath);
+      return new BufferedWriter(
+          new OutputStreamWriter(append && fs.exists(path) ? fs.append(path) : fs.create(path)));
+    } catch (IOException e) {
+      logger.error("Failed to get buffered writer for {}. ", filePath, e);
+      return null;
+    }
+  }
+
+  public BufferedInputStream getBufferedInputStream(String filePath) {
+    try {
+      return new BufferedInputStream(fs.open(new Path(filePath)));
+    } catch (IOException e) {
+      logger.error("Failed to get buffered input stream for {}. ", filePath, e);
+      return null;
+    }
+  }
+
+  public BufferedOutputStream getBufferedOutputStream(String filePath) {
+    try {
+      return new BufferedOutputStream(fs.create(new Path(filePath)));
+    } catch (IOException e) {
+      logger.error("Failed to get buffered output stream for {}. ", filePath, e);
+      return null;
+    }
+  }
+
+  public File[] listFilesBySuffix(String fileFolder, String suffix) {
+    PathFilter pathFilter = path -> path.toUri().toString().endsWith(suffix);
+    List<HDFSFile> files = listFiles(fileFolder, pathFilter);
+    return files.toArray(new HDFSFile[0]);
+  }
+
+  public File[] listFilesByPrefix(String fileFolder, String prefix) {
+    PathFilter pathFilter = path -> path.toUri().toString().startsWith(prefix);
+    List<HDFSFile> files = listFiles(fileFolder, pathFilter);
+    return files.toArray(new HDFSFile[0]);
+  }
+
+  private List<HDFSFile> listFiles(String fileFolder, PathFilter pathFilter) {
+    List<HDFSFile> files = new ArrayList<>();
+    try {
+      Path path = new Path(fileFolder);
+      for (FileStatus fileStatus : fs.listStatus(path)) {
+        Path filePath = fileStatus.getPath();
+        if (pathFilter.accept(filePath)) {
+          HDFSFile file = new HDFSFile(filePath.toUri().toString());
+          files.add(file);
+        }
+      }
+    } catch (IOException e) {
+      logger.error("Failed to list files in {}. ", fileFolder);
+    }
+    return files;
+  }
+
+  public void moveTo(File dst) {
+    try {
+      fs.rename(this.hdfsPath, new Path(dst.getAbsolutePath()));
+    } catch (IOException e) {
+      logger.error("Failed to move file {} to {}. ", this, dst);
+    }
+  }
+
+  public void moveFromLocalFile(File localSrc) {
+    try {
+      fs.moveFromLocalFile(new Path(localSrc.getAbsolutePath()), this.hdfsPath);
+    } catch (IOException e) {
+      logger.error("Failed to move local file {} to hdfs {}. ", localSrc, this);
+    }
+  }
+
+  public void moveToLocalFile(File localDst) {
+    try {
+      fs.moveToLocalFile(this.hdfsPath, new Path(localDst.getAbsolutePath()));
+    } catch (IOException e) {
+      logger.error("Failed to move hdfs file {} to local {}. ", this, localDst);
+    }
+  }
+
+  public void copyTo(File dst) {
+    try {
+      FileUtil.copy(fs, this.hdfsPath, fs, ((HDFSFile) dst).hdfsPath, false, fs.getConf());
+    } catch (IOException e) {
+      logger.error("Failed to copy {} to {}. ", this, dst);
+    }
+  }
+
+  public void copyFromLocalFile(File localSrc) {
+    try {
+      fs.copyFromLocalFile(false, new Path(localSrc.getAbsolutePath()), this.hdfsPath);
+    } catch (IOException e) {
+      logger.error("Failed to copy local file {} to hdfs {}. ", localSrc, this);
+    }
+  }
+
+  public void copyToLocalFile(File localDst) {
+    try {
+      fs.copyToLocalFile(false, this.hdfsPath, new Path(localDst.getAbsolutePath()));
+    } catch (IOException e) {
+      logger.error("Failed to copy hdfs file {} to local {}. ", this, localDst);
+    }
   }
 }

@@ -18,6 +18,8 @@
  */
 package org.apache.iotdb.db.sync.sender.manage;
 
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
@@ -36,15 +38,15 @@ public interface ISyncFileManager {
    *
    * @param dataDir data directory
    */
-  void getCurrentLocalFiles(String dataDir);
+  void getCurrentLocalFiles(FSPath dataDir);
 
   /**
    * Load last local files from file<lastLocalFile> which does not contain those tsfiles which are
    * not synced successfully in previous sync tasks.
    *
-   * @param lastLocalFile last local file, which may not exist in first sync task.
+   * @param lastLocalFilePath last local file, which may not exist in first sync task.
    */
-  void getLastLocalFiles(File lastLocalFile) throws IOException;
+  void getLastLocalFiles(FSPath lastLocalFilePath) throws IOException;
 
   /**
    * Based on current local files and last local files, we can distinguish two kinds of files
@@ -53,7 +55,7 @@ public interface ISyncFileManager {
    *
    * @param dataDir data directory
    */
-  void getValidFiles(String dataDir) throws IOException;
+  void getValidFiles(FSPath dataDir) throws IOException;
 
   /*
    * the following 4 maps share same map structure

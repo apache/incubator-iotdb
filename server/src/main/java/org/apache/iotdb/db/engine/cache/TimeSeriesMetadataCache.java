@@ -35,6 +35,7 @@ import org.apache.iotdb.tsfile.utils.RamUsageEstimator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -134,7 +135,7 @@ public class TimeSeriesMetadataCache {
       TimeSeriesMetadataCacheKey key, Set<String> allSensors, boolean debug) throws IOException {
     if (!CACHE_ENABLE) {
       // bloom filter part
-      TsFileSequenceReader reader = FileReaderManager.getInstance().get(key.filePath, true);
+      TsFileSequenceReader reader = FileReaderManager.getInstance().get(key.file, true);
       BloomFilter bloomFilter = reader.readBloomFilter();
       if (bloomFilter != null
           && !bloomFilter.contains(key.device + IoTDBConstant.PATH_SEPARATOR + key.measurement)) {
@@ -158,13 +159,12 @@ public class TimeSeriesMetadataCache {
       printCacheLog(true);
     } else {
       if (debug) {
-        DEBUG_LOGGER.info(
-            "Cache miss: {}.{} in file: {}", key.device, key.measurement, key.filePath);
+        DEBUG_LOGGER.info("Cache miss: {}.{} in file: {}", key.device, key.measurement, key.file);
         DEBUG_LOGGER.info("Device: {}, all sensors: {}", key.device, allSensors);
       }
       // allow for the parallelism of different devices
       synchronized (
-          devices.computeIfAbsent(key.device + SEPARATOR + key.filePath, WeakReference::new)) {
+          devices.computeIfAbsent(key.device + SEPARATOR + key.file, WeakReference::new)) {
         // double check
         lock.readLock().lock();
         try {
@@ -178,7 +178,7 @@ public class TimeSeriesMetadataCache {
         } else {
           Path path = new Path(key.device, key.measurement);
           // bloom filter part
-          TsFileSequenceReader reader = FileReaderManager.getInstance().get(key.filePath, true);
+          TsFileSequenceReader reader = FileReaderManager.getInstance().get(key.file, true);
           BloomFilter bloomFilter = reader.readBloomFilter();
           if (bloomFilter != null && !bloomFilter.contains(path.getFullPath())) {
             if (debug) {
@@ -196,7 +196,7 @@ public class TimeSeriesMetadataCache {
                 metadata -> {
                   TimeSeriesMetadataCacheKey k =
                       new TimeSeriesMetadataCacheKey(
-                          key.filePath, key.device, metadata.getMeasurementId());
+                          key.file, key.device, metadata.getMeasurementId());
                   if (!lruCache.containsKey(k)) {
                     lruCache.put(k, metadata);
                   }
@@ -219,7 +219,7 @@ public class TimeSeriesMetadataCache {
             "Get timeseries: {}.{}  metadata in file: {}  from cache: {}.",
             key.device,
             key.measurement,
-            key.filePath,
+            key.file,
             timeseriesMetadata);
       }
       return new TimeseriesMetadata(timeseriesMetadata);
@@ -405,14 +405,14 @@ public class TimeSeriesMetadataCache {
 
   public static class TimeSeriesMetadataCacheKey implements Accountable {
 
-    private final String filePath;
+    private final File file;
     private final String device;
     private final String measurement;
 
     private long ramSize;
 
-    public TimeSeriesMetadataCacheKey(String filePath, String device, String measurement) {
-      this.filePath = filePath;
+    public TimeSeriesMetadataCacheKey(File file, String device, String measurement) {
+      this.file = file;
       this.device = device;
       this.measurement = measurement;
     }
@@ -426,14 +426,14 @@ public class TimeSeriesMetadataCache {
         return false;
       }
       TimeSeriesMetadataCacheKey that = (TimeSeriesMetadataCacheKey) o;
-      return Objects.equals(filePath, that.filePath)
+      return Objects.equals(file, that.file)
           && Objects.equals(device, that.device)
           && Objects.equals(measurement, that.measurement);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(filePath, device, measurement);
+      return Objects.hash(file, device, measurement);
     }
 
     @Override

@@ -25,6 +25,8 @@ import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.exception.write.WriteProcessException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.RecordUtils;
 import org.apache.iotdb.tsfile.write.record.TSRecord;
@@ -61,9 +63,11 @@ public class PerfTest {
   public static String errorOutputDataFile;
   public static Schema schema;
   public static Random rm = new Random();
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
 
   private static void generateSampleInputDataFile() throws IOException {
-    File file = new File(inputDataFile);
+    File file = fsFactory.getFile(inputDataFile);
     if (file.exists()) {
       file.delete();
     }
@@ -115,8 +119,8 @@ public class PerfTest {
   }
 
   private static void write() throws IOException, InterruptedException {
-    File file = new File(outputDataFile);
-    File errorFile = new File(errorOutputDataFile);
+    File file = fsFactory.getFile(outputDataFile);
+    File errorFile = fsFactory.getFile(errorOutputDataFile);
     if (file.exists()) {
       file.delete();
     }
@@ -138,7 +142,7 @@ public class PerfTest {
   }
 
   private static Scanner getDataFile(String path) {
-    File file = new File(path);
+    File file = fsFactory.getFile(path);
     try {
       Scanner in = new Scanner(file);
       return in;
@@ -209,15 +213,15 @@ public class PerfTest {
 
   @After
   public void after() {
-    File file = new File(inputDataFile);
+    File file = fsFactory.getFile(inputDataFile);
     if (file.exists()) {
       file.delete();
     }
-    file = new File(outputDataFile);
+    file = fsFactory.getFile(outputDataFile);
     if (file.exists()) {
       file.delete();
     }
-    file = new File(errorOutputDataFile);
+    file = fsFactory.getFile(errorOutputDataFile);
     if (file.exists()) {
       file.delete();
     }

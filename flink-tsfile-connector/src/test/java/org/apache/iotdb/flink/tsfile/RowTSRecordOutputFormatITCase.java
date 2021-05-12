@@ -39,7 +39,7 @@ public class RowTSRecordOutputFormatITCase extends RowTsFileOutputFormatTestBase
     source.output(outputFormat).setParallelism(1);
     env.execute();
 
-    String[] actual = readTsFile(outputFilePath, paths);
+    String[] actual = readTsFile(new File(outputFilePath), paths);
     String[] expected = {
       "1,1.2,20,null,2.3,11,19",
       "2,null,20,50,25.4,10,21",

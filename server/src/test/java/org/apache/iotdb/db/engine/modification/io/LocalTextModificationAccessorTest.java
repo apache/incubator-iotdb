@@ -47,7 +47,8 @@ public class LocalTextModificationAccessorTest {
           new Deletion(new PartialPath(new String[] {"d1", "s3"}), 3, 3),
           new Deletion(new PartialPath(new String[] {"d1", "s4"}), 4, 4),
         };
-    try (LocalTextModificationAccessor accessor = new LocalTextModificationAccessor(tempFileName)) {
+    try (LocalTextModificationAccessor accessor =
+        new LocalTextModificationAccessor(new File(tempFileName))) {
       for (int i = 0; i < 2; i++) {
         accessor.write(modifications[i]);
       }
@@ -73,7 +74,8 @@ public class LocalTextModificationAccessorTest {
   @Test
   public void readNull() {
     String tempFileName = TestConstant.BASE_OUTPUT_PATH.concat("mod.temp");
-    LocalTextModificationAccessor accessor = new LocalTextModificationAccessor(tempFileName);
+    LocalTextModificationAccessor accessor =
+        new LocalTextModificationAccessor(new File(tempFileName));
     new File(tempFileName).delete();
     Collection<Modification> modifications = accessor.read();
     assertEquals(new ArrayList<>(), modifications);

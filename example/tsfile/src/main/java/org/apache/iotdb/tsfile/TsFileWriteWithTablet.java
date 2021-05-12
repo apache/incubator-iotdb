@@ -22,6 +22,7 @@ package org.apache.iotdb.tsfile;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.write.TsFileWriter;
 import org.apache.iotdb.tsfile.write.record.Tablet;
@@ -40,11 +41,12 @@ import java.util.List;
 public class TsFileWriteWithTablet {
 
   private static final Logger logger = LoggerFactory.getLogger(TsFileWriteWithTablet.class);
+  private static final FSFactory fsFactory = FSFactoryProducer.getFSFactory(Constant.DEFAULT_FS);
 
   public static void main(String[] args) {
     try {
       String path = "test.tsfile";
-      File f = FSFactoryProducer.getFSFactory().getFile(path);
+      File f = fsFactory.getFile(path);
       if (f.exists() && !f.delete()) {
         throw new RuntimeException("can not delete " + f.getAbsolutePath());
       }

@@ -22,7 +22,7 @@ package org.apache.iotdb.db.tools;
 import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.qp.utils.DatetimeUtils;
-import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -54,7 +54,7 @@ public class IoTDBDataDirViewer {
     System.out.println("data dir num:" + data_dir.length);
     try (PrintWriter pw = new PrintWriter(new FileWriter(outFile))) {
       for (String dir : data_dir) {
-        File dirFile = FSFactoryProducer.getFSFactory().getFile(dir);
+        File dirFile = FSPath.parse(dir).toFile();
         File[] seqAndUnseqDirs = dirFile.listFiles();
         if (seqAndUnseqDirs == null || seqAndUnseqDirs.length != 2) {
           throw new IOException(

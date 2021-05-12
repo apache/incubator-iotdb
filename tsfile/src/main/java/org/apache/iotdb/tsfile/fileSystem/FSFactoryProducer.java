@@ -20,6 +20,7 @@
 package org.apache.iotdb.tsfile.fileSystem;
 
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
+import org.apache.iotdb.tsfile.exception.filesystem.FileSystemNotSupportedException;
 import org.apache.iotdb.tsfile.fileSystem.fileInputFactory.FileInputFactory;
 import org.apache.iotdb.tsfile.fileSystem.fileInputFactory.HDFSInputFactory;
 import org.apache.iotdb.tsfile.fileSystem.fileInputFactory.LocalFSInputFactory;
@@ -30,35 +31,84 @@ import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.fileSystem.fsFactory.HDFSFactory;
 import org.apache.iotdb.tsfile.fileSystem.fsFactory.LocalFSFactory;
 
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * FSFactoryProducer contains several static factories that creates {@code FSFactory} , {@code
+ * FileInputFactory}, {@code FileOutputFactory} for different filesystems.
+ */
 public class FSFactoryProducer {
-
-  private static FSType fSType = TSFileDescriptor.getInstance().getConfig().getTSFileStorageFs();
-
-  private static FSFactory fsFactory;
-  private static FileInputFactory fileInputFactory;
-  private static FileOutputFactory fileOutputFactory;
+  private static final Map<FSType, FSFactory> fsFactory;
+  private static final Map<FSType, FileInputFactory> fileInputFactory;
+  private static final Map<FSType, FileOutputFactory> fileOutputFactory;
 
   static {
-    if (fSType.equals(FSType.HDFS)) {
-      fsFactory = new HDFSFactory();
-      fileInputFactory = new HDFSInputFactory();
-      fileOutputFactory = new HDFSOutputFactory();
-    } else {
-      fsFactory = new LocalFSFactory();
-      fileInputFactory = new LocalFSInputFactory();
-      fileOutputFactory = new LocalFSOutputFactory();
+    fsFactory = new HashMap<>();
+    fileInputFactory = new HashMap<>();
+    fileOutputFactory = new HashMap<>();
+    reload();
+  }
+
+  /** load the FSFactory of each filesystem. */
+  public static synchronized void reload() {
+    fsFactory.clear();
+    fileInputFactory.clear();
+    fileOutputFactory.clear();
+    for (FSType fs : TSFileDescriptor.getInstance().getConfig().getTSFileStorageFs()) {
+      switch (fs) {
+        case LOCAL:
+          fsFactory.put(fs, new LocalFSFactory());
+          fileInputFactory.put(fs, new LocalFSInputFactory());
+          fileOutputFactory.put(fs, new LocalFSOutputFactory());
+          break;
+        case HDFS:
+          fsFactory.put(fs, new HDFSFactory());
+          fileInputFactory.put(fs, new HDFSInputFactory());
+          fileOutputFactory.put(fs, new HDFSOutputFactory());
+          break;
+        default:
+          throw new FileSystemNotSupportedException(fs.name());
+      }
     }
   }
 
-  public static FSFactory getFSFactory() {
-    return fsFactory;
+  /**
+   * Get the {@code FSFactory} according to the filesystem type
+   *
+   * @param fsType filesystem type
+   * @return the FSFactory object represented by the fsType argument
+   */
+  public static FSFactory getFSFactory(FSType fsType) {
+    if (!fsFactory.containsKey(fsType)) {
+      throw new FileSystemNotSupportedException(fsType.name());
+    }
+    return fsFactory.get(fsType);
   }
 
-  public static FileInputFactory getFileInputFactory() {
-    return fileInputFactory;
+  /**
+   * Get the {@code FileInputFactory} according to the filesystem type
+   *
+   * @param fsType filesystem type
+   * @return the FileInputFactory object represented by the fsType argument
+   */
+  public static FileInputFactory getFileInputFactory(FSType fsType) {
+    if (!fileInputFactory.containsKey(fsType)) {
+      throw new FileSystemNotSupportedException(fsType.name());
+    }
+    return fileInputFactory.get(fsType);
   }
 
-  public static FileOutputFactory getFileOutputFactory() {
-    return fileOutputFactory;
+  /**
+   * Get the {@code FileOutputFactory} according to the filesystem type
+   *
+   * @param fsType filesystem type
+   * @return the FileOutputFactory object represented by the fsType argument
+   */
+  public static FileOutputFactory getFileOutputFactory(FSType fsType) {
+    if (!fileOutputFactory.containsKey(fsType)) {
+      throw new FileSystemNotSupportedException(fsType.name());
+    }
+    return fileOutputFactory.get(fsType);
   }
 }

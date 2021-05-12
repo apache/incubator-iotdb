@@ -22,6 +22,8 @@ import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.exception.write.WriteProcessException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.ReadOnlyTsFile;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Path;
@@ -55,6 +57,8 @@ public class ReadWriteTest {
 
   private final String TEMPLATE_NAME = "template";
   private String tsfilePath = TestConstant.BASE_OUTPUT_PATH.concat("TestValueFilter.tsfile");
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
 
   @Before
   public void before() throws IOException, WriteProcessException {
@@ -63,7 +67,7 @@ public class ReadWriteTest {
 
   @After
   public void after() {
-    File file = new File(tsfilePath);
+    File file = fsFactory.getFile(tsfilePath);
     if (file.exists()) {
       file.delete();
     }
@@ -87,7 +91,8 @@ public class ReadWriteTest {
             .addSelectedPath(new Path("d1", "s2"))
             .setExpression(finalExpression);
 
-    try (TsFileSequenceReader fileReader = new TsFileSequenceReader(tsfilePath)) {
+    try (TsFileSequenceReader fileReader =
+        new TsFileSequenceReader(fsFactory.getFile(tsfilePath))) {
       ReadOnlyTsFile readOnlyTsFile = new ReadOnlyTsFile(fileReader);
       QueryDataSet dataSet = readOnlyTsFile.query(queryExpression);
       int i = 0;
@@ -102,7 +107,7 @@ public class ReadWriteTest {
   }
 
   private void writeFile(String tsfilePath) throws IOException, WriteProcessException {
-    File f = new File(tsfilePath);
+    File f = fsFactory.getFile(tsfilePath);
     if (f.exists()) {
       f.delete();
     }

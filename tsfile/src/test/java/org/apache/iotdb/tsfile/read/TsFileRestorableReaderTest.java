@@ -20,6 +20,7 @@
 package org.apache.iotdb.tsfile.read;
 
 import org.apache.iotdb.tsfile.common.conf.TSFileConfig;
+import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.utils.TsFileGeneratorForTest;
@@ -36,7 +37,8 @@ import static org.junit.Assert.assertTrue;
 public class TsFileRestorableReaderTest {
 
   private static final String FILE_PATH = TsFileGeneratorForTest.outputDataFile;
-  private FSFactory fsFactory = FSFactoryProducer.getFSFactory();
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
 
   @Test
   public void testToReadDamagedFileAndRepair() throws IOException {
@@ -44,7 +46,7 @@ public class TsFileRestorableReaderTest {
 
     TsFileGeneratorForTest.writeFileWithOneIncompleteChunkHeader(file);
 
-    TsFileSequenceReader reader = new TsFileRestorableReader(FILE_PATH, true);
+    TsFileSequenceReader reader = new TsFileRestorableReader(file, true);
     String tailMagic = reader.readTailMagic();
     reader.close();
 
@@ -59,7 +61,7 @@ public class TsFileRestorableReaderTest {
 
     TsFileGeneratorForTest.writeFileWithOneIncompleteChunkHeader(file);
     // This should throw an Illegal Argument Exception
-    TsFileSequenceReader reader = new TsFileRestorableReader(FILE_PATH, false);
+    TsFileSequenceReader reader = new TsFileRestorableReader(file, false);
     assertFalse(reader.isComplete());
   }
 }

@@ -19,8 +19,8 @@
 package org.apache.iotdb.db.sync.sender.transfer;
 
 import org.apache.iotdb.db.conf.IoTDBConstant;
-import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
+import org.apache.iotdb.db.engine.tier.TierManager;
 import org.apache.iotdb.db.exception.DiskSpaceInsufficientException;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.sync.conf.SyncSenderConfig;
@@ -29,6 +29,7 @@ import org.apache.iotdb.db.sync.sender.recover.ISyncSenderLogAnalyzer;
 import org.apache.iotdb.db.sync.sender.recover.SyncSenderLogAnalyzer;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.db.utils.FilePathUtils;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 
 import org.junit.After;
 import org.junit.Before;
@@ -54,16 +55,14 @@ public class SyncClientTest {
   private static final Logger logger = LoggerFactory.getLogger(SyncClientTest.class);
   private ISyncClient manager = SyncClient.getInstance();
   private SyncSenderConfig config = SyncSenderDescriptor.getInstance().getConfig();
-  private String dataDir;
+  private FSPath dataDir;
   private ISyncSenderLogAnalyzer senderLogAnalyzer;
 
   @Before
   public void setUp() throws DiskSpaceInsufficientException {
     EnvironmentUtils.envSetUp();
-    dataDir =
-        new File(DirectoryManager.getInstance().getNextFolderForSequenceFile())
-            .getParentFile()
-            .getAbsolutePath();
+    FSPath seqDir = TierManager.getInstance().getAllSequenceFileFolders().get(0);
+    dataDir = new FSPath(seqDir.getFsType(), seqDir.toFile().getParentFile().getAbsolutePath());
     config.update(dataDir);
     senderLogAnalyzer = new SyncSenderLogAnalyzer(config.getSenderFolderPath());
   }
@@ -88,7 +87,7 @@ public class SyncClientTest {
         }
         String rand = String.valueOf(r.nextInt(10000));
         String fileName =
-            FilePathUtils.regularizePath(dataDir)
+            FilePathUtils.regularizePath(dataDir.getPath())
                 + IoTDBConstant.SEQUENCE_FLODER_NAME
                 + File.separator
                 + i
@@ -98,7 +97,7 @@ public class SyncClientTest {
                 + "0"
                 + File.separator
                 + rand;
-        File file = new File(fileName);
+        File file = new FSPath(dataDir.getFsType(), fileName).toFile();
         allFileList.get(String.valueOf(i)).get(0L).get(0L).add(file);
         if (!file.getParentFile().exists()) {
           file.getParentFile().mkdirs();
@@ -114,7 +113,7 @@ public class SyncClientTest {
     }
 
     Map<String, Set<String>> dataFileMap = new HashMap<>();
-    File sequenceFile = new File(dataDir, IoTDBConstant.SEQUENCE_FLODER_NAME);
+    File sequenceFile = dataDir.getChildFile(IoTDBConstant.SEQUENCE_FLODER_NAME);
     for (File sgFile : sequenceFile.listFiles()) {
       dataFileMap.putIfAbsent(sgFile.getName(), new HashSet<>());
       for (File vgFile : sgFile.listFiles()) {
@@ -129,11 +128,11 @@ public class SyncClientTest {
       }
     }
 
-    assertTrue(new File(config.getSenderFolderPath()).exists());
-    assertTrue(new File(config.getSnapshotPath()).exists());
+    assertTrue(config.getSenderFolderPath().toFile().exists());
+    assertTrue(config.getSnapshotPath().toFile().exists());
 
     Map<String, Set<String>> snapFileMap = new HashMap<>();
-    for (File sgFile : new File(config.getSnapshotPath()).listFiles()) {
+    for (File sgFile : config.getSnapshotPath().toFile().listFiles()) {
       snapFileMap.putIfAbsent(sgFile.getName(), new HashSet<>());
       for (File vgFile : sgFile.listFiles()) {
         for (File trFile : vgFile.listFiles()) {
@@ -153,9 +152,9 @@ public class SyncClientTest {
       assertTrue(snapFileMap.get(sg).containsAll(tsfiles));
     }
 
-    assertFalse(new File(config.getLastFileInfoPath()).exists());
+    assertFalse(config.getLastFileInfoPath().toFile().exists());
     senderLogAnalyzer.recover();
-    assertFalse(new File(config.getSnapshotPath()).exists());
-    assertTrue(new File(config.getLastFileInfoPath()).exists());
+    assertFalse(config.getSnapshotPath().toFile().exists());
+    assertTrue(config.getLastFileInfoPath().toFile().exists());
   }
 }

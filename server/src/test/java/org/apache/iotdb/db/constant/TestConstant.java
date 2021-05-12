@@ -19,6 +19,7 @@
 
 package org.apache.iotdb.db.constant;
 
+import org.apache.iotdb.tsfile.fileSystem.FSType;
 import org.apache.iotdb.tsfile.write.record.TSRecord;
 import org.apache.iotdb.tsfile.write.record.datapoint.DataPoint;
 
@@ -29,6 +30,7 @@ public class TestConstant {
   public static final String BASE_OUTPUT_PATH = "target".concat(File.separator);
   public static final String OUTPUT_DATA_DIR =
       BASE_OUTPUT_PATH.concat("data").concat(File.separator);
+  public static final FSType DEFAULT_TEST_FS = FSType.LOCAL;
 
   public static final String d0 = "root.vehicle.d0";
   public static final String s0 = "s0";

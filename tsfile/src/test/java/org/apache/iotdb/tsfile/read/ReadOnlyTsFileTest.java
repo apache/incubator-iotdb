@@ -19,6 +19,9 @@
 package org.apache.iotdb.tsfile.read;
 
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
+import org.apache.iotdb.tsfile.constant.TestConstant;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.read.common.RowRecord;
 import org.apache.iotdb.tsfile.read.expression.IExpression;
@@ -43,6 +46,8 @@ import java.util.ArrayList;
 public class ReadOnlyTsFileTest {
 
   private static final String FILE_PATH = TsFileGeneratorForTest.outputDataFile;
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
   private TsFileSequenceReader fileReader;
   private ReadOnlyTsFile tsFile;
 
@@ -51,7 +56,7 @@ public class ReadOnlyTsFileTest {
     TSFileDescriptor.getInstance().getConfig().setTimeEncoder("TS_2DIFF");
     int rowCount = 1000;
     TsFileGeneratorForTest.generateFile(rowCount, 16 * 1024 * 1024, 10000);
-    fileReader = new TsFileSequenceReader(FILE_PATH);
+    fileReader = new TsFileSequenceReader(fsFactory.getFile(FILE_PATH));
     tsFile = new ReadOnlyTsFile(fileReader);
     queryTest(rowCount);
     tsFile.close();
@@ -124,7 +129,7 @@ public class ReadOnlyTsFileTest {
     int minRowCount = 1000, maxRowCount = 100000;
     TSFileDescriptor.getInstance().getConfig().setTimeEncoder("TS_2DIFF");
     TsFileGeneratorForTest.generateFile(minRowCount, maxRowCount, 16 * 1024 * 1024, 10000);
-    fileReader = new TsFileSequenceReader(FILE_PATH);
+    fileReader = new TsFileSequenceReader(fsFactory.getFile(FILE_PATH));
     tsFile = new ReadOnlyTsFile(fileReader);
     queryTest2();
     queryNonExistPathTest();

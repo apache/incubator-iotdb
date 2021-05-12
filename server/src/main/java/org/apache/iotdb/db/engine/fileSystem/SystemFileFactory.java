@@ -22,11 +22,18 @@ package org.apache.iotdb.db.engine.fileSystem;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.tsfile.fileSystem.FSType;
 
+import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 
 public enum SystemFileFactory {
   INSTANCE;
+
+  private static final Logger logger = LoggerFactory.getLogger(SystemFileFactory.class);
 
   private static FSType fsType = IoTDBDescriptor.getInstance().getConfig().getSystemFileStorageFs();
   private static final String UNSUPPORT_FILE_SYSTEM = "Unsupported file system: ";
@@ -64,6 +71,18 @@ public enum SystemFileFactory {
       // return new HDFSFile(uri);
     } else {
       return new File(uri);
+    }
+  }
+
+  public void moveFile(File srcFile, File destFile) {
+    try {
+      FileUtils.moveFile(srcFile, destFile);
+    } catch (IOException e) {
+      logger.error(
+          "Failed to move file from {} to {}. ",
+          srcFile.getAbsolutePath(),
+          destFile.getAbsolutePath(),
+          e);
     }
   }
 }

@@ -18,7 +18,7 @@
  */
 package org.apache.iotdb.db.sync.sender.recover;
 
-import org.apache.iotdb.db.conf.directories.DirectoryManager;
+import org.apache.iotdb.db.engine.tier.TierManager;
 import org.apache.iotdb.db.exception.DiskSpaceInsufficientException;
 import org.apache.iotdb.db.exception.StartupException;
 import org.apache.iotdb.db.exception.StorageEngineException;
@@ -26,6 +26,7 @@ import org.apache.iotdb.db.sync.conf.SyncConstant;
 import org.apache.iotdb.db.sync.conf.SyncSenderConfig;
 import org.apache.iotdb.db.sync.conf.SyncSenderDescriptor;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 
 import org.junit.After;
 import org.junit.Before;
@@ -45,16 +46,14 @@ public class SyncSenderLoggerTest {
 
   private SyncSenderLogger senderLogger;
   private SyncSenderConfig config = SyncSenderDescriptor.getInstance().getConfig();
-  private String dataDir;
+  private FSPath dataDir;
 
   @Before
   public void setUp()
       throws IOException, InterruptedException, StartupException, DiskSpaceInsufficientException {
     EnvironmentUtils.envSetUp();
-    dataDir =
-        new File(DirectoryManager.getInstance().getNextFolderForSequenceFile())
-            .getParentFile()
-            .getAbsolutePath();
+    FSPath seqDir = TierManager.getInstance().getAllSequenceFileFolders().get(0);
+    dataDir = new FSPath(seqDir.getFsType(), seqDir.toFile().getParentFile().getAbsolutePath());
     config.update(dataDir);
   }
 
@@ -66,27 +65,30 @@ public class SyncSenderLoggerTest {
   @Test
   public void testSyncSenderLogger() throws IOException {
     senderLogger =
-        new SyncSenderLogger(new File(config.getSenderFolderPath(), SyncConstant.SYNC_LOG_NAME));
+        new SyncSenderLogger(config.getSenderFolderPath().getChildFile(SyncConstant.SYNC_LOG_NAME));
     Set<String> deletedFileNames = new HashSet<>();
     Set<String> deletedFileNamesTest = new HashSet<>();
     senderLogger.startSyncDeletedFilesName();
     for (int i = 0; i < 100; i++) {
-      senderLogger.finishSyncDeletedFileName(new File(config.getSenderFolderPath(), "deleted" + i));
-      deletedFileNames.add(new File(config.getSenderFolderPath(), "deleted" + i).getAbsolutePath());
+      File file = config.getSenderFolderPath().getChildFile("deleted" + i);
+      senderLogger.finishSyncDeletedFileName(file);
+      deletedFileNames.add(FSPath.parse(file).getAbsoluteFSPath().getRawFSPath());
     }
     Set<String> toBeSyncedFiles = new HashSet<>();
     Set<String> toBeSyncedFilesTest = new HashSet<>();
     senderLogger.startSyncTsFiles();
     for (int i = 0; i < 100; i++) {
-      senderLogger.finishSyncTsfile(new File(config.getSenderFolderPath(), "new" + i));
-      toBeSyncedFiles.add(new File(config.getSenderFolderPath(), "new" + i).getAbsolutePath());
+      File file = config.getSenderFolderPath().getChildFile("new" + i);
+      senderLogger.finishSyncTsfile(file);
+      toBeSyncedFiles.add(FSPath.parse(file).getAbsoluteFSPath().getRawFSPath());
     }
     senderLogger.close();
     int count = 0;
     int mode = 0;
     try (BufferedReader br =
         new BufferedReader(
-            new FileReader(new File(config.getSenderFolderPath(), SyncConstant.SYNC_LOG_NAME)))) {
+            new FileReader(
+                config.getSenderFolderPath().getChildFile(SyncConstant.SYNC_LOG_NAME)))) {
       String line;
       while ((line = br.readLine()) != null) {
         count++;

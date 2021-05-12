@@ -37,10 +37,12 @@ import org.apache.iotdb.tsfile.file.metadata.TimeseriesMetadata;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.BatchData;
 import org.apache.iotdb.tsfile.read.reader.page.PageReader;
 import org.apache.iotdb.tsfile.utils.Binary;
+import org.apache.iotdb.tsfile.utils.FSUtils;
 import org.apache.iotdb.tsfile.write.chunk.ChunkWriterImpl;
 import org.apache.iotdb.tsfile.write.chunk.IChunkWriter;
 import org.apache.iotdb.tsfile.write.schema.IMeasurementSchema;
@@ -98,9 +100,11 @@ public class TsFileRewriteTool implements AutoCloseable {
   public TsFileRewriteTool(TsFileResource resourceToBeRewritten) throws IOException {
     oldTsFile = resourceToBeRewritten.getTsFile();
     String file = oldTsFile.getAbsolutePath();
-    reader = new TsFileSequenceReader(file);
+    reader = new TsFileSequenceReader(oldTsFile);
     partitionWriterMap = new HashMap<>();
-    if (FSFactoryProducer.getFSFactory().getFile(file + ModificationFile.FILE_SUFFIX).exists()) {
+    if (FSFactoryProducer.getFSFactory(FSUtils.getFSType(oldTsFile))
+        .getFile(file + ModificationFile.FILE_SUFFIX)
+        .exists()) {
       oldModification = (List<Modification>) resourceToBeRewritten.getModFile().getModifications();
       modsIterator = oldModification.iterator();
       fileModificationMap = new HashMap<>();
@@ -338,15 +342,14 @@ public class TsFileRewriteTool implements AutoCloseable {
     return partitionWriterMap.computeIfAbsent(
         partition,
         k -> {
-          File partitionDir =
-              FSFactoryProducer.getFSFactory()
-                  .getFile(oldTsFile.getParent() + File.separator + partition);
+          FSFactory fsFactory = FSFactoryProducer.getFSFactory(FSUtils.getFSType(oldTsFile));
+          File partitionDir = fsFactory.getFile(oldTsFile.getParent() + File.separator + partition);
           if (!partitionDir.exists()) {
             partitionDir.mkdirs();
           }
           File newFile =
-              FSFactoryProducer.getFSFactory()
-                  .getFile(partitionDir + File.separator + upgradeTsFileName(oldTsFile.getName()));
+              fsFactory.getFile(
+                  partitionDir + File.separator + upgradeTsFileName(oldTsFile.getName()));
           try {
             if (newFile.exists()) {
               logger.debug("delete uncomplated file {}", newFile);
@@ -358,7 +361,8 @@ public class TsFileRewriteTool implements AutoCloseable {
             TsFileIOWriter writer = new TsFileIOWriter(newFile);
             if (oldModification != null) {
               fileModificationMap.put(
-                  writer, new ModificationFile(newFile + ModificationFile.FILE_SUFFIX));
+                  writer,
+                  new ModificationFile(fsFactory.getFile(newFile + ModificationFile.FILE_SUFFIX)));
             }
             return writer;
           } catch (IOException e) {

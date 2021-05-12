@@ -994,7 +994,7 @@ public class PlanExecutor implements IPlanExecutor {
       Map<Path, IMeasurementSchema> schemaMap = new HashMap<>();
 
       List<ChunkGroupMetadata> chunkGroupMetadataList = new ArrayList<>();
-      try (TsFileSequenceReader reader = new TsFileSequenceReader(file.getAbsolutePath(), false)) {
+      try (TsFileSequenceReader reader = new TsFileSequenceReader(file, false)) {
         reader.selfCheck(schemaMap, chunkGroupMetadataList, false);
       }
 

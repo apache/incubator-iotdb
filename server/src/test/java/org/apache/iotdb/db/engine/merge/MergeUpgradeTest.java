@@ -31,6 +31,7 @@ import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.write.TsFileWriter;
 import org.apache.iotdb.tsfile.write.record.TSRecord;
@@ -50,6 +51,8 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 
 public class MergeUpgradeTest {
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
 
   private List<TsFileResource> seqResources = new ArrayList<>();
   private List<TsFileResource> unseqResources = new ArrayList<>();
@@ -88,34 +91,32 @@ public class MergeUpgradeTest {
     // prepare seqFiles
     for (int i = 0; i < seqFileNum; i++) {
       File seqfile =
-          FSFactoryProducer.getFSFactory()
-              .getFile(
-                  TestConstant.BASE_OUTPUT_PATH.concat(
-                      "seq"
-                          + IoTDBConstant.FILE_NAME_SEPARATOR
-                          + i
-                          + IoTDBConstant.FILE_NAME_SEPARATOR
-                          + i
-                          + IoTDBConstant.FILE_NAME_SEPARATOR
-                          + 0
-                          + ".tsfile"));
+          fsFactory.getFile(
+              TestConstant.BASE_OUTPUT_PATH.concat(
+                  "seq"
+                      + IoTDBConstant.FILE_NAME_SEPARATOR
+                      + i
+                      + IoTDBConstant.FILE_NAME_SEPARATOR
+                      + i
+                      + IoTDBConstant.FILE_NAME_SEPARATOR
+                      + 0
+                      + ".tsfile"));
       TsFileResource seqTsFileResource = new TsFileResource(seqfile);
       seqResources.add(seqTsFileResource);
       prepareOldFile(seqTsFileResource, i * ptNum, ptNum, 0);
     }
     // prepare unseqFile
     File unseqfile =
-        FSFactoryProducer.getFSFactory()
-            .getFile(
-                TestConstant.BASE_OUTPUT_PATH.concat(
-                    "unseq"
-                        + IoTDBConstant.FILE_NAME_SEPARATOR
-                        + 0
-                        + IoTDBConstant.FILE_NAME_SEPARATOR
-                        + 0
-                        + IoTDBConstant.FILE_NAME_SEPARATOR
-                        + 0
-                        + ".tsfile"));
+        fsFactory.getFile(
+            TestConstant.BASE_OUTPUT_PATH.concat(
+                "unseq"
+                    + IoTDBConstant.FILE_NAME_SEPARATOR
+                    + 0
+                    + IoTDBConstant.FILE_NAME_SEPARATOR
+                    + 0
+                    + IoTDBConstant.FILE_NAME_SEPARATOR
+                    + 0
+                    + ".tsfile"));
     TsFileResource unseqTsFileResource = new TsFileResource(unseqfile);
     unseqResources.add(unseqTsFileResource);
     prepareFile(unseqTsFileResource, 0, 2 * ptNum, 10);

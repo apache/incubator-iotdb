@@ -25,6 +25,8 @@ import org.apache.iotdb.tsfile.exception.write.WriteProcessException;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.FileUtils;
 import org.apache.iotdb.tsfile.utils.FileUtils.Unit;
@@ -61,6 +63,8 @@ public class TsFileGeneratorForSeriesReaderByTimestamp {
   private static int pageSize;
   private static int preChunkGroupSize;
   private static int prePageSize;
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
 
   public static void generateFile(int rc, int rs, int ps) throws IOException {
     rowCount = rc;
@@ -80,22 +84,22 @@ public class TsFileGeneratorForSeriesReaderByTimestamp {
   public static void after() {
     TSFileDescriptor.getInstance().getConfig().setGroupSizeInByte(preChunkGroupSize);
     TSFileDescriptor.getInstance().getConfig().setMaxNumberOfPointsInPage(prePageSize);
-    File file = new File(inputDataFile);
+    File file = fsFactory.getFile(inputDataFile);
     if (file.exists()) {
       Assert.assertTrue(file.delete());
     }
-    file = new File(outputDataFile);
+    file = fsFactory.getFile(outputDataFile);
     if (file.exists()) {
       Assert.assertTrue(file.delete());
     }
-    file = new File(errorOutputDataFile);
+    file = fsFactory.getFile(errorOutputDataFile);
     if (file.exists()) {
       Assert.assertTrue(file.delete());
     }
   }
 
   private static void generateSampleInputDataFile() throws IOException {
-    File file = new File(inputDataFile);
+    File file = fsFactory.getFile(inputDataFile);
     if (file.exists()) {
       Assert.assertTrue(file.delete());
     }
@@ -152,8 +156,8 @@ public class TsFileGeneratorForSeriesReaderByTimestamp {
   }
 
   public static void write() throws IOException {
-    File file = new File(outputDataFile);
-    File errorFile = new File(errorOutputDataFile);
+    File file = fsFactory.getFile(outputDataFile);
+    File errorFile = fsFactory.getFile(errorOutputDataFile);
     if (file.exists()) {
       Assert.assertTrue(file.delete());
     }
@@ -255,7 +259,7 @@ public class TsFileGeneratorForSeriesReaderByTimestamp {
   }
 
   private static Scanner getDataFile(String path) {
-    File file = new File(path);
+    File file = fsFactory.getFile(path);
     try {
       Scanner in = new Scanner(file);
       return in;

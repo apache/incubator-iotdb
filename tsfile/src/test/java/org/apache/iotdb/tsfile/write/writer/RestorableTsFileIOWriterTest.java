@@ -60,7 +60,7 @@ import static org.junit.Assert.assertTrue;
 public class RestorableTsFileIOWriterTest {
 
   private static final String FILE_NAME = TestConstant.BASE_OUTPUT_PATH.concat("test.ts");
-  private static FSFactory fsFactory = FSFactoryProducer.getFSFactory();
+  private static FSFactory fsFactory = FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
 
   @Test(expected = NotCompatibleTsFileException.class)
   public void testBadHeadMagic() throws Exception {
@@ -125,7 +125,7 @@ public class RestorableTsFileIOWriterTest {
 
   @Test
   public void testOnlyOneChunkHeader() throws Exception {
-    File file = new File(FILE_NAME);
+    File file = fsFactory.getFile(FILE_NAME);
     TsFileWriter writer = new TsFileWriter(file);
     writer.getIOWriter().startChunkGroup("root.sg1.d1");
     writer
@@ -210,7 +210,7 @@ public class RestorableTsFileIOWriterTest {
     writer = new TsFileWriter(rWriter);
     writer.close();
 
-    ReadOnlyTsFile readOnlyTsFile = new ReadOnlyTsFile(new TsFileSequenceReader(file.getPath()));
+    ReadOnlyTsFile readOnlyTsFile = new ReadOnlyTsFile(new TsFileSequenceReader(file));
     List<Path> pathList = new ArrayList<>();
     pathList.add(new Path("d1", "s1"));
     pathList.add(new Path("d1", "s2"));
@@ -252,7 +252,7 @@ public class RestorableTsFileIOWriterTest {
     writer = new TsFileWriter(rWriter);
     writer.close();
     assertNotEquals(TsFileIOWriter.MAGIC_STRING_BYTES.length, rWriter.getTruncatedSize());
-    TsFileSequenceReader reader = new TsFileSequenceReader(FILE_NAME);
+    TsFileSequenceReader reader = new TsFileSequenceReader(fsFactory.getFile(FILE_NAME));
     List<ChunkMetadata> chunkMetadataList = reader.getChunkMetadataList(new Path("d1", "s1"));
     assertNotNull(chunkMetadataList);
     chunkMetadataList = reader.getChunkMetadataList(new Path("d1", "s2"));
@@ -296,7 +296,7 @@ public class RestorableTsFileIOWriterTest {
     RestorableTsFileIOWriter rWriter = new RestorableTsFileIOWriter(file);
     writer = new TsFileWriter(rWriter);
     writer.close();
-    TsFileSequenceReader reader = new TsFileSequenceReader(FILE_NAME);
+    TsFileSequenceReader reader = new TsFileSequenceReader(fsFactory.getFile(FILE_NAME));
     List<ChunkMetadata> chunkMetadataList = reader.getChunkMetadataList(new Path("d1", "s1"));
     assertNotNull(chunkMetadataList);
     chunkMetadataList = reader.getChunkMetadataList(new Path("d1", "s2"));
@@ -344,7 +344,7 @@ public class RestorableTsFileIOWriterTest {
     RestorableTsFileIOWriter rWriter = new RestorableTsFileIOWriter(file);
     writer = new TsFileWriter(rWriter);
     writer.close();
-    TsFileSequenceReader reader = new TsFileSequenceReader(FILE_NAME);
+    TsFileSequenceReader reader = new TsFileSequenceReader(fsFactory.getFile(FILE_NAME));
     List<ChunkMetadata> chunkMetadataList = reader.getChunkMetadataList(new Path("d1", "s1"));
     assertNotNull(chunkMetadataList);
     chunkMetadataList = reader.getChunkMetadataList(new Path("d1", "s2"));
@@ -393,7 +393,7 @@ public class RestorableTsFileIOWriterTest {
     RestorableTsFileIOWriter rWriter = new RestorableTsFileIOWriter(file);
     writer = new TsFileWriter(rWriter);
     writer.close();
-    TsFileSequenceReader reader = new TsFileSequenceReader(FILE_NAME);
+    TsFileSequenceReader reader = new TsFileSequenceReader(fsFactory.getFile(FILE_NAME));
     List<ChunkMetadata> chunkMetadataList = reader.getChunkMetadataList(new Path("d1", "s1"));
     assertNotNull(chunkMetadataList);
     chunkMetadataList = reader.getChunkMetadataList(new Path("d1", "s2"));
@@ -430,7 +430,7 @@ public class RestorableTsFileIOWriterTest {
 
     rWriter = new RestorableTsFileIOWriter(file);
     assertFalse(rWriter.canWrite());
-    TsFileSequenceReader reader = new TsFileSequenceReader(FILE_NAME);
+    TsFileSequenceReader reader = new TsFileSequenceReader(fsFactory.getFile(FILE_NAME));
     List<ChunkMetadata> chunkMetadataList = reader.getChunkMetadataList(new Path("d1", "s1"));
     assertNotNull(chunkMetadataList);
     chunkMetadataList = reader.getChunkMetadataList(new Path("d1", "s2"));

@@ -26,6 +26,7 @@ import org.apache.iotdb.db.engine.compaction.TsFileManagement;
 import org.apache.iotdb.db.engine.compaction.utils.CompactionLogAnalyzer;
 import org.apache.iotdb.db.engine.compaction.utils.CompactionLogger;
 import org.apache.iotdb.db.engine.compaction.utils.CompactionUtils;
+import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.engine.modification.Modification;
 import org.apache.iotdb.db.engine.modification.ModificationFile;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
@@ -33,6 +34,8 @@ import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.query.control.FileReaderManager;
 import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
+import org.apache.iotdb.tsfile.utils.FSUtils;
 import org.apache.iotdb.tsfile.write.writer.RestorableTsFileIOWriter;
 
 import org.slf4j.Logger;
@@ -85,8 +88,8 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
   private final List<TsFileResource> sequenceRecoverTsFileResources = new ArrayList<>();
   private final List<TsFileResource> unSequenceRecoverTsFileResources = new ArrayList<>();
 
-  public LevelCompactionTsFileManagement(String storageGroupName, String storageGroupDir) {
-    super(storageGroupName, storageGroupDir);
+  public LevelCompactionTsFileManagement(String storageGroupName, String storageGroupSysDir) {
+    super(storageGroupName, storageGroupSysDir);
     clear();
   }
 
@@ -98,8 +101,11 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
     logger.debug("{} [compaction] merge starts to rename real file's mod", storageGroupName);
     List<Modification> modifications = new ArrayList<>();
     for (TsFileResource mergeTsFile : mergeTsFiles) {
+      FSFactory fsFactory =
+          FSFactoryProducer.getFSFactory(FSUtils.getFSType(mergeTsFile.getTsFile()));
       try (ModificationFile sourceModificationFile =
-          new ModificationFile(mergeTsFile.getTsFilePath() + ModificationFile.FILE_SUFFIX)) {
+          new ModificationFile(
+              fsFactory.getFile(mergeTsFile.getTsFilePath() + ModificationFile.FILE_SUFFIX))) {
         modifications.addAll(sourceModificationFile.getModifications());
         if (sourceModificationFile.exists()) {
           sourceModificationFile.remove();
@@ -108,8 +114,11 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
     }
     modifications.removeAll(filterModification);
     if (!modifications.isEmpty()) {
+      FSFactory fsFactory =
+          FSFactoryProducer.getFSFactory(FSUtils.getFSType(targetTsFile.getTsFile()));
       try (ModificationFile modificationFile =
-          new ModificationFile(targetTsFile.getTsFilePath() + ModificationFile.FILE_SUFFIX)) {
+          new ModificationFile(
+              fsFactory.getFile(targetTsFile.getTsFilePath() + ModificationFile.FILE_SUFFIX))) {
         for (Modification modification : modifications) {
           // we have to set modification offset to MAX_VALUE, as the offset of source chunk may
           // change after compaction
@@ -190,14 +199,18 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
       if (sequence) {
         List<SortedSet<TsFileResource>> sequenceTsFileList =
             sequenceTsFileResources.get(timePartition);
-        for (int i = sequenceTsFileList.size() - 1; i >= 0; i--) {
-          result.addAll(sequenceTsFileList.get(i));
+        if (sequenceTsFileList != null) {
+          for (int i = sequenceTsFileList.size() - 1; i >= 0; i--) {
+            result.addAll(sequenceTsFileList.get(i));
+          }
         }
       } else {
         List<List<TsFileResource>> unSequenceTsFileList =
             unSequenceTsFileResources.get(timePartition);
-        for (int i = unSequenceTsFileList.size() - 1; i >= 0; i--) {
-          result.addAll(unSequenceTsFileList.get(i));
+        if (unSequenceTsFileList != null) {
+          for (int i = unSequenceTsFileList.size() - 1; i >= 0; i--) {
+            result.addAll(unSequenceTsFileList.get(i));
+          }
         }
       }
       return result;
@@ -420,8 +433,8 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
   @SuppressWarnings("squid:S3776")
   public void recover() {
     File logFile =
-        FSFactoryProducer.getFSFactory()
-            .getFile(storageGroupDir, storageGroupName + COMPACTION_LOG_NAME);
+        SystemFileFactory.INSTANCE.getFile(
+            storageGroupSysDir, storageGroupName + COMPACTION_LOG_NAME);
     try {
       if (logFile.exists()) {
         CompactionLogAnalyzer logAnalyzer = new CompactionLogAnalyzer(logFile);
@@ -455,7 +468,7 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
             }
             writer.close();
             CompactionLogger compactionLogger =
-                new CompactionLogger(storageGroupDir, storageGroupName);
+                new CompactionLogger(storageGroupSysDir, storageGroupName);
             List<Modification> modifications = new ArrayList<>();
             CompactionUtils.merge(
                 targetTsFileResource,
@@ -489,7 +502,7 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
             }
             writer.close();
             CompactionLogger compactionLogger =
-                new CompactionLogger(storageGroupDir, storageGroupName);
+                new CompactionLogger(storageGroupSysDir, storageGroupName);
             List<Modification> modifications = new ArrayList<>();
             CompactionUtils.merge(
                 targetResource,
@@ -657,7 +670,7 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
                 mergeResources.get(i),
                 Long.MAX_VALUE);
           } else {
-            compactionLogger = new CompactionLogger(storageGroupDir, storageGroupName);
+            compactionLogger = new CompactionLogger(storageGroupSysDir, storageGroupName);
             // log source file list and target file for recover
             for (TsFileResource mergeResource : mergeResources.get(i)) {
               compactionLogger.logFile(SOURCE_NAME, mergeResource.getTsFile());
@@ -717,8 +730,8 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
             renameLevelFilesMods(modifications, toMergeTsFiles, newResource);
             compactionLogger.close();
             File logFile =
-                FSFactoryProducer.getFSFactory()
-                    .getFile(storageGroupDir, storageGroupName + COMPACTION_LOG_NAME);
+                SystemFileFactory.INSTANCE.getFile(
+                    storageGroupSysDir, storageGroupName + COMPACTION_LOG_NAME);
             if (logFile.exists()) {
               Files.delete(logFile.toPath());
             }
@@ -837,8 +850,8 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
   /** restore the files back to the status before the compaction task is submitted */
   private void restoreCompaction() {
     File logFile =
-        FSFactoryProducer.getFSFactory()
-            .getFile(storageGroupDir, storageGroupName + COMPACTION_LOG_NAME);
+        SystemFileFactory.INSTANCE.getFile(
+            storageGroupSysDir, storageGroupName + COMPACTION_LOG_NAME);
     try {
       if (logFile.exists()) {
         CompactionLogAnalyzer logAnalyzer = new CompactionLogAnalyzer(logFile);

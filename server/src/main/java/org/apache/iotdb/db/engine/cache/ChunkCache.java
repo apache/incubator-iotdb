@@ -95,8 +95,7 @@ public class ChunkCache {
   public Chunk get(ChunkMetadata chunkMetaData, boolean debug) throws IOException {
     if (!CACHE_ENABLE) {
       TsFileSequenceReader reader =
-          FileReaderManager.getInstance()
-              .get(chunkMetaData.getFilePath(), chunkMetaData.isClosed());
+          FileReaderManager.getInstance().get(chunkMetaData.getFile(), chunkMetaData.isClosed());
       Chunk chunk = reader.readMemChunk(chunkMetaData);
       return new Chunk(
           chunk.getHeader(),
@@ -120,8 +119,7 @@ public class ChunkCache {
     } else {
       printCacheLog(false);
       TsFileSequenceReader reader =
-          FileReaderManager.getInstance()
-              .get(chunkMetaData.getFilePath(), chunkMetaData.isClosed());
+          FileReaderManager.getInstance().get(chunkMetaData.getFile(), chunkMetaData.isClosed());
       try {
         chunk = reader.readMemChunk(chunkMetaData);
       } catch (IOException e) {

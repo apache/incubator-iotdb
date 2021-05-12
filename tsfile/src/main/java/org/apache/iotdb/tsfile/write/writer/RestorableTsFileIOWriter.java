@@ -28,6 +28,7 @@ import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.read.TsFileCheckStatus;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Path;
+import org.apache.iotdb.tsfile.utils.FSUtils;
 import org.apache.iotdb.tsfile.write.schema.IMeasurementSchema;
 
 import org.slf4j.Logger;
@@ -79,7 +80,9 @@ public class RestorableTsFileIOWriter extends TsFileIOWriter {
       logger.debug("{} is opened.", file.getName());
     }
     this.file = file;
-    this.out = FSFactoryProducer.getFileOutputFactory().getTsFileOutput(file.getPath(), true);
+    this.out =
+        FSFactoryProducer.getFileOutputFactory(FSUtils.getFSType(this.file))
+            .getTsFileOutput(file.getPath(), true);
 
     // file doesn't exist
     if (file.length() == 0) {
@@ -90,7 +93,7 @@ public class RestorableTsFileIOWriter extends TsFileIOWriter {
     }
 
     if (file.exists()) {
-      try (TsFileSequenceReader reader = new TsFileSequenceReader(file.getAbsolutePath(), false)) {
+      try (TsFileSequenceReader reader = new TsFileSequenceReader(file, false)) {
 
         truncatedSize = reader.selfCheck(knownSchemas, chunkGroupMetadataList, true);
         minPlanIndex = reader.getMinPlanIndex();
@@ -126,7 +129,7 @@ public class RestorableTsFileIOWriter extends TsFileIOWriter {
       throws IOException {
     long position = file.length();
 
-    try (TsFileSequenceReader reader = new TsFileSequenceReader(file.getAbsolutePath(), false)) {
+    try (TsFileSequenceReader reader = new TsFileSequenceReader(file, false)) {
       // this tsfile is complete
       if (reader.isComplete()) {
         reader.loadMetadataSize();

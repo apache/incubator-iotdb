@@ -46,6 +46,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -83,7 +84,7 @@ public class TsFileProcessorTest {
   @After
   public void tearDown() throws Exception {
     EnvironmentUtils.cleanEnv();
-    EnvironmentUtils.cleanDir(TestConstant.OUTPUT_DATA_DIR);
+    EnvironmentUtils.cleanDir(new File(TestConstant.OUTPUT_DATA_DIR));
   }
 
   @Test

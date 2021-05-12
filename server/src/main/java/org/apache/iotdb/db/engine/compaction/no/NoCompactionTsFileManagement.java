@@ -43,8 +43,8 @@ public class NoCompactionTsFileManagement extends TsFileManagement {
   // includes sealed and unsealed unSequence TsFiles
   private final Map<Long, List<TsFileResource>> unSequenceFileListMap = new TreeMap<>();
 
-  public NoCompactionTsFileManagement(String storageGroupName, String storageGroupDir) {
-    super(storageGroupName, storageGroupDir);
+  public NoCompactionTsFileManagement(String storageGroupName, String storageGroupSysDir) {
+    super(storageGroupName, storageGroupSysDir);
   }
 
   @Deprecated

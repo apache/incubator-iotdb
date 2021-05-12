@@ -47,7 +47,6 @@ import org.apache.iotdb.db.writelog.io.LogWriter;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 
 import org.apache.commons.io.FileUtils;
@@ -241,13 +240,13 @@ public class MLogWriter implements AutoCloseable {
         }
 
         // rename .bin.tmp to .bin
-        FSFactoryProducer.getFSFactory().moveFile(tmpLogFile, logFile);
+        SystemFileFactory.INSTANCE.moveFile(tmpLogFile, logFile);
       }
     } else if (!logFile.exists() && !tmpLogFile.exists()) {
       // if both .bin and .bin.tmp do not exist, nothing to do
     } else if (!logFile.exists() && tmpLogFile.exists()) {
       // if old .bin doesn't exist but .bin.tmp exists, rename tmp file to .bin
-      FSFactoryProducer.getFSFactory().moveFile(tmpLogFile, logFile);
+      SystemFileFactory.INSTANCE.moveFile(tmpLogFile, logFile);
     } else if (tmpLogFile.exists()) {
       // if both .bin and .bin.tmp exist, delete .bin.tmp
       try {

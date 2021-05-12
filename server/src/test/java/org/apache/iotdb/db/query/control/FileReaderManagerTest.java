@@ -77,7 +77,7 @@ public class FileReaderManagerTest {
                 for (int i = 1; i <= 6; i++) {
                   TsFileResource tsFile = tsFileResources[i];
                   testManager.addFilePathToMap(1L, tsFile, false);
-                  manager.get(tsFile.getTsFilePath(), false);
+                  manager.get(tsFile.getTsFile(), false);
                   Assert.assertTrue(manager.contains(tsFile, false));
                 }
                 for (int i = 1; i <= 6; i++) {
@@ -100,7 +100,7 @@ public class FileReaderManagerTest {
                 for (int i = 4; i <= MAX_FILE_SIZE; i++) {
                   TsFileResource tsFile = tsFileResources[i];
                   testManager.addFilePathToMap(2L, tsFile, false);
-                  manager.get(tsFile.getTsFilePath(), false);
+                  manager.get(tsFile.getTsFile(), false);
                   Assert.assertTrue(manager.contains(tsFile, false));
                 }
                 for (int i = 4; i <= MAX_FILE_SIZE; i++) {

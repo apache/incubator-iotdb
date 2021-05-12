@@ -251,7 +251,7 @@ public class UnseqTsFileRecoverTest {
       assertEquals(9, resource.getEndTime("root.sg.device" + i));
     }
 
-    TsFileSequenceReader fileReader = new TsFileSequenceReader(tsF.getPath(), true);
+    TsFileSequenceReader fileReader = new TsFileSequenceReader(tsF, true);
     IMetadataQuerier metadataQuerier = new MetadataQuerierByFileImpl(fileReader);
     IChunkLoader chunkLoader = new CachedChunkLoaderImpl(fileReader);
 

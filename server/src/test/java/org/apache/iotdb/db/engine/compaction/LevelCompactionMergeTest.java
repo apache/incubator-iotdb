@@ -182,7 +182,8 @@ public class LevelCompactionMergeTest extends LevelCompactionTest {
                 + measurementSchemas[0].getMeasurementId());
     try (ModificationFile sourceModificationFile =
         new ModificationFile(
-            forthSeqTsFileResource.getTsFilePath() + ModificationFile.FILE_SUFFIX)) {
+            fsFactory.getFile(
+                forthSeqTsFileResource.getTsFilePath() + ModificationFile.FILE_SUFFIX))) {
       Modification modification =
           new Deletion(path, forthSeqTsFileResource.getTsFileSize() / 10, 300, 310);
       sourceModificationFile.write(modification);

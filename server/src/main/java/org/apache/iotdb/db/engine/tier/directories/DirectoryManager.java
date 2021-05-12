@@ -16,21 +16,20 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.iotdb.db.conf.directories;
+
+package org.apache.iotdb.db.engine.tier.directories;
 
 import org.apache.iotdb.db.conf.IoTDBConstant;
-import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.conf.directories.strategy.DirectoryStrategy;
+import org.apache.iotdb.db.engine.tier.directories.strategy.DirectoryStrategy;
 import org.apache.iotdb.db.exception.DiskSpaceInsufficientException;
 import org.apache.iotdb.db.exception.LoadConfigurationException;
-import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /** The main class of multiple directories. Used to allocate folders to data files. */
@@ -38,51 +37,53 @@ public class DirectoryManager {
 
   private static final Logger logger = LoggerFactory.getLogger(DirectoryManager.class);
 
-  private List<String> sequenceFileFolders;
-  private List<String> unsequenceFileFolders;
+  private int tierLevel;
+  private List<FSPath> sequenceFileFolders;
+  private List<FSPath> unsequenceFileFolders;
   private DirectoryStrategy sequenceStrategy;
   private DirectoryStrategy unsequenceStrategy;
 
-  private DirectoryManager() {
-    sequenceFileFolders =
-        new ArrayList<>(Arrays.asList(IoTDBDescriptor.getInstance().getConfig().getDataDirs()));
-    for (int i = 0; i < sequenceFileFolders.size(); i++) {
-      sequenceFileFolders.set(
-          i, sequenceFileFolders.get(i) + File.separator + IoTDBConstant.SEQUENCE_FLODER_NAME);
+  public DirectoryManager(int tierLevel, FSPath[] dataDirs, String directoryStrategyName) {
+    this.tierLevel = tierLevel;
+    sequenceFileFolders = new ArrayList<>();
+    unsequenceFileFolders = new ArrayList<>();
+    for (FSPath dataDir : dataDirs) {
+      sequenceFileFolders.add(
+          dataDir.postConcat(File.separator + IoTDBConstant.SEQUENCE_FLODER_NAME));
+      unsequenceFileFolders.add(
+          dataDir.postConcat(File.separator + IoTDBConstant.UNSEQUENCE_FLODER_NAME));
     }
     mkDataDirs(sequenceFileFolders);
-
-    unsequenceFileFolders =
-        new ArrayList<>(Arrays.asList(IoTDBDescriptor.getInstance().getConfig().getDataDirs()));
-    for (int i = 0; i < unsequenceFileFolders.size(); i++) {
-      unsequenceFileFolders.set(
-          i, unsequenceFileFolders.get(i) + File.separator + IoTDBConstant.UNSEQUENCE_FLODER_NAME);
-    }
     mkDataDirs(unsequenceFileFolders);
 
-    String strategyName = "";
     try {
-      strategyName = IoTDBDescriptor.getInstance().getConfig().getMultiDirStrategyClassName();
-      Class<?> clazz = Class.forName(strategyName);
+      Class<?> clazz = Class.forName(directoryStrategyName);
       sequenceStrategy = (DirectoryStrategy) clazz.newInstance();
       sequenceStrategy.setFolders(sequenceFileFolders);
       unsequenceStrategy = (DirectoryStrategy) clazz.newInstance();
       unsequenceStrategy.setFolders(unsequenceFileFolders);
     } catch (DiskSpaceInsufficientException e) {
-      logger.error("All disks of folders are full.", e);
+      logger.error("All disks of folders in tier {} are full.", tierLevel, e);
     } catch (Exception e) {
-      logger.error("Can't find strategy {} for mult-directories.", strategyName, e);
+      logger.error(
+          "Can't find strategy {} for mult-directories of tier {}.",
+          directoryStrategyName,
+          tierLevel,
+          e);
     }
   }
 
-  public void updateFileFolders() throws LoadConfigurationException {
+  public void updateFileFolders(FSPath[] dataDirs) throws LoadConfigurationException {
     try {
-      List<String> sequenceFileFolders =
-          new ArrayList<>(Arrays.asList(IoTDBDescriptor.getInstance().getConfig().getDataDirs()));
+      List<FSPath> sequenceFileFolders = new ArrayList<>();
+      List<FSPath> unsequenceFileFolders = new ArrayList<>();
+      for (FSPath dataDir : dataDirs) {
+        sequenceFileFolders.add(
+            dataDir.postConcat(File.separator + IoTDBConstant.SEQUENCE_FLODER_NAME));
+        unsequenceFileFolders.add(
+            dataDir.postConcat(File.separator + IoTDBConstant.UNSEQUENCE_FLODER_NAME));
+      }
       mkDataDirs(sequenceFileFolders);
-
-      List<String> unsequenceFileFolders =
-          new ArrayList<>(Arrays.asList(IoTDBDescriptor.getInstance().getConfig().getDataDirs()));
       mkDataDirs(unsequenceFileFolders);
       sequenceStrategy.setFolders(sequenceFileFolders);
       unsequenceStrategy.setFolders(unsequenceFileFolders);
@@ -90,38 +91,39 @@ public class DirectoryManager {
       this.unsequenceFileFolders = unsequenceFileFolders;
       logger.info("Success to update file folders.");
     } catch (DiskSpaceInsufficientException e) {
-      logger.error("Fail to update file folders, use previous folders.", e);
+      logger.error("Fail to update file folders of tier {}, use previous folders.", tierLevel, e);
       throw new LoadConfigurationException(
-          "Fail to update file folders because all disks of folders are full, use previous folders.");
+          String.format(
+              "Fail to update file folders of tier %d because all disks of folders are full, use previous folders.",
+              tierLevel));
     }
   }
 
-  public void updateDirectoryStrategy() throws LoadConfigurationException {
-    String strategyName = "";
+  public void updateDirectoryStrategy(String directoryStrategyName)
+      throws LoadConfigurationException {
     try {
-      strategyName = IoTDBDescriptor.getInstance().getConfig().getMultiDirStrategyClassName();
-      Class<?> clazz = Class.forName(strategyName);
+      Class<?> clazz = Class.forName(directoryStrategyName);
       sequenceStrategy = (DirectoryStrategy) clazz.newInstance();
       sequenceStrategy.setFolders(sequenceFileFolders);
       unsequenceStrategy = (DirectoryStrategy) clazz.newInstance();
       unsequenceStrategy.setFolders(unsequenceFileFolders);
       logger.info("Success to update directory strategy.");
     } catch (Exception e) {
-      logger.error("Fail to update directory strategy {}, use previous strategy", strategyName, e);
+      logger.error(
+          "Fail to update directory strategy {} of tier {}, use previous strategy",
+          directoryStrategyName,
+          tierLevel,
+          e);
       throw new LoadConfigurationException(
           String.format(
-              "Fail to update directory strategy because can't find strategy %s for mult-directories, use previous strategy",
-              strategyName));
+              "Fail to update directory strategy of %d because can't find strategy %s for mult-directories, use previous strategy",
+              tierLevel, directoryStrategyName));
     }
   }
 
-  public static DirectoryManager getInstance() {
-    return DirectoriesHolder.INSTANCE;
-  }
-
-  private void mkDataDirs(List<String> folders) {
-    for (String folder : folders) {
-      File file = FSFactoryProducer.getFSFactory().getFile(folder);
+  private void mkDataDirs(List<FSPath> folders) {
+    for (FSPath folder : folders) {
+      File file = folder.toFile();
       if (file.mkdirs()) {
         logger.info("folder {} doesn't exist, create it", file.getPath());
       } else {
@@ -131,7 +133,7 @@ public class DirectoryManager {
     }
   }
 
-  public String getNextFolderForSequenceFile() throws DiskSpaceInsufficientException {
+  public FSPath getNextFolderForSequenceFile() throws DiskSpaceInsufficientException {
     return getSequenceFileFolder(getNextFolderIndexForSequenceFile());
   }
 
@@ -144,28 +146,15 @@ public class DirectoryManager {
     return sequenceStrategy.nextFolderIndex();
   }
 
-  public String getSequenceFileFolder(int index) {
+  public FSPath getSequenceFileFolder(int index) {
     return sequenceFileFolders.get(index);
   }
 
-  public List<String> getAllSequenceFileFolders() {
+  public List<FSPath> getAllSequenceFileFolders() {
     return new ArrayList<>(sequenceFileFolders);
   }
 
-  private static class DirectoriesHolder {
-
-    private static final DirectoryManager INSTANCE = new DirectoryManager();
-  }
-
-  public String getWALFolder() {
-    return IoTDBDescriptor.getInstance().getConfig().getWalDir();
-  }
-
-  public String getIndexRootFolder() {
-    return IoTDBDescriptor.getInstance().getConfig().getIndexRootFolder();
-  }
-
-  public String getNextFolderForUnSequenceFile() throws DiskSpaceInsufficientException {
+  public FSPath getNextFolderForUnSequenceFile() throws DiskSpaceInsufficientException {
     return getUnSequenceFileFolder(getNextFolderIndexForUnSequenceFile());
   }
 
@@ -178,7 +167,7 @@ public class DirectoryManager {
     return unsequenceStrategy.nextFolderIndex();
   }
 
-  public String getUnSequenceFileFolder(int index) {
+  public FSPath getUnSequenceFileFolder(int index) {
     return unsequenceFileFolders.get(index);
   }
 
@@ -186,7 +175,11 @@ public class DirectoryManager {
     return unsequenceFileFolders.indexOf(folder);
   }
 
-  public List<String> getAllUnSequenceFileFolders() {
+  public List<FSPath> getAllUnSequenceFileFolders() {
     return new ArrayList<>(unsequenceFileFolders);
+  }
+
+  public int getTierLevel() {
+    return tierLevel;
   }
 }

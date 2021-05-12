@@ -23,6 +23,8 @@ import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.exception.write.WriteProcessException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.ReadOnlyTsFile;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Field;
@@ -55,11 +57,12 @@ public class TsFileReadWriteTest {
 
   private final double delta = 0.0000001;
   private String path = TestConstant.BASE_OUTPUT_PATH.concat("read_write_rle.tsfile");
+  private static FSFactory fsFactory = FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
   private File f;
 
   @Before
   public void setUp() {
-    f = new File(path);
+    f = fsFactory.getFile(path);
     if (f.exists()) {
       assertTrue(f.delete());
     }
@@ -67,7 +70,7 @@ public class TsFileReadWriteTest {
 
   @After
   public void tearDown() {
-    f = new File(path);
+    f = fsFactory.getFile(path);
     if (f.exists()) {
       assertTrue(f.delete());
     }
@@ -173,7 +176,7 @@ public class TsFileReadWriteTest {
     }
 
     // read example : no filter
-    TsFileSequenceReader reader = new TsFileSequenceReader(path);
+    TsFileSequenceReader reader = new TsFileSequenceReader(fsFactory.getFile(path));
     ReadOnlyTsFile readTsFile = new ReadOnlyTsFile(reader);
     ArrayList<Path> paths = new ArrayList<>();
     paths.add(new Path("device_1", "sensor_2"));
@@ -219,7 +222,7 @@ public class TsFileReadWriteTest {
   }
 
   private void readData(ReadDataPointProxy proxy) throws IOException {
-    TsFileSequenceReader reader = new TsFileSequenceReader(path);
+    TsFileSequenceReader reader = new TsFileSequenceReader(fsFactory.getFile(path));
     ReadOnlyTsFile readTsFile = new ReadOnlyTsFile(reader);
     ArrayList<Path> paths = new ArrayList<>();
     paths.add(new Path("device_1", "sensor_1"));

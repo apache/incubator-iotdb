@@ -26,13 +26,13 @@ public enum CompactionStrategy {
   LEVEL_COMPACTION,
   NO_COMPACTION;
 
-  public TsFileManagement getTsFileManagement(String storageGroupName, String storageGroupDir) {
+  public TsFileManagement getTsFileManagement(String storageGroupName, String storageGroupSysDir) {
     switch (this) {
       case LEVEL_COMPACTION:
-        return new LevelCompactionTsFileManagement(storageGroupName, storageGroupDir);
+        return new LevelCompactionTsFileManagement(storageGroupName, storageGroupSysDir);
       case NO_COMPACTION:
       default:
-        return new NoCompactionTsFileManagement(storageGroupName, storageGroupDir);
+        return new NoCompactionTsFileManagement(storageGroupName, storageGroupSysDir);
     }
   }
 }

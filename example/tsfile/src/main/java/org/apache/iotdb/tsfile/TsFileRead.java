@@ -18,6 +18,8 @@
  */
 package org.apache.iotdb.tsfile;
 
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.ReadOnlyTsFile;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Path;
@@ -41,6 +43,7 @@ import java.util.ArrayList;
 public class TsFileRead {
 
   private static final String DEVICE1 = "device_1";
+  private static final FSFactory fsFactory = FSFactoryProducer.getFSFactory(Constant.DEFAULT_FS);
 
   private static void queryAndPrint(
       ArrayList<Path> paths, ReadOnlyTsFile readTsFile, IExpression statement) throws IOException {
@@ -58,7 +61,7 @@ public class TsFileRead {
     String path = "test.tsfile";
 
     // create reader and get the readTsFile interface
-    try (TsFileSequenceReader reader = new TsFileSequenceReader(path);
+    try (TsFileSequenceReader reader = new TsFileSequenceReader(fsFactory.getFile(path));
         ReadOnlyTsFile readTsFile = new ReadOnlyTsFile(reader)) {
 
       // use these paths(all measurements) for all the queries

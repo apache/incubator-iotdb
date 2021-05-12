@@ -36,6 +36,7 @@ import org.apache.flink.api.java.tuple.Tuple7;
 import org.apache.flink.types.Row;
 import org.junit.Before;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -101,9 +102,9 @@ public abstract class RowTsFileOutputFormatTestBase extends RowTsFileConnectorTe
     return env.fromCollection(prepareData(), rowTypeInfo);
   }
 
-  protected String[] readTsFile(String tsFilePath, List<Path> paths) throws IOException {
+  protected String[] readTsFile(File tsFile, List<Path> paths) throws IOException {
     QueryExpression expression = QueryExpression.create(paths, null);
-    TsFileSequenceReader reader = new TsFileSequenceReader(tsFilePath);
+    TsFileSequenceReader reader = new TsFileSequenceReader(tsFile);
     ReadOnlyTsFile readTsFile = new ReadOnlyTsFile(reader);
     QueryDataSet queryDataSet = readTsFile.query(expression);
     List<String> result = new ArrayList<>();

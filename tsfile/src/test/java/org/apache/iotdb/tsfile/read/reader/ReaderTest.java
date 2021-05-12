@@ -19,7 +19,10 @@
 package org.apache.iotdb.tsfile.read.reader;
 
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
+import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.file.metadata.IChunkMetadata;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.BatchData;
 import org.apache.iotdb.tsfile.read.common.Path;
@@ -45,6 +48,8 @@ import java.util.List;
 public class ReaderTest {
 
   private static final String FILE_PATH = TsFileGeneratorForTest.outputDataFile;
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
   private TsFileSequenceReader fileReader;
   private MetadataQuerierByFileImpl metadataQuerierByFile;
   private int maxDegreeOfIndexNode;
@@ -56,7 +61,7 @@ public class ReaderTest {
     TSFileDescriptor.getInstance().getConfig().setTimeEncoder("TS_2DIFF");
     TSFileDescriptor.getInstance().getConfig().setMaxDegreeOfIndexNode(3);
     TsFileGeneratorForTest.generateFile(rowCount, 10 * 1024 * 1024, 10000);
-    fileReader = new TsFileSequenceReader(FILE_PATH);
+    fileReader = new TsFileSequenceReader(fsFactory.getFile(FILE_PATH));
     metadataQuerierByFile = new MetadataQuerierByFileImpl(fileReader);
   }
 

@@ -20,11 +20,14 @@
 package org.apache.iotdb.tsfile.read;
 
 import org.apache.iotdb.tsfile.common.conf.TSFileConfig;
+import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.file.MetaMarker;
 import org.apache.iotdb.tsfile.file.header.ChunkGroupHeader;
 import org.apache.iotdb.tsfile.file.header.ChunkHeader;
 import org.apache.iotdb.tsfile.file.header.PageHeader;
 import org.apache.iotdb.tsfile.file.metadata.ChunkMetadata;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.utils.FileGenerator;
 import org.apache.iotdb.tsfile.utils.Pair;
 
@@ -43,13 +46,15 @@ import java.util.Map;
 public class TsFileSequenceReaderTest {
 
   private static final String FILE_PATH = FileGenerator.outputDataFile;
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
   private ReadOnlyTsFile tsFile;
 
   @Before
   public void before() throws IOException {
     int rowCount = 100;
     FileGenerator.generateFile(rowCount, 10000);
-    TsFileSequenceReader fileReader = new TsFileSequenceReader(FILE_PATH);
+    TsFileSequenceReader fileReader = new TsFileSequenceReader(fsFactory.getFile(FILE_PATH));
     tsFile = new ReadOnlyTsFile(fileReader);
   }
 
@@ -61,7 +66,7 @@ public class TsFileSequenceReaderTest {
 
   @Test
   public void testReadTsFileSequentially() throws IOException {
-    TsFileSequenceReader reader = new TsFileSequenceReader(FILE_PATH);
+    TsFileSequenceReader reader = new TsFileSequenceReader(fsFactory.getFile(FILE_PATH));
     reader.position(TSFileConfig.MAGIC_STRING.getBytes().length + 1);
     Map<String, List<Pair<Long, Long>>> deviceChunkGroupMetadataOffsets = new HashMap<>();
 
@@ -104,7 +109,7 @@ public class TsFileSequenceReaderTest {
 
   @Test
   public void testReadChunkMetadataInDevice() throws IOException {
-    TsFileSequenceReader reader = new TsFileSequenceReader(FILE_PATH);
+    TsFileSequenceReader reader = new TsFileSequenceReader(fsFactory.getFile(FILE_PATH));
 
     // test for exist device "d2"
     Map<String, List<ChunkMetadata>> chunkMetadataMap = reader.readChunkMetadataInDevice("d2");

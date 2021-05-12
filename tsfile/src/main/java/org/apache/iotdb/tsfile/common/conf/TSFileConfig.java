@@ -113,7 +113,7 @@ public class TSFileConfig implements Serializable {
   /** Default endian value is BIG_ENDIAN. */
   private String endian = "BIG_ENDIAN";
   /** Default storage is in local file system */
-  private FSType TSFileStorageFs = FSType.LOCAL;
+  private FSType[] tsFileStorageFs = {FSType.LOCAL};
   /** Default core-site.xml file path is /etc/hadoop/conf/core-site.xml */
   private String coreSitePath = "/etc/hadoop/conf/core-site.xml";
   /** Default hdfs-site.xml file path is /etc/hadoop/conf/hdfs-site.xml */
@@ -146,6 +146,15 @@ public class TSFileConfig implements Serializable {
   private int batchSize = 1000;
 
   public TSFileConfig() {}
+
+  public boolean isFSSupported(FSType fsType) {
+    for (FSType fs : tsFileStorageFs) {
+      if (fsType.equals(fs)) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   public int getGroupSizeInByte() {
     return groupSizeInByte;
@@ -331,12 +340,20 @@ public class TSFileConfig implements Serializable {
     this.bloomFilterErrorRate = bloomFilterErrorRate;
   }
 
-  public FSType getTSFileStorageFs() {
-    return this.TSFileStorageFs;
+  public FSType[] getTSFileStorageFs() {
+    return this.tsFileStorageFs;
   }
 
-  public void setTSFileStorageFs(FSType fileStorageFs) {
-    this.TSFileStorageFs = fileStorageFs;
+  public void setTSFileStorageFs(FSType[] fileStorageFs) {
+    this.tsFileStorageFs = fileStorageFs;
+  }
+
+  public void setTSFileStorageFs(String[] fileStorageFs) {
+    FSType[] fsTypes = new FSType[fileStorageFs.length];
+    for (int i = 0; i < fileStorageFs.length; ++i) {
+      fsTypes[i] = FSType.valueOf(fileStorageFs[i]);
+    }
+    this.setTSFileStorageFs(fsTypes);
   }
 
   public String getCoreSitePath() {

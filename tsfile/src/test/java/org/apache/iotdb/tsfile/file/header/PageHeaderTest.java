@@ -23,6 +23,8 @@ import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.utils.TestHelper;
 import org.apache.iotdb.tsfile.file.metadata.utils.Utils;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -42,13 +44,15 @@ public class PageHeaderTest {
   public static final long MIN_TIMESTAMO = 423372036854775806L;
   public static final TSDataType DATA_TYPE = TSDataType.INT64;
   private final String PATH = TestConstant.BASE_OUTPUT_PATH.concat("outputPageHeader.tsfile");
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
 
   @Before
   public void setUp() {}
 
   @After
   public void tearDown() {
-    File file = new File(PATH);
+    File file = fsFactory.getFile(PATH);
     if (file.exists()) {
       Assert.assertTrue(file.delete());
     }
@@ -67,7 +71,7 @@ public class PageHeaderTest {
     FileInputStream fis = null;
     PageHeader header = null;
     try {
-      fis = new FileInputStream(new File(PATH));
+      fis = new FileInputStream(fsFactory.getFile(PATH));
       header = PageHeader.deserializeFrom(fis, DATA_TYPE, true);
       return header;
     } catch (IOException e) {
@@ -85,7 +89,7 @@ public class PageHeaderTest {
   }
 
   private void serialized(PageHeader header) {
-    File file = new File(PATH);
+    File file = fsFactory.getFile(PATH);
     if (file.exists()) {
       Assert.assertTrue(file.delete());
     }

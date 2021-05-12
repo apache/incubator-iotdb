@@ -30,6 +30,7 @@ import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Chunk;
 import org.apache.iotdb.tsfile.read.reader.IPointReader;
+import org.apache.iotdb.tsfile.utils.FSUtils;
 import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.write.chunk.ChunkWriterImpl;
 import org.apache.iotdb.tsfile.write.chunk.IChunkWriter;
@@ -121,7 +122,8 @@ public class MergeResource {
     if (writer == null) {
       writer =
           new RestorableTsFileIOWriter(
-              FSFactoryProducer.getFSFactory().getFile(resource.getTsFilePath() + MERGE_SUFFIX));
+              FSFactoryProducer.getFSFactory(FSUtils.getFSType(resource.getTsFile()))
+                  .getFile(resource.getTsFilePath() + MERGE_SUFFIX));
       fileWriterCache.put(resource, writer);
     }
     return writer;
@@ -147,7 +149,7 @@ public class MergeResource {
   public TsFileSequenceReader getFileReader(TsFileResource tsFileResource) throws IOException {
     TsFileSequenceReader reader = fileReaderCache.get(tsFileResource);
     if (reader == null) {
-      reader = new TsFileSequenceReader(tsFileResource.getTsFilePath(), true, cacheDeviceMeta);
+      reader = new TsFileSequenceReader(tsFileResource.getTsFile(), true, cacheDeviceMeta);
       fileReaderCache.put(tsFileResource, reader);
     }
     return reader;

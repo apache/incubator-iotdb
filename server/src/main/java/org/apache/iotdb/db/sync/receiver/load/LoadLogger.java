@@ -18,9 +18,12 @@
  */
 package org.apache.iotdb.db.sync.receiver.load;
 
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
+import org.apache.iotdb.tsfile.utils.FSUtils;
+
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 
 public class LoadLogger implements ILoadLogger {
@@ -31,7 +34,10 @@ public class LoadLogger implements ILoadLogger {
     if (!logFile.getParentFile().exists()) {
       logFile.getParentFile().mkdirs();
     }
-    bw = new BufferedWriter(new FileWriter(logFile));
+
+    bw =
+        FSFactoryProducer.getFSFactory(FSUtils.getFSType(logFile))
+            .getBufferedWriter(logFile.getAbsolutePath(), false);
   }
 
   @Override
@@ -43,7 +49,7 @@ public class LoadLogger implements ILoadLogger {
 
   @Override
   public void finishLoadDeletedFile(File file) throws IOException {
-    bw.write(file.getAbsolutePath());
+    bw.write(FSPath.parse(file).getAbsoluteFSPath().getRawFSPath());
     bw.newLine();
     bw.flush();
   }
@@ -57,7 +63,7 @@ public class LoadLogger implements ILoadLogger {
 
   @Override
   public void finishLoadTsfile(File file) throws IOException {
-    bw.write(file.getAbsolutePath());
+    bw.write(FSPath.parse(file).getAbsoluteFSPath().getRawFSPath());
     bw.newLine();
     bw.flush();
   }

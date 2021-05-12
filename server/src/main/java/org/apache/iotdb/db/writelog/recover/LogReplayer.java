@@ -41,11 +41,11 @@ import org.apache.iotdb.db.writelog.io.ILogReader;
 import org.apache.iotdb.db.writelog.manager.MultiFileLogNodeManager;
 import org.apache.iotdb.db.writelog.node.WriteLogNode;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -61,7 +61,7 @@ public class LogReplayer {
 
   private Logger logger = LoggerFactory.getLogger(LogReplayer.class);
   private String logNodePrefix;
-  private String insertFilePath;
+  private File insertFile;
   private ModificationFile modFile;
   private TsFileResource currentTsFileResource;
   private IMemTable recoverMemTable;
@@ -74,13 +74,13 @@ public class LogReplayer {
 
   public LogReplayer(
       String logNodePrefix,
-      String insertFilePath,
+      File insertFile,
       ModificationFile modFile,
       TsFileResource currentTsFileResource,
       IMemTable memTable,
       boolean sequence) {
     this.logNodePrefix = logNodePrefix;
-    this.insertFilePath = insertFilePath;
+    this.insertFile = insertFile;
     this.modFile = modFile;
     this.currentTsFileResource = currentTsFileResource;
     this.recoverMemTable = memTable;
@@ -94,9 +94,7 @@ public class LogReplayer {
   public void replayLogs(Supplier<ByteBuffer[]> supplier) {
     WriteLogNode logNode =
         MultiFileLogNodeManager.getInstance()
-            .getNode(
-                logNodePrefix + FSFactoryProducer.getFSFactory().getFile(insertFilePath).getName(),
-                supplier);
+            .getNode(logNodePrefix + insertFile.getName(), supplier);
 
     ILogReader logReader = logNode.getLogReader();
     try {
@@ -111,11 +109,11 @@ public class LogReplayer {
         } catch (PathNotExistException ignored) {
           // can not get path because it is deleted
         } catch (Exception e) {
-          logger.warn("recover wal of {} failed", insertFilePath, e);
+          logger.warn("recover wal of {} failed", insertFile, e);
         }
       }
     } catch (IOException e) {
-      logger.warn("meet error when redo wal of {}", insertFilePath, e);
+      logger.warn("meet error when redo wal of {}", insertFile, e);
     } finally {
       logReader.close();
       try {

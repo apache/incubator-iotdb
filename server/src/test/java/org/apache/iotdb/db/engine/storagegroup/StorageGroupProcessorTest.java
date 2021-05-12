@@ -53,6 +53,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -82,7 +83,7 @@ public class StorageGroupProcessorTest {
   public void tearDown() throws Exception {
     processor.syncDeleteDataFiles();
     EnvironmentUtils.cleanEnv();
-    EnvironmentUtils.cleanDir(TestConstant.OUTPUT_DATA_DIR);
+    EnvironmentUtils.cleanDir(new File(TestConstant.OUTPUT_DATA_DIR));
     MergeManager.getINSTANCE().stop();
     EnvironmentUtils.cleanEnv();
     IoTDBDescriptor.getInstance()

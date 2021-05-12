@@ -19,7 +19,6 @@ package org.apache.iotdb.flink;
 
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.read.ReadOnlyTsFile;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Path;
@@ -51,10 +50,9 @@ public class TsFileUtils {
 
   private TsFileUtils() {}
 
-  public static void writeTsFile(String path) {
+  public static void writeTsFile(File file) {
     try {
-      File f = FSFactoryProducer.getFSFactory().getFile(path);
-      Files.delete(f.toPath());
+      Files.delete(file.toPath());
       Schema schema = new Schema();
       schema.extendTemplate(
           DEFAULT_TEMPLATE, new MeasurementSchema("sensor_1", TSDataType.FLOAT, TSEncoding.RLE));
@@ -65,7 +63,7 @@ public class TsFileUtils {
           DEFAULT_TEMPLATE,
           new MeasurementSchema("sensor_3", TSDataType.INT32, TSEncoding.TS_2DIFF));
 
-      try (TsFileWriter tsFileWriter = new TsFileWriter(f, schema)) {
+      try (TsFileWriter tsFileWriter = new TsFileWriter(file, schema)) {
 
         // construct TSRecord
         for (int i = 0; i < 100; i++) {
@@ -83,13 +81,13 @@ public class TsFileUtils {
       }
 
     } catch (Exception e) {
-      logger.error("Write {} failed. ", path, e);
+      logger.error("Write {} failed. ", file, e);
     }
   }
 
-  public static String[] readTsFile(String tsFilePath, List<Path> paths) throws IOException {
+  public static String[] readTsFile(File tsFile, List<Path> paths) throws IOException {
     QueryExpression expression = QueryExpression.create(paths, null);
-    TsFileSequenceReader reader = new TsFileSequenceReader(tsFilePath);
+    TsFileSequenceReader reader = new TsFileSequenceReader(tsFile);
     try (ReadOnlyTsFile readTsFile = new ReadOnlyTsFile(reader)) {
       QueryDataSet queryDataSet = readTsFile.query(expression);
       List<String> result = new ArrayList<>();

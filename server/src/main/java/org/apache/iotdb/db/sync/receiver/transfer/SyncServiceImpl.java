@@ -22,8 +22,8 @@ import org.apache.iotdb.db.concurrent.ThreadName;
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
+import org.apache.iotdb.db.engine.tier.TierManager;
 import org.apache.iotdb.db.exception.DiskSpaceInsufficientException;
 import org.apache.iotdb.db.exception.SyncDeviceOwnerConflictException;
 import org.apache.iotdb.db.metadata.MetadataConstant;
@@ -41,6 +41,7 @@ import org.apache.iotdb.db.utils.SyncUtils;
 import org.apache.iotdb.service.sync.thrift.ConfirmInfo;
 import org.apache.iotdb.service.sync.thrift.SyncService;
 import org.apache.iotdb.service.sync.thrift.SyncStatus;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,7 +60,7 @@ public class SyncServiceImpl implements SyncService.Iface {
 
   private IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
 
-  private ThreadLocal<String> syncFolderPath = new ThreadLocal<>();
+  private ThreadLocal<FSPath> syncFolder = new ThreadLocal<>();
 
   private ThreadLocal<String> currentSG = new ThreadLocal<>();
 
@@ -126,9 +127,9 @@ public class SyncServiceImpl implements SyncService.Iface {
     try {
       initPath();
       currentSG.remove();
-      FileLoader.createFileLoader(senderName.get(), syncFolderPath.get());
+      FileLoader.createFileLoader(senderName.get(), syncFolder.get());
       syncLog.set(
-          new SyncReceiverLogger(new File(syncFolderPath.get(), SyncConstant.SYNC_LOG_NAME)));
+          new SyncReceiverLogger(syncFolder.get().getChildFile(SyncConstant.SYNC_LOG_NAME)));
       return getSuccessResult();
     } catch (DiskSpaceInsufficientException | IOException e) {
       logger.error("Can not receiver data from sender", e);
@@ -138,15 +139,13 @@ public class SyncServiceImpl implements SyncService.Iface {
 
   /** Init file path. */
   private void initPath() throws DiskSpaceInsufficientException {
-    String dataDir =
-        new File(DirectoryManager.getInstance().getNextFolderForSequenceFile())
-            .getParentFile()
-            .getAbsolutePath();
-    syncFolderPath.set(
-        FilePathUtils.regularizePath(dataDir)
+    FSPath seqFolder = TierManager.getInstance().getNextFolderForSequenceFile();
+    String syncFolderPath =
+        FilePathUtils.regularizePath(seqFolder.toFile().getParentFile().getAbsolutePath())
             + SyncConstant.SYNC_RECEIVER
             + File.separatorChar
-            + senderName.get());
+            + senderName.get();
+    syncFolder.set(new FSPath(seqFolder.getFsType(), syncFolderPath));
   }
 
   /** Init threadLocal variable. */
@@ -169,11 +168,11 @@ public class SyncServiceImpl implements SyncService.Iface {
       syncLog
           .get()
           .finishSyncDeletedFileName(
-              new File(getSyncDataPath(), currentSG.get() + File.separatorChar + fileName));
+              getSyncDataPath().getChildFile(currentSG.get() + File.separatorChar + fileName));
       FileLoaderManager.getInstance()
           .getFileLoader(senderName.get())
           .addDeletedFileName(
-              new File(getSyncDataPath(), currentSG.get() + File.separatorChar + fileName));
+              getSyncDataPath().getChildFile(currentSG.get() + File.separatorChar + fileName));
     } catch (IOException e) {
       logger.error("Can not sync deleted file", e);
       return getErrorResult(
@@ -188,9 +187,9 @@ public class SyncServiceImpl implements SyncService.Iface {
     try {
       File file;
       if (currentSG.get() == null) { // schema mlog.txt file
-        file = new File(getSyncDataPath(), filename);
+        file = getSyncDataPath().getChildFile(filename);
       } else {
-        file = new File(getSyncDataPath(), currentSG.get() + File.separatorChar + filename);
+        file = getSyncDataPath().getChildFile(currentSG.get() + File.separatorChar + filename);
       }
       file.delete();
       currentFile.set(file);
@@ -253,7 +252,9 @@ public class SyncServiceImpl implements SyncService.Iface {
             FileLoaderManager.getInstance()
                 .checkAndUpdateDeviceOwner(
                     new TsFileResource(
-                        new File(currentFile.get() + TsFileResource.RESOURCE_SUFFIX)));
+                        FSPath.parse(currentFile.get())
+                            .postConcat(TsFileResource.RESOURCE_SUFFIX)
+                            .toFile()));
             syncLog.get().finishSyncTsfile(currentFile.get());
             FileLoaderManager.getInstance()
                 .getFileLoader(senderName.get())
@@ -325,7 +326,7 @@ public class SyncServiceImpl implements SyncService.Iface {
       logger.error("Can not end sync", e);
       return getErrorResult(String.format("Can not end sync because %s", e.getMessage()));
     } finally {
-      syncFolderPath.remove();
+      syncFolder.remove();
       currentSG.remove();
       syncLog.remove();
       senderName.remove();
@@ -336,8 +337,8 @@ public class SyncServiceImpl implements SyncService.Iface {
     return getSuccessResult();
   }
 
-  private String getSyncDataPath() {
-    return syncFolderPath.get() + File.separatorChar + SyncConstant.RECEIVER_DATA_FOLDER_NAME;
+  private FSPath getSyncDataPath() {
+    return syncFolder.get().postConcat(File.separatorChar + SyncConstant.RECEIVER_DATA_FOLDER_NAME);
   }
 
   private SyncStatus getSuccessResult() {

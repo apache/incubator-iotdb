@@ -36,7 +36,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 
-public class LocalFSFactory implements FSFactory {
+public class LocalFSFactory extends AbstractFSFactory {
 
   private static final Logger logger = LoggerFactory.getLogger(LocalFSFactory.class);
 
@@ -111,19 +111,6 @@ public class LocalFSFactory implements FSFactory {
   }
 
   @Override
-  public void moveFile(File srcFile, File destFile) {
-    try {
-      FileUtils.moveFile(srcFile, destFile);
-    } catch (IOException e) {
-      logger.error(
-          "Failed to move file from {} to {}. ",
-          srcFile.getAbsolutePath(),
-          destFile.getAbsolutePath(),
-          e);
-    }
-  }
-
-  @Override
   public File[] listFilesBySuffix(String fileFolder, String suffix) {
     return new File(fileFolder).listFiles(file -> file.getName().endsWith(suffix));
   }
@@ -136,5 +123,31 @@ public class LocalFSFactory implements FSFactory {
   @Override
   public boolean deleteIfExists(File file) throws IOException {
     return Files.deleteIfExists(file.toPath());
+  }
+
+  @Override
+  void moveFileInSameFS(File srcFile, File destFile) {
+    try {
+      FileUtils.moveFile(srcFile, destFile);
+    } catch (IOException e) {
+      logger.error(
+          "Failed to move file from {} to {}. ",
+          srcFile.getAbsolutePath(),
+          destFile.getAbsolutePath(),
+          e);
+    }
+  }
+
+  @Override
+  void copyFileInSameFS(File srcFile, File destFile) {
+    try {
+      FileUtils.copyFile(srcFile, destFile);
+    } catch (IOException e) {
+      logger.error(
+          "Failed to copy file from {} to {}. ",
+          srcFile.getAbsolutePath(),
+          destFile.getAbsolutePath(),
+          e);
+    }
   }
 }

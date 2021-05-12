@@ -45,6 +45,7 @@ import org.apache.iotdb.tsfile.read.reader.IPageReader;
 import org.apache.iotdb.tsfile.read.reader.chunk.ChunkReader;
 import org.apache.iotdb.tsfile.read.reader.chunk.VectorChunkReader;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -59,8 +60,7 @@ public class FileLoaderUtils {
   public static void checkTsFileResource(TsFileResource tsFileResource) throws IOException {
     if (!tsFileResource.resourceFileExists()) {
       // .resource file does not exist, read file metadata and recover tsfile resource
-      try (TsFileSequenceReader reader =
-          new TsFileSequenceReader(tsFileResource.getTsFile().getAbsolutePath())) {
+      try (TsFileSequenceReader reader = new TsFileSequenceReader(tsFileResource.getTsFile())) {
         updateTsFileResource(reader, tsFileResource);
       }
       // write .resource file
@@ -121,9 +121,7 @@ public class FileLoaderUtils {
           TimeSeriesMetadataCache.getInstance()
               .get(
                   new TimeSeriesMetadataCache.TimeSeriesMetadataCacheKey(
-                      resource.getTsFilePath(),
-                      seriesPath.getDevice(),
-                      seriesPath.getMeasurement()),
+                      resource.getTsFile(), seriesPath.getDevice(), seriesPath.getMeasurement()),
                   allSensors,
                   context.isDebug());
       if (timeSeriesMetadata != null) {
@@ -272,9 +270,8 @@ public class FileLoaderUtils {
     return chunkReader.loadPageReaderList();
   }
 
-  public static List<IChunkMetadata> getChunkMetadataList(Path path, String filePath)
-      throws IOException {
-    TsFileSequenceReader tsFileReader = FileReaderManager.getInstance().get(filePath, true);
+  public static List<IChunkMetadata> getChunkMetadataList(Path path, File file) throws IOException {
+    TsFileSequenceReader tsFileReader = FileReaderManager.getInstance().get(file, true);
     return new ArrayList<>(tsFileReader.getChunkMetadataList(path));
   }
 }

@@ -19,8 +19,8 @@
 package org.apache.iotdb.db.sync.sender.recover;
 
 import org.apache.iotdb.db.conf.IoTDBConstant;
-import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
+import org.apache.iotdb.db.engine.tier.TierManager;
 import org.apache.iotdb.db.exception.DiskSpaceInsufficientException;
 import org.apache.iotdb.db.exception.StartupException;
 import org.apache.iotdb.db.exception.StorageEngineException;
@@ -35,6 +35,7 @@ import org.apache.iotdb.db.sync.sender.manage.SyncFileManager;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.db.utils.FilePathUtils;
 import org.apache.iotdb.db.utils.SyncUtils;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 
 import org.junit.After;
 import org.junit.Before;
@@ -58,19 +59,17 @@ public class SyncSenderLogAnalyzerTest {
   private ISyncSenderLogAnalyzer senderLogAnalyzer;
   private ISyncFileManager manager = SyncFileManager.getInstance();
   private SyncSenderConfig config = SyncSenderDescriptor.getInstance().getConfig();
-  private String dataDir;
+  private FSPath dataDir;
 
   @Before
   public void setUp()
       throws IOException, InterruptedException, StartupException, DiskSpaceInsufficientException {
     EnvironmentUtils.envSetUp();
-    dataDir =
-        new File(DirectoryManager.getInstance().getNextFolderForSequenceFile())
-            .getParentFile()
-            .getAbsolutePath();
+    FSPath seqDir = TierManager.getInstance().getAllSequenceFileFolders().get(0);
+    dataDir = new FSPath(seqDir.getFsType(), seqDir.toFile().getParentFile().getAbsolutePath());
     config.update(dataDir);
     senderLogger =
-        new SyncSenderLogger(new File(config.getSenderFolderPath(), SyncConstant.SYNC_LOG_NAME));
+        new SyncSenderLogger(config.getSenderFolderPath().getChildFile(SyncConstant.SYNC_LOG_NAME));
     senderLogAnalyzer = new SyncSenderLogAnalyzer(config.getSenderFolderPath());
   }
 
@@ -95,7 +94,7 @@ public class SyncSenderLogAnalyzerTest {
             .computeIfAbsent(0L, k -> new HashSet<>());
         String rand = r.nextInt(10000) + TSFILE_SUFFIX;
         String fileName =
-            FilePathUtils.regularizePath(dataDir)
+            FilePathUtils.regularizePath(dataDir.getPath())
                 + IoTDBConstant.SEQUENCE_FLODER_NAME
                 + File.separator
                 + getSgName(i)
@@ -105,7 +104,7 @@ public class SyncSenderLogAnalyzerTest {
                 + "0"
                 + File.separator
                 + rand;
-        File file = new File(fileName);
+        File file = new FSPath(dataDir.getFsType(), fileName).toFile();
         allFileList.get(getSgName(i)).get(0L).get(0L).add(file);
         if (!file.getParentFile().exists()) {
           file.getParentFile().mkdirs();
@@ -141,9 +140,9 @@ public class SyncSenderLogAnalyzerTest {
     assertFileMap(allFileList, lastFilesMap);
 
     // delete some files
-    assertFalse(new File(config.getSenderFolderPath(), SyncConstant.SYNC_LOG_NAME).exists());
+    assertFalse(config.getSenderFolderPath().getChildFile(SyncConstant.SYNC_LOG_NAME).exists());
     senderLogger =
-        new SyncSenderLogger(new File(config.getSenderFolderPath(), SyncConstant.SYNC_LOG_NAME));
+        new SyncSenderLogger(config.getSenderFolderPath().getChildFile(SyncConstant.SYNC_LOG_NAME));
     manager.getValidFiles(dataDir);
     assertFalse(SyncUtils.isEmpty(manager.getLastLocalFilesMap()));
     senderLogger.startSyncDeletedFilesName();

@@ -19,12 +19,15 @@
 
 package org.apache.iotdb.tsfile.write;
 
+import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.exception.encoding.TsFileEncodingException;
 import org.apache.iotdb.tsfile.exception.write.NoMeasurementException;
 import org.apache.iotdb.tsfile.exception.write.WriteProcessException;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.ReadOnlyTsFile;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Path;
@@ -42,7 +45,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
@@ -50,6 +52,8 @@ import java.util.Arrays;
 import static org.junit.Assert.*;
 
 public class TsFileWriterTest {
+  private static FSFactory fsFactory = FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
+
   TsFileWriter writer = null;
   long fileName = System.nanoTime();
   boolean closed = false;
@@ -57,7 +61,7 @@ public class TsFileWriterTest {
   @Before
   public void setUp() {
     try {
-      writer = new TsFileWriter(new File("target/tsfileWriter-" + fileName));
+      writer = new TsFileWriter(fsFactory.getFile("target/tsfileWriter-" + fileName));
       addMeasurement();
     } catch (IOException e) {
       e.printStackTrace();
@@ -71,7 +75,7 @@ public class TsFileWriterTest {
       closeFile();
     }
     try {
-      Files.deleteIfExists(new File("target/tsfileWriter-" + fileName).toPath());
+      Files.deleteIfExists(fsFactory.getFile("target/tsfileWriter-" + fileName).toPath());
     } catch (IOException e) {
       e.printStackTrace();
       fail(e.getMessage());
@@ -270,7 +274,8 @@ public class TsFileWriterTest {
     // using TsFileReader for test
     try {
       ReadOnlyTsFile readOnlyTsFile =
-          new ReadOnlyTsFile(new TsFileSequenceReader("target/tsfileWriter-" + fileName));
+          new ReadOnlyTsFile(
+              new TsFileSequenceReader(fsFactory.getFile("target/tsfileWriter-" + fileName)));
       QueryDataSet dataSet =
           readOnlyTsFile.query(
               QueryExpression.create()
@@ -291,7 +296,8 @@ public class TsFileWriterTest {
   private void readOneRow(int s2Value) {
     try {
       ReadOnlyTsFile readOnlyTsFile =
-          new ReadOnlyTsFile(new TsFileSequenceReader("target/tsfileWriter-" + fileName));
+          new ReadOnlyTsFile(
+              new TsFileSequenceReader(fsFactory.getFile("target/tsfileWriter-" + fileName)));
       QueryDataSet dataSet =
           readOnlyTsFile.query(
               QueryExpression.create()

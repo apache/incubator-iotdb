@@ -43,6 +43,7 @@ import org.apache.iotdb.tsfile.v2.file.metadata.MetadataIndexNodeV2;
 import org.apache.iotdb.tsfile.v2.file.metadata.TimeseriesMetadataV2;
 import org.apache.iotdb.tsfile.v2.file.metadata.TsFileMetadataV2;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -69,7 +70,7 @@ public class TsFileSequenceReaderForV2 extends TsFileSequenceReader implements A
    * @param file the data file
    * @throws IOException If some I/O error occurs
    */
-  public TsFileSequenceReaderForV2(String file) throws IOException {
+  public TsFileSequenceReaderForV2(File file) throws IOException {
     this(file, true);
   }
 
@@ -79,7 +80,7 @@ public class TsFileSequenceReaderForV2 extends TsFileSequenceReader implements A
    * @param file -given file name
    * @param loadMetadataSize -whether load meta data size
    */
-  public TsFileSequenceReaderForV2(String file, boolean loadMetadataSize) throws IOException {
+  public TsFileSequenceReaderForV2(File file, boolean loadMetadataSize) throws IOException {
     super(file, loadMetadataSize);
   }
 

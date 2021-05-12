@@ -31,6 +31,7 @@ import org.apache.iotdb.tsfile.v2.read.TsFileSequenceReaderForV2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
@@ -147,15 +148,14 @@ public class FileReaderManager implements IService {
    * exists, just get it from closedFileReaderMap or unclosedFileReaderMap depending on isClosing .
    * Otherwise a new reader will be created and cached.
    *
-   * @param filePath the path of the file, of which the reader is desired.
+   * @param file the file which the reader is desired.
    * @param isClosed whether the corresponding file still receives insertions or not.
    * @return the reader of the file specified by filePath.
    * @throws IOException when reader cannot be created.
    */
   @SuppressWarnings("squid:S2095")
-  public synchronized TsFileSequenceReader get(String filePath, boolean isClosed)
-      throws IOException {
-
+  public synchronized TsFileSequenceReader get(File file, boolean isClosed) throws IOException {
+    String filePath = file.getPath();
     Map<String, TsFileSequenceReader> readerMap =
         !isClosed ? unclosedFileReaderMap : closedFileReaderMap;
     if (!readerMap.containsKey(filePath)) {
@@ -167,12 +167,12 @@ public class FileReaderManager implements IService {
       TsFileSequenceReader tsFileReader = null;
       // check if the file is old version
       if (!isClosed) {
-        tsFileReader = new UnClosedTsFileReader(filePath);
+        tsFileReader = new UnClosedTsFileReader(file);
       } else {
-        tsFileReader = new TsFileSequenceReader(filePath);
+        tsFileReader = new TsFileSequenceReader(file);
         if (tsFileReader.readVersionNumber() != TSFileConfig.VERSION_NUMBER) {
           tsFileReader.close();
-          tsFileReader = new TsFileSequenceReaderForV2(filePath);
+          tsFileReader = new TsFileSequenceReaderForV2(file);
           if (!((TsFileSequenceReaderForV2) tsFileReader)
               .readVersionNumberV2()
               .equals(TSFileConfig.VERSION_NUMBER_V2)) {

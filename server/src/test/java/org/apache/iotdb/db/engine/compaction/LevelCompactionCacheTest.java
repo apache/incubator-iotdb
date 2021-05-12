@@ -72,17 +72,17 @@ public class LevelCompactionCacheTest extends LevelCompactionTest {
     LevelCompactionTsFileManagement levelCompactionTsFileManagement =
         new LevelCompactionTsFileManagement(COMPACTION_TEST_SG, tempSGDir.getPath());
     TsFileResource tsFileResource = seqResources.get(1);
-    TsFileSequenceReader reader = new TsFileSequenceReader(tsFileResource.getTsFilePath());
+    TsFileSequenceReader reader = new TsFileSequenceReader(tsFileResource.getTsFile());
     List<Path> paths = reader.getAllPaths();
     Set<String> allSensors = new TreeSet<>();
     for (Path path : paths) {
       allSensors.add(path.getMeasurement());
     }
     ChunkMetadata firstChunkMetadata = reader.getChunkMetadataList(paths.get(0)).get(0);
-    firstChunkMetadata.setFilePath(tsFileResource.getTsFilePath());
+    firstChunkMetadata.setFile(tsFileResource.getTsFile());
     TimeSeriesMetadataCacheKey firstTimeSeriesMetadataCacheKey =
         new TimeSeriesMetadataCacheKey(
-            seqResources.get(1).getTsFilePath(),
+            seqResources.get(1).getTsFile(),
             paths.get(0).getDevice(),
             paths.get(0).getMeasurement());
 
@@ -102,7 +102,7 @@ public class LevelCompactionCacheTest extends LevelCompactionTest {
       // wait
     }
 
-    firstChunkMetadata.setFilePath(null);
+    firstChunkMetadata.setFile(null);
     try {
       ChunkCache.getInstance().get(firstChunkMetadata);
       fail();

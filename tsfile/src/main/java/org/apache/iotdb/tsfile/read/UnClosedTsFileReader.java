@@ -21,12 +21,13 @@ package org.apache.iotdb.tsfile.read;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.TsFileMetadata;
 
+import java.io.File;
 import java.io.IOException;
 
 /** A class for reading unclosed tsfile. */
 public class UnClosedTsFileReader extends TsFileSequenceReader {
 
-  public UnClosedTsFileReader(String file) throws IOException {
+  public UnClosedTsFileReader(File file) throws IOException {
     super(file, false);
   }
 

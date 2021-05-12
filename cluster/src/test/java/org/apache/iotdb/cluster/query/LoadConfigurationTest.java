@@ -27,8 +27,6 @@ import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.qp.logical.sys.LoadConfigurationOperator;
 import org.apache.iotdb.db.qp.physical.sys.LoadConfigurationPlan;
 import org.apache.iotdb.db.qp.strategy.PhysicalGenerator;
-import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
-import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -53,8 +51,6 @@ import static org.mockito.Mockito.when;
 @PrepareForTest({IoTDBDescriptor.class, ClusterDescriptor.class})
 public class LoadConfigurationTest {
 
-  private static FSFactory fsFactory = FSFactoryProducer.getFSFactory();
-
   private static final String ENGINE_PROPERTIES_FILE =
       TestConstant.BASE_OUTPUT_PATH.concat("LoadConfigurationTestEngineProperties");
   private static final String CLUSTER_PROPERTIES_FILE =
@@ -67,7 +63,7 @@ public class LoadConfigurationTest {
   @Before
   public void setUp() throws Exception {
     // init engine properties
-    File engineFile = fsFactory.getFile(ENGINE_PROPERTIES_FILE);
+    File engineFile = new File(ENGINE_PROPERTIES_FILE);
     if (engineFile.exists()) {
       Assert.assertTrue(engineFile.delete());
     }
@@ -80,7 +76,7 @@ public class LoadConfigurationTest {
     when(ioTDBDescriptor.getPropsUrl()).thenReturn(new URL("file:" + ENGINE_PROPERTIES_FILE));
 
     // init cluster properties
-    File clusterFile = fsFactory.getFile(CLUSTER_PROPERTIES_FILE);
+    File clusterFile = new File(CLUSTER_PROPERTIES_FILE);
     if (clusterFile.exists()) {
       Assert.assertTrue(clusterFile.delete());
     }
@@ -95,11 +91,11 @@ public class LoadConfigurationTest {
 
   @After
   public void tearDown() {
-    File engineFile = fsFactory.getFile(ENGINE_PROPERTIES_FILE);
+    File engineFile = new File(ENGINE_PROPERTIES_FILE);
     if (engineFile.exists()) {
       Assert.assertTrue(engineFile.delete());
     }
-    File clusterFile = fsFactory.getFile(CLUSTER_PROPERTIES_FILE);
+    File clusterFile = new File(CLUSTER_PROPERTIES_FILE);
     if (clusterFile.exists()) {
       Assert.assertTrue(clusterFile.delete());
     }

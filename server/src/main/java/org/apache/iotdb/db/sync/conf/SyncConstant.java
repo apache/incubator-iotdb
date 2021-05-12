@@ -38,6 +38,7 @@ public class SyncConstant {
   public static final int DATA_CHUNK_SIZE = 64 * 1024 * 1024;
 
   // sender section
+  public static final String TMP_FILE_SUFFIX = ".tmp";
 
   public static final String LOCK_FILE_NAME = "sync_lock";
 
@@ -48,6 +49,10 @@ public class SyncConstant {
   public static final String LAST_LOCAL_FILE_NAME = "last_local_files.txt";
 
   public static final String CURRENT_LOCAL_FILE_NAME = "current_local_files.txt";
+
+  public static final String DELETED_BLACKLIST_FILE_NAME = "deleted_files_blacklist.txt";
+
+  public static final String TO_BE_SYNCED_BLACKLIST_FILE_NAME = "to_be_synced_files_blacklist.txt";
 
   public static final String DATA_SNAPSHOT_NAME = "snapshot";
 

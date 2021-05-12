@@ -40,7 +40,6 @@ import org.apache.iotdb.db.service.IoTDB;
 import org.apache.iotdb.db.service.ServiceType;
 import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.read.common.RowRecord;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import org.apache.iotdb.tsfile.utils.Binary;
@@ -320,7 +319,7 @@ public class TriggerRegistrationService implements IService {
         FileUtils.deleteQuietly(temporaryLogFile);
       } else {
         doRecoveryFromLogFile(temporaryLogFile);
-        FSFactoryProducer.getFSFactory().moveFile(temporaryLogFile, logFile);
+        SystemFileFactory.INSTANCE.moveFile(temporaryLogFile, logFile);
       }
     } else if (logFile.exists()) {
       doRecoveryFromLogFile(logFile);
@@ -393,7 +392,7 @@ public class TriggerRegistrationService implements IService {
 
       File temporaryLogFile = SystemFileFactory.INSTANCE.getFile(TEMPORARY_LOG_FILE_NAME);
       File logFile = SystemFileFactory.INSTANCE.getFile(LOG_FILE_NAME);
-      FSFactoryProducer.getFSFactory().moveFile(temporaryLogFile, logFile);
+      SystemFileFactory.INSTANCE.moveFile(temporaryLogFile, logFile);
     } catch (IOException ignored) {
       // ignored
     }

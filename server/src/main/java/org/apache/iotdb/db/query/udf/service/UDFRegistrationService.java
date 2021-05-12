@@ -31,7 +31,6 @@ import org.apache.iotdb.db.query.udf.core.context.UDFContext;
 import org.apache.iotdb.db.service.IService;
 import org.apache.iotdb.db.service.ServiceType;
 import org.apache.iotdb.db.utils.TestOnly;
-import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
@@ -329,7 +328,7 @@ public class UDFRegistrationService implements IService {
         FileUtils.deleteQuietly(temporaryLogFile);
       } else {
         recoveryFromLogFile(temporaryLogFile);
-        FSFactoryProducer.getFSFactory().moveFile(temporaryLogFile, logFile);
+        SystemFileFactory.INSTANCE.moveFile(temporaryLogFile, logFile);
       }
     } else if (logFile.exists()) {
       recoveryFromLogFile(logFile);
@@ -371,7 +370,7 @@ public class UDFRegistrationService implements IService {
 
       File temporaryLogFile = SystemFileFactory.INSTANCE.getFile(TEMPORARY_LOG_FILE_NAME);
       File logFile = SystemFileFactory.INSTANCE.getFile(LOG_FILE_NAME);
-      FSFactoryProducer.getFSFactory().moveFile(temporaryLogFile, logFile);
+      SystemFileFactory.INSTANCE.moveFile(temporaryLogFile, logFile);
     } catch (IOException ignored) {
       // ignored
     }

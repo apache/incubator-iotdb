@@ -30,6 +30,7 @@ import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.service.IoTDB;
 import org.apache.iotdb.tsfile.file.metadata.ChunkMetadata;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.read.TimeValuePair;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Chunk;
@@ -37,6 +38,7 @@ import org.apache.iotdb.tsfile.read.reader.BatchDataIterator;
 import org.apache.iotdb.tsfile.read.reader.IChunkReader;
 import org.apache.iotdb.tsfile.read.reader.IPointReader;
 import org.apache.iotdb.tsfile.read.reader.chunk.ChunkReaderByTimestamp;
+import org.apache.iotdb.tsfile.utils.FSUtils;
 import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.write.chunk.ChunkWriterImpl;
 import org.apache.iotdb.tsfile.write.chunk.IChunkWriter;
@@ -436,7 +438,7 @@ public class CompactionUtils {
         path -> {
           try {
             if (levelResource.getTsFile().exists()) {
-              return new TsFileSequenceReader(path);
+              return new TsFileSequenceReader(levelResource.getTsFile());
             } else {
               logger.info("{} tsfile does not exist", path);
               return null;
@@ -462,7 +464,9 @@ public class CompactionUtils {
             reader.getFileName(),
             fileName ->
                 new LinkedList<>(
-                    new ModificationFile(fileName + ModificationFile.FILE_SUFFIX)
+                    new ModificationFile(
+                            FSFactoryProducer.getFSFactory(FSUtils.getFSType(reader.getFile()))
+                                .getFile(fileName + ModificationFile.FILE_SUFFIX))
                         .getModifications()));
     List<Modification> seriesModifications = new LinkedList<>();
     for (Modification modification : modifications) {

@@ -18,7 +18,10 @@
  */
 package org.apache.iotdb.tsfile.read.controller;
 
+import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.file.metadata.ChunkMetadata;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.read.common.TimeRange;
@@ -36,6 +39,8 @@ import java.util.List;
 public class IMetadataQuerierByFileImplTest {
 
   private static final String FILE_PATH = TsFileGeneratorForTest.outputDataFile;
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
   private TsFileSequenceReader reader;
   private ArrayList<TimeRange> d1s6timeRangeList = new ArrayList<>();
   private ArrayList<TimeRange> d2s1timeRangeList = new ArrayList<>();
@@ -45,7 +50,7 @@ public class IMetadataQuerierByFileImplTest {
   @Before
   public void before() throws IOException {
     TsFileGeneratorForTest.generateFile(10000, 1024, 100);
-    reader = new TsFileSequenceReader(FILE_PATH);
+    reader = new TsFileSequenceReader(fsFactory.getFile(FILE_PATH));
     List<ChunkMetadata> d1s6List = reader.getChunkMetadataList(new Path("d1", "s6"));
     for (ChunkMetadata chunkMetaData : d1s6List) {
       // get a series of [startTime, endTime] of d1.s6 from the chunkGroupMetaData of

@@ -19,6 +19,7 @@
 package org.apache.iotdb.db.exception;
 
 import org.apache.iotdb.rpc.TSStatusCode;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 
 import java.util.List;
 
@@ -26,7 +27,7 @@ public class DiskSpaceInsufficientException extends StorageEngineException {
 
   private static final long serialVersionUID = 9001643829368311032L;
 
-  public DiskSpaceInsufficientException(List<String> folders) {
+  public DiskSpaceInsufficientException(List<FSPath> folders) {
     super(
         String.format("Can't get next folder from [%s], because they are all full.", folders),
         TSStatusCode.DISK_SPACE_INSUFFICIENT_ERROR.getStatusCode());

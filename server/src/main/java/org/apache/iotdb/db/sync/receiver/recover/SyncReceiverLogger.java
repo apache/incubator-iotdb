@@ -18,9 +18,12 @@
  */
 package org.apache.iotdb.db.sync.receiver.recover;
 
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
+import org.apache.iotdb.tsfile.utils.FSUtils;
+
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 
 public class SyncReceiverLogger implements ISyncReceiverLogger {
@@ -31,7 +34,9 @@ public class SyncReceiverLogger implements ISyncReceiverLogger {
     if (!logFile.getParentFile().exists()) {
       logFile.getParentFile().mkdirs();
     }
-    bw = new BufferedWriter(new FileWriter(logFile));
+    bw =
+        FSFactoryProducer.getFSFactory(FSUtils.getFSType(logFile))
+            .getBufferedWriter(logFile.getAbsolutePath(), false);
   }
 
   @Override
@@ -43,7 +48,7 @@ public class SyncReceiverLogger implements ISyncReceiverLogger {
 
   @Override
   public void finishSyncDeletedFileName(File file) throws IOException {
-    bw.write(file.getAbsolutePath());
+    bw.write(FSPath.parse(file).getAbsoluteFSPath().getRawFSPath());
     bw.newLine();
     bw.flush();
   }
@@ -57,7 +62,7 @@ public class SyncReceiverLogger implements ISyncReceiverLogger {
 
   @Override
   public void finishSyncTsfile(File file) throws IOException {
-    bw.write(file.getAbsolutePath());
+    bw.write(FSPath.parse(file).getAbsoluteFSPath().getRawFSPath());
     bw.newLine();
     bw.flush();
   }

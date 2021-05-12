@@ -21,8 +21,11 @@ package org.apache.iotdb.tsfile.read;
 
 import org.apache.iotdb.tsfile.common.conf.TSFileConfig;
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
+import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.file.metadata.ChunkMetadata;
 import org.apache.iotdb.tsfile.file.metadata.IChunkMetadata;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.FileGenerator;
 
@@ -42,6 +45,8 @@ import java.util.Map.Entry;
 public class MeasurementChunkMetadataListMapIteratorTest {
 
   private static final String FILE_PATH = FileGenerator.outputDataFile;
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
   private final TSFileConfig conf = TSFileDescriptor.getInstance().getConfig();
 
   private int maxDegreeOfIndexNode;
@@ -121,7 +126,7 @@ public class MeasurementChunkMetadataListMapIteratorTest {
   public void testCorrectness(int deviceNum, int measurementNum) throws IOException {
     FileGenerator.generateFile(10000, deviceNum, measurementNum);
 
-    try (TsFileSequenceReader fileReader = new TsFileSequenceReader(FILE_PATH)) {
+    try (TsFileSequenceReader fileReader = new TsFileSequenceReader(fsFactory.getFile(FILE_PATH))) {
       Map<String, List<String>> deviceMeasurementListMap = fileReader.getDeviceMeasurementsMap();
 
       List<String> devices = fileReader.getAllDevices();
@@ -176,7 +181,7 @@ public class MeasurementChunkMetadataListMapIteratorTest {
   public void testSequentiality(int deviceNum, int measurementNum) throws IOException {
     FileGenerator.generateFile(10000, deviceNum, measurementNum);
 
-    try (TsFileSequenceReader fileReader = new TsFileSequenceReader(FILE_PATH)) {
+    try (TsFileSequenceReader fileReader = new TsFileSequenceReader(fsFactory.getFile(FILE_PATH))) {
       for (String device : fileReader.getAllDevices()) {
         Iterator<Map<String, List<ChunkMetadata>>> iterator =
             fileReader.getMeasurementChunkMetadataListMapIterator(device);

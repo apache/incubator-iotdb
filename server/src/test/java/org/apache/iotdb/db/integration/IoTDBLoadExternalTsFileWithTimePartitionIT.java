@@ -20,6 +20,7 @@ package org.apache.iotdb.db.integration;
 
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.constant.TestConstant;
 import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
@@ -31,6 +32,7 @@ import org.apache.iotdb.tsfile.exception.write.WriteProcessException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.write.TsFileWriter;
 import org.apache.iotdb.tsfile.write.record.TSRecord;
@@ -156,7 +158,7 @@ public class IoTDBLoadExternalTsFileWithTimePartitionIT {
             counter++;
           }
           String path = getName(counter);
-          f = FSFactoryProducer.getFSFactory().getFile(path);
+          f = FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS).getFile(path);
           tsFileWriter = new TsFileWriter(new TsFileIOWriter(f));
           register(tsFileWriter);
         }
@@ -178,11 +180,10 @@ public class IoTDBLoadExternalTsFileWithTimePartitionIT {
 
       statement.execute(String.format("load \"%s\"", new File(tempDir).getAbsolutePath()));
 
-      String dataDir = config.getDataDirs()[0];
+      FSPath dataDir = config.getDataDirs()[0][0];
       // sequence/logical_sg/virtual_sg/time_partitions
       File f =
-          new File(
-              dataDir,
+          dataDir.getChildFile(
               new PartialPath("sequence") + File.separator + "root.ln" + File.separator + "0");
       Assert.assertEquals(
           (endTime - startTime) / (timePartition), f.list().length * originalTsFileNum);

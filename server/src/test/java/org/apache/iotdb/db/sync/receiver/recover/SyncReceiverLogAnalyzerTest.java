@@ -20,10 +20,10 @@ package org.apache.iotdb.db.sync.receiver.recover;
 
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
+import org.apache.iotdb.db.engine.tier.TierManager;
 import org.apache.iotdb.db.exception.DiskSpaceInsufficientException;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
@@ -37,6 +37,7 @@ import org.apache.iotdb.db.sync.receiver.load.FileLoaderManager;
 import org.apache.iotdb.db.sync.receiver.load.FileLoaderTest;
 import org.apache.iotdb.db.sync.receiver.load.IFileLoader;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 
 import org.junit.After;
 import org.junit.Before;
@@ -62,7 +63,7 @@ public class SyncReceiverLogAnalyzerTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(FileLoaderTest.class);
   private static final String SG_NAME = "root.sg";
-  private String dataDir;
+  private FSPath dataDir;
   private IFileLoader fileLoader;
   private ISyncReceiverLogAnalyzer logAnalyze;
   private ISyncReceiverLogger receiverLogger;
@@ -72,10 +73,8 @@ public class SyncReceiverLogAnalyzerTest {
     IoTDBDescriptor.getInstance().getConfig().setSyncEnable(true);
     EnvironmentUtils.closeStatMonitor();
     EnvironmentUtils.envSetUp();
-    dataDir =
-        new File(DirectoryManager.getInstance().getNextFolderForSequenceFile())
-            .getParentFile()
-            .getAbsolutePath();
+    FSPath seqDir = TierManager.getInstance().getAllSequenceFileFolders().get(0);
+    dataDir = new FSPath(seqDir.getFsType(), seqDir.toFile().getParentFile().getAbsolutePath());
     logAnalyze = SyncReceiverLogAnalyzer.getInstance();
     initMetadata();
   }
@@ -130,11 +129,13 @@ public class SyncReceiverLogAnalyzerTest {
         Thread.sleep(1);
         File syncFile = new File(fileName);
         receiverLogger.finishSyncTsfile(syncFile);
-        toBeSyncedFiles.add(syncFile.getAbsolutePath());
+        toBeSyncedFiles.add(FSPath.parse(syncFile).getAbsoluteFSPath().getRawFSPath());
         File dataFile =
-            new File(
-                DirectoryManager.getInstance().getNextFolderForSequenceFile(),
-                syncFile.getParentFile().getName() + File.separatorChar + syncFile.getName());
+            TierManager.getInstance()
+                .getAllSequenceFileFolders()
+                .get(0)
+                .getChildFile(
+                    syncFile.getParentFile().getName() + File.separatorChar + syncFile.getName());
         correctSequenceLoadedFileMap.get(SG_NAME + i).add(dataFile);
         allFileList.get(SG_NAME + i).add(syncFile);
         if (!syncFile.getParentFile().exists()) {
@@ -218,12 +219,10 @@ public class SyncReceiverLogAnalyzerTest {
   }
 
   private File getReceiverFolderFile() {
-    return new File(
-        dataDir
-            + File.separatorChar
-            + SyncConstant.SYNC_RECEIVER
-            + File.separatorChar
-            + "127.0.0.1_5555");
+    return dataDir
+        .postConcat(
+            File.separatorChar + SyncConstant.SYNC_RECEIVER + File.separatorChar + "127.0.0.1_5555")
+        .toFile();
   }
 
   private File getSnapshotFolder() {

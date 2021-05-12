@@ -16,10 +16,11 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.iotdb.db.conf.directories.strategy;
+package org.apache.iotdb.db.engine.tier.directories.strategy;
 
 import org.apache.iotdb.db.exception.DiskSpaceInsufficientException;
 import org.apache.iotdb.db.utils.CommonUtils;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 
 import java.util.List;
 
@@ -28,7 +29,7 @@ public class SequenceStrategy extends DirectoryStrategy {
   private int currentIndex;
 
   @Override
-  public void setFolders(List<String> folders) throws DiskSpaceInsufficientException {
+  public void setFolders(List<FSPath> folders) throws DiskSpaceInsufficientException {
     super.setFolders(folders);
 
     // super.setFolders() ensures at least one folder is not full,

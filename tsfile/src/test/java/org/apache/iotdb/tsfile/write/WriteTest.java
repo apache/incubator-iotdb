@@ -26,6 +26,8 @@ import org.apache.iotdb.tsfile.exception.write.WriteProcessException;
 import org.apache.iotdb.tsfile.file.metadata.TsFileMetadata;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.RecordUtils;
@@ -54,6 +56,7 @@ import static org.junit.Assert.fail;
 public class WriteTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(WriteTest.class);
+  private static FSFactory fsFactory = FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
   private final int ROW_COUNT = 2000000;
   private TsFileWriter tsFileWriter;
   private String inputDataFile;
@@ -90,8 +93,8 @@ public class WriteTest {
     } catch (IOException e) {
       fail();
     }
-    File file = new File(outputDataFile);
-    File errorFile = new File(errorOutputDataFile);
+    File file = fsFactory.getFile(outputDataFile);
+    File errorFile = fsFactory.getFile(errorOutputDataFile);
     if (file.exists()) {
       file.delete();
     }
@@ -131,15 +134,15 @@ public class WriteTest {
 
   @After
   public void after() {
-    File file = new File(inputDataFile);
+    File file = fsFactory.getFile(inputDataFile);
     if (file.exists()) {
       file.delete();
     }
-    file = new File(outputDataFile);
+    file = fsFactory.getFile(outputDataFile);
     if (file.exists()) {
       file.delete();
     }
-    file = new File(errorOutputDataFile);
+    file = fsFactory.getFile(errorOutputDataFile);
     if (file.exists()) {
       file.delete();
     }
@@ -152,7 +155,7 @@ public class WriteTest {
   }
 
   private void generateSampleInputDataFile() throws IOException {
-    File file = new File(inputDataFile);
+    File file = fsFactory.getFile(inputDataFile);
     if (file.exists()) {
       file.delete();
     }
@@ -208,7 +211,7 @@ public class WriteTest {
       e.printStackTrace();
     }
     LOG.info("write processing has finished");
-    TsFileSequenceReader reader = new TsFileSequenceReader(outputDataFile);
+    TsFileSequenceReader reader = new TsFileSequenceReader(fsFactory.getFile(outputDataFile));
     TsFileMetadata metaData = reader.readFileMetadata();
   }
 

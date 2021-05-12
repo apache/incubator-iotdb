@@ -95,7 +95,7 @@ public class CompactionChunkTest extends LevelCompactionTest {
         new RestorableTsFileIOWriter(targetTsfileResource.getTsFile());
     writer.startChunkGroup(device);
     for (TsFileResource tsFileResource : sourceTsfileResources) {
-      TsFileSequenceReader reader = new TsFileSequenceReader(tsFileResource.getTsFilePath());
+      TsFileSequenceReader reader = new TsFileSequenceReader(tsFileResource.getTsFile());
       Map<String, List<ChunkMetadata>> chunkMetadataMap = reader.readChunkMetadataInDevice(device);
       for (Entry<String, List<ChunkMetadata>> entry : chunkMetadataMap.entrySet()) {
         for (ChunkMetadata chunkMetadata : entry.getValue()) {
@@ -130,7 +130,7 @@ public class CompactionChunkTest extends LevelCompactionTest {
     writer.endFile();
     targetTsfileResource.close();
 
-    TsFileSequenceReader reader = new TsFileSequenceReader(file.getPath());
+    TsFileSequenceReader reader = new TsFileSequenceReader(file);
     List<Path> paths = reader.getAllPaths();
     for (Path path : paths) {
       List<ChunkMetadata> chunkMetadataList = reader.getChunkMetadataList(path);
@@ -174,7 +174,7 @@ public class CompactionChunkTest extends LevelCompactionTest {
         new RestorableTsFileIOWriter(targetTsfileResource.getTsFile());
     writer.startChunkGroup(device);
     for (TsFileResource tsFileResource : sourceTsfileResources) {
-      TsFileSequenceReader reader = new TsFileSequenceReader(tsFileResource.getTsFilePath());
+      TsFileSequenceReader reader = new TsFileSequenceReader(tsFileResource.getTsFile());
       Map<String, List<ChunkMetadata>> chunkMetadataMap = reader.readChunkMetadataInDevice(device);
       for (Entry<String, List<ChunkMetadata>> entry : chunkMetadataMap.entrySet()) {
         for (ChunkMetadata chunkMetadata : entry.getValue()) {
@@ -215,7 +215,7 @@ public class CompactionChunkTest extends LevelCompactionTest {
     writer.endFile();
     targetTsfileResource.close();
 
-    TsFileSequenceReader reader = new TsFileSequenceReader(file.getPath());
+    TsFileSequenceReader reader = new TsFileSequenceReader(file);
     List<Path> paths = reader.getAllPaths();
     for (Path path : paths) {
       List<ChunkMetadata> chunkMetadataList = reader.getChunkMetadataList(path);

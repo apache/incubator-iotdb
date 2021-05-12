@@ -20,6 +20,8 @@ package org.apache.iotdb.tsfile.file.metadata;
 
 import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.file.metadata.utils.TestHelper;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.utils.PublicBAOS;
 
 import org.junit.After;
@@ -38,13 +40,15 @@ public class TimeSeriesMetadataTest {
   public static final String measurementUID = "sensor01";
   public static final int typeLength = 1024;
   final String PATH = TestConstant.BASE_OUTPUT_PATH.concat("outputTimeSeries.tsfile");
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
 
   @Before
   public void setUp() {}
 
   @After
   public void tearDown() {
-    File file = new File(PATH);
+    File file = fsFactory.getFile(PATH);
     if (file.exists()) {
       file.delete();
     }
@@ -64,7 +68,7 @@ public class TimeSeriesMetadataTest {
     FileInputStream fis = null;
     TimeseriesMetadata metaData = null;
     try {
-      fis = new FileInputStream(new File(PATH));
+      fis = new FileInputStream(fsFactory.getFile(PATH));
       FileChannel fch = fis.getChannel();
       ByteBuffer buffer = ByteBuffer.allocate((int) fch.size());
       fch.read(buffer);
@@ -87,7 +91,7 @@ public class TimeSeriesMetadataTest {
   }
 
   private void serialized(TimeseriesMetadata metaData) {
-    File file = new File(PATH);
+    File file = fsFactory.getFile(PATH);
     if (file.exists()) {
       file.delete();
     }

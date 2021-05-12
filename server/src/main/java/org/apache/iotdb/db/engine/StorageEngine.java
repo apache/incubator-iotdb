@@ -100,6 +100,8 @@ public class StorageEngine implements IService {
 
   private static final IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
   private static final long TTL_CHECK_INTERVAL = 60 * 1000L;
+  private static final long TIER_MIGRATION_CHECK_INTERVAL = 60 * 60 * 1000L;
+
   /**
    * Time range for dividing storage group, the time unit is the same with IoTDB's
    * TimestampPrecision
@@ -123,6 +125,7 @@ public class StorageEngine implements IService {
 
   private ExecutorService recoverAllSgThreadPool;
   private ScheduledExecutorService ttlCheckThread;
+  private ScheduledExecutorService tierMigrationCheckThread;
   private TsFileFlushPolicy fileFlushPolicy = new DirectFlushPolicy();
   private ExecutorService recoveryThreadPool;
   // add customized listeners here for flush and close events
@@ -298,6 +301,13 @@ public class StorageEngine implements IService {
     ttlCheckThread = Executors.newSingleThreadScheduledExecutor();
     ttlCheckThread.scheduleAtFixedRate(
         this::checkTTL, TTL_CHECK_INTERVAL, TTL_CHECK_INTERVAL, TimeUnit.MILLISECONDS);
+
+    tierMigrationCheckThread = Executors.newSingleThreadScheduledExecutor();
+    tierMigrationCheckThread.scheduleAtFixedRate(
+        this::checkTierMigration,
+        TIER_MIGRATION_CHECK_INTERVAL,
+        TIER_MIGRATION_CHECK_INTERVAL,
+        TimeUnit.MILLISECONDS);
   }
 
   private void checkTTL() {
@@ -316,6 +326,16 @@ public class StorageEngine implements IService {
     }
   }
 
+  private void checkTierMigration() {
+    try {
+      for (VirtualStorageGroupManager processor : processorMap.values()) {
+        processor.checkTierMigration();
+      }
+    } catch (Exception e) {
+      logger.error("An error occurred when checking Tier Migration", e);
+    }
+  }
+
   @Override
   public void stop() {
     syncCloseAllProcessor();
@@ -328,6 +348,17 @@ public class StorageEngine implements IService {
         Thread.currentThread().interrupt();
         throw new StorageEngineFailureException(
             "StorageEngine failed to stop because of " + "ttlCheckThread.", e);
+      }
+    }
+    if (tierMigrationCheckThread != null) {
+      tierMigrationCheckThread.shutdownNow();
+      try {
+        tierMigrationCheckThread.awaitTermination(60, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        logger.warn("Tier migration check thread still doesn't exit after 60s");
+        Thread.currentThread().interrupt();
+        throw new StorageEngineFailureException(
+            "StorageEngine failed to stop because of " + "tierMigrationCheckThread.", e);
       }
     }
     recoveryThreadPool.shutdownNow();
@@ -361,6 +392,15 @@ public class StorageEngine implements IService {
         ttlCheckThread.awaitTermination(30, TimeUnit.SECONDS);
       } catch (InterruptedException e) {
         logger.warn("TTL check thread still doesn't exit after 30s");
+        Thread.currentThread().interrupt();
+      }
+    }
+    if (tierMigrationCheckThread != null) {
+      tierMigrationCheckThread.shutdownNow();
+      try {
+        tierMigrationCheckThread.awaitTermination(30, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        logger.warn("Tier migration check thread still doesn't exit after 30s");
         Thread.currentThread().interrupt();
       }
     }

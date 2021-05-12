@@ -21,7 +21,7 @@ package org.apache.iotdb.db.utils;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.qp.constant.SQLConstant;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 import org.apache.iotdb.tsfile.utils.Binary;
 
 import com.google.common.base.Throwables;
@@ -34,14 +34,11 @@ import io.airlift.airline.ParseCommandUnrecognizedException;
 import io.airlift.airline.ParseOptionConversionException;
 import io.airlift.airline.ParseOptionMissingException;
 import io.airlift.airline.ParseOptionMissingValueException;
+import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
-import java.util.stream.Stream;
 
 @SuppressWarnings("java:S106") // for console outputs
 public class CommonUtils {
@@ -73,20 +70,22 @@ public class CommonUtils {
    * @param dir directory path
    * @return
    */
-  public static long getUsableSpace(String dir) {
-    File dirFile = FSFactoryProducer.getFSFactory().getFile(dir);
+  public static long getUsableSpace(FSPath dir) {
+    File dirFile = dir.toFile();
     dirFile.mkdirs();
     return dirFile.getFreeSpace();
   }
 
-  public static boolean hasSpace(String dir) {
+  public static boolean hasSpace(FSPath dir) {
     return getUsableSpace(dir) > 0;
   }
 
-  public static long getOccupiedSpace(String folderPath) throws IOException {
-    Path folder = Paths.get(folderPath);
-    try (Stream<Path> s = Files.walk(folder)) {
-      return s.filter(p -> p.toFile().isFile()).mapToLong(p -> p.toFile().length()).sum();
+  public static long getOccupiedSpace(FSPath folderPath) throws IOException {
+    File file = folderPath.toFile();
+    if (file.isDirectory()) {
+      return FileUtils.sizeOfDirectory(file);
+    } else {
+      return file.length();
     }
   }
 

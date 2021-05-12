@@ -24,6 +24,7 @@ import org.apache.iotdb.tsfile.file.metadata.statistics.Statistics;
 import org.apache.iotdb.tsfile.read.common.TimeRange;
 import org.apache.iotdb.tsfile.read.controller.IChunkLoader;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
@@ -56,7 +57,7 @@ public interface IChunkMetadata {
 
   void setChunkLoader(IChunkLoader chunkLoader);
 
-  void setFilePath(String filePath);
+  void setFile(File file);
 
   void setClosed(boolean closed);
 

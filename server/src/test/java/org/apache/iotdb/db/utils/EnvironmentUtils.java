@@ -22,12 +22,12 @@ import org.apache.iotdb.db.auth.AuthException;
 import org.apache.iotdb.db.auth.authorizer.BasicAuthorizer;
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.constant.TestConstant;
 import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.cache.ChunkCache;
 import org.apache.iotdb.db.engine.cache.TimeSeriesMetadataCache;
 import org.apache.iotdb.db.engine.compaction.CompactionMergeTaskPoolManager;
+import org.apache.iotdb.db.engine.tier.TierManager;
 import org.apache.iotdb.db.engine.trigger.service.TriggerRegistrationService;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.TriggerManagementException;
@@ -40,6 +40,7 @@ import org.apache.iotdb.db.query.udf.service.UDFRegistrationService;
 import org.apache.iotdb.db.rescon.PrimitiveArrayManager;
 import org.apache.iotdb.db.rescon.SystemInfo;
 import org.apache.iotdb.db.service.IoTDB;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.thrift.transport.TSocket;
@@ -66,7 +67,7 @@ public class EnvironmentUtils {
   private static final Logger logger = LoggerFactory.getLogger(EnvironmentUtils.class);
 
   private static final IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
-  private static final DirectoryManager directoryManager = DirectoryManager.getInstance();
+  private static final TierManager tierManager = TierManager.getInstance();
 
   public static long TEST_QUERY_JOB_ID = 1;
   public static QueryContext TEST_QUERY_CONTEXT = new QueryContext(TEST_QUERY_JOB_ID);
@@ -200,33 +201,35 @@ public class EnvironmentUtils {
 
   public static void cleanAllDir() throws IOException {
     // delete sequential files
-    for (String path : directoryManager.getAllSequenceFileFolders()) {
-      cleanDir(path);
+    for (FSPath path : tierManager.getAllSequenceFileFolders()) {
+      cleanDir(path.toFile());
     }
     // delete unsequence files
-    for (String path : directoryManager.getAllUnSequenceFileFolders()) {
-      cleanDir(path);
+    for (FSPath path : tierManager.getAllUnSequenceFileFolders()) {
+      cleanDir(path.toFile());
     }
     // delete system info
-    cleanDir(config.getSystemDir());
+    cleanDir(new File(config.getSystemDir()));
     // delete wal
-    cleanDir(config.getWalDir());
+    cleanDir(new File(config.getWalDir()));
     // delete query
-    cleanDir(config.getQueryDir());
+    cleanDir(new File(config.getQueryDir()));
     // delete tracing
-    cleanDir(config.getTracingDir());
+    cleanDir(new File(config.getTracingDir()));
     // delete ulog
-    cleanDir(config.getUdfDir());
+    cleanDir(new File(config.getUdfDir()));
     // delete tlog
-    cleanDir(config.getTriggerDir());
+    cleanDir(new File(config.getTriggerDir()));
     // delete data files
-    for (String dataDir : config.getDataDirs()) {
-      cleanDir(dataDir);
+    for (FSPath[] tierDataDirs : config.getDataDirs()) {
+      for (FSPath dataDir : tierDataDirs) {
+        cleanDir(dataDir.toFile());
+      }
     }
   }
 
-  public static void cleanDir(String dir) throws IOException {
-    FileUtils.deleteDirectory(new File(dir));
+  public static void cleanDir(File dir) throws IOException {
+    FileUtils.deleteDirectory(dir);
   }
 
   /** disable the system monitor</br> this function should be called before all code in the setup */
@@ -291,11 +294,11 @@ public class EnvironmentUtils {
 
   private static void createAllDir() {
     // create sequential files
-    for (String path : directoryManager.getAllSequenceFileFolders()) {
+    for (FSPath path : tierManager.getAllSequenceFileFolders()) {
       createDir(path);
     }
     // create unsequential files
-    for (String path : directoryManager.getAllUnSequenceFileFolders()) {
+    for (FSPath path : tierManager.getAllUnSequenceFileFolders()) {
       createDir(path);
     }
     // create storage group
@@ -309,8 +312,10 @@ public class EnvironmentUtils {
     createDir(config.getQueryDir());
     createDir(TestConstant.OUTPUT_DATA_DIR);
     // create data
-    for (String dataDir : config.getDataDirs()) {
-      createDir(dataDir);
+    for (FSPath[] tierDataDirs : config.getDataDirs()) {
+      for (FSPath dataDir : tierDataDirs) {
+        createDir(dataDir);
+      }
     }
     // create user and roles folder
     try {
@@ -323,6 +328,11 @@ public class EnvironmentUtils {
 
   private static void createDir(String dir) {
     File file = new File(dir);
+    file.mkdirs();
+  }
+
+  private static void createDir(FSPath dir) {
+    File file = dir.toFile();
     file.mkdirs();
   }
 }

@@ -26,6 +26,7 @@ import org.apache.iotdb.db.utils.UpgradeUtils;
 import org.apache.iotdb.tsfile.exception.write.WriteProcessException;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
+import org.apache.iotdb.tsfile.utils.FSUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,8 +41,6 @@ public class UpgradeTask extends WrappedRunnable {
   private TsFileResource upgradeResource;
   private static final Logger logger = LoggerFactory.getLogger(UpgradeTask.class);
   private static final String COMMA_SEPERATOR = ",";
-
-  private FSFactory fsFactory = FSFactoryProducer.getFSFactory();
 
   public UpgradeTask(TsFileResource upgradeResource) {
     this.upgradeResource = upgradeResource;
@@ -106,6 +105,7 @@ public class UpgradeTask extends WrappedRunnable {
     try {
       File upgradeFolder = upgradeResource.getTsFile().getParentFile();
       for (File tempPartitionDir : upgradeFolder.listFiles()) {
+        FSFactory fsFactory = FSFactoryProducer.getFSFactory(FSUtils.getFSType(tempPartitionDir));
         if (tempPartitionDir.isDirectory()
             && fsFactory
                 .getFile(

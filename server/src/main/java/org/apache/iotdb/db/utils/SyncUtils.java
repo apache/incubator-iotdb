@@ -19,6 +19,7 @@
 package org.apache.iotdb.db.utils;
 
 import org.apache.iotdb.db.sync.conf.SyncSenderDescriptor;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 
 import java.io.File;
 import java.text.DecimalFormat;
@@ -46,11 +47,11 @@ public class SyncUtils {
             + file.getParentFile().getName()
             + File.separator
             + file.getName();
-    String snapshotDir = SyncSenderDescriptor.getInstance().getConfig().getSnapshotPath();
-    if (!new File(snapshotDir).exists()) {
-      new File(snapshotDir).mkdirs();
+    FSPath snapshotDir = SyncSenderDescriptor.getInstance().getConfig().getSnapshotPath();
+    if (!snapshotDir.toFile().exists()) {
+      snapshotDir.toFile().mkdirs();
     }
-    return new File(snapshotDir, relativeFilePath);
+    return snapshotDir.getChildFile(relativeFilePath);
   }
 
   /** Verify sending list is empty or not It's used by sync sender. */

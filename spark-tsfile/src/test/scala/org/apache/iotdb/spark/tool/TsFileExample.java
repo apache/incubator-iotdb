@@ -21,7 +21,6 @@ package org.apache.iotdb.spark.tool;
 import java.io.File;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.Binary;
 import org.apache.iotdb.tsfile.write.TsFileWriter;
@@ -38,7 +37,7 @@ import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 public class TsFileExample {
 
   public static void create(String tsfilePath) throws Exception {
-    File f = FSFactoryProducer.getFSFactory().getFile(tsfilePath);
+    File f = new File(tsfilePath);
     if (f.exists()) {
       f.delete();
     }

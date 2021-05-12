@@ -23,6 +23,8 @@ import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.exception.write.WriteProcessException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.ReadOnlyTsFile;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Path;
@@ -56,6 +58,8 @@ public class TimeGeneratorReadWriteTest {
 
   private final String TEMPLATE_NAME = "template";
   private String tsfilePath = TestConstant.BASE_OUTPUT_PATH.concat("TimegeneratorReadWrite.tsfile");
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
 
   @Before
   public void before() throws IOException, WriteProcessException {
@@ -64,7 +68,7 @@ public class TimeGeneratorReadWriteTest {
 
   @After
   public void after() {
-    File file = new File(tsfilePath);
+    File file = fsFactory.getFile(tsfilePath);
     if (file.exists()) {
       file.delete();
     }
@@ -88,7 +92,8 @@ public class TimeGeneratorReadWriteTest {
             .addSelectedPath(new Path("d1", "s2"))
             .setExpression(finalExpression);
 
-    try (TsFileSequenceReader fileReader = new TsFileSequenceReader(tsfilePath)) {
+    try (TsFileSequenceReader fileReader =
+        new TsFileSequenceReader(fsFactory.getFile(tsfilePath))) {
       ReadOnlyTsFile readOnlyTsFile = new ReadOnlyTsFile(fileReader);
       QueryDataSet dataSet = readOnlyTsFile.query(queryExpression);
       int i = 0;
@@ -103,7 +108,7 @@ public class TimeGeneratorReadWriteTest {
 
   /** s1 -> 1, 2, 3, 4, 5 s2 -> 2, 3, 4, 5, 6 */
   private void writeTsFile(String tsfilePath) throws IOException, WriteProcessException {
-    File f = new File(tsfilePath);
+    File f = fsFactory.getFile(tsfilePath);
     if (f.exists()) {
       f.delete();
     }
@@ -114,7 +119,7 @@ public class TimeGeneratorReadWriteTest {
     schema.extendTemplate(
         TEMPLATE_NAME, new MeasurementSchema("s2", TSDataType.INT32, TSEncoding.TS_2DIFF));
 
-    TsFileWriter tsFileWriter = new TsFileWriter(new File(tsfilePath), schema);
+    TsFileWriter tsFileWriter = new TsFileWriter(fsFactory.getFile(tsfilePath), schema);
 
     // s1 -> 1, 2, 3
     TSRecord tsRecord = new TSRecord(1, "d1");

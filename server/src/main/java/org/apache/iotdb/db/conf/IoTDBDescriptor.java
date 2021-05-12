@@ -18,14 +18,14 @@
  */
 package org.apache.iotdb.db.conf;
 
-import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
+import org.apache.iotdb.db.engine.tier.TierManager;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.utils.FilePathUtils;
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-import org.apache.iotdb.tsfile.fileSystem.FSType;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 
 import com.google.common.net.InetAddresses;
 import org.slf4j.Logger;
@@ -203,32 +203,6 @@ public class IoTDBDescriptor {
 
       loadWALProps(properties);
 
-      String systemDir = properties.getProperty("system_dir");
-      if (systemDir == null) {
-        systemDir = properties.getProperty("base_dir");
-        if (systemDir != null) {
-          systemDir = FilePathUtils.regularizePath(systemDir) + IoTDBConstant.SYSTEM_FOLDER_NAME;
-        } else {
-          systemDir = conf.getSystemDir();
-        }
-      }
-      conf.setSystemDir(systemDir);
-
-      conf.setSchemaDir(
-          FilePathUtils.regularizePath(conf.getSystemDir()) + IoTDBConstant.SCHEMA_FOLDER_NAME);
-
-      conf.setSyncDir(
-          FilePathUtils.regularizePath(conf.getSystemDir()) + IoTDBConstant.SYNC_FOLDER_NAME);
-
-      conf.setQueryDir(
-          FilePathUtils.regularizePath(conf.getSystemDir() + IoTDBConstant.QUERY_FOLDER_NAME));
-
-      conf.setTracingDir(properties.getProperty("tracing_dir", conf.getTracingDir()));
-
-      conf.setDataDirs(properties.getProperty("data_dirs", conf.getDataDirs()[0]).split(","));
-
-      conf.setWalDir(properties.getProperty("wal_dir", conf.getWalDir()));
-
       int mlogBufferSize =
           Integer.parseInt(
               properties.getProperty(
@@ -237,8 +211,26 @@ public class IoTDBDescriptor {
         conf.setMlogBufferSize(mlogBufferSize);
       }
 
-      conf.setMultiDirStrategyClassName(
-          properties.getProperty("multi_dir_strategy", conf.getMultiDirStrategyClassName()));
+      String rawMultiDirStrategyClassNames = String.join(";", conf.getMultiDirStrategyClassNames());
+      conf.setMultiDirStrategyClassNames(
+          properties.getProperty("multi_dir_strategy", rawMultiDirStrategyClassNames).split(";"));
+
+      conf.setEnableTieredStorage(
+          Boolean.parseBoolean(
+              properties.getProperty(
+                  "enable_tiered_storage", Boolean.toString(conf.isEnableTieredStorage()))));
+
+      String rawTierMigrationStrategyClassNames =
+          String.join(";", conf.getTierMigrationStrategyClassNames());
+      conf.setTierMigrationStrategyClassNames(
+          properties
+              .getProperty("default_tier_migration_strategy", rawTierMigrationStrategyClassNames)
+              .split(";"));
+
+      conf.setMigrationThreadNum(
+          Integer.parseInt(
+              properties.getProperty(
+                  "migration_thread_num", Integer.toString(conf.getMigrationThreadNum()))));
 
       conf.setBatchSize(
           Integer.parseInt(
@@ -567,7 +559,7 @@ public class IoTDBDescriptor {
       conf.setRpcMaxConcurrentClientNum(maxConcurrentClientNum);
 
       conf.setTsFileStorageFs(
-          properties.getProperty("tsfile_storage_fs", conf.getTsFileStorageFs().toString()));
+          properties.getProperty("tsfile_storage_fs", conf.getRawTsFileStorageFs()).split(","));
       conf.setCoreSitePath(properties.getProperty("core_site_path", conf.getCoreSitePath()));
       conf.setHdfsSitePath(properties.getProperty("hdfs_site_path", conf.getHdfsSitePath()));
       conf.setHdfsIp(properties.getProperty("hdfs_ip", conf.getRawHDFSIp()).split(","));
@@ -719,8 +711,7 @@ public class IoTDBDescriptor {
       TSFileDescriptor.getInstance()
           .getConfig()
           .setTSFileStorageFs(
-              FSType.valueOf(
-                  properties.getProperty("tsfile_storage_fs", conf.getTsFileStorageFs().name())));
+              properties.getProperty("tsfile_storage_fs", conf.getRawTsFileStorageFs()).split(","));
       TSFileDescriptor.getInstance()
           .getConfig()
           .setCoreSitePath(properties.getProperty("core_site_path", conf.getCoreSitePath()));
@@ -770,6 +761,9 @@ public class IoTDBDescriptor {
               properties.getProperty("kerberos_principal", conf.getKerberosPrincipal()));
       TSFileDescriptor.getInstance().getConfig().setBatchSize(conf.getBatchSize());
 
+      // load directory config
+      loadDirProps(properties);
+
       // set tsfile-format config
       loadTsFileProps(properties);
 
@@ -799,6 +793,49 @@ public class IoTDBDescriptor {
       getConfig().setRpcAddress(address.getHostAddress());
     }
     logger.debug("after replace, the rpc_address={},", conf.getRpcAddress());
+  }
+
+  private void loadDirProps(Properties properties) {
+    String systemDir = properties.getProperty("system_dir");
+    if (systemDir == null) {
+      systemDir = properties.getProperty("base_dir");
+      if (systemDir != null) {
+        systemDir = FilePathUtils.regularizePath(systemDir) + IoTDBConstant.SYSTEM_FOLDER_NAME;
+      } else {
+        systemDir = conf.getSystemDir();
+      }
+    }
+    conf.setSystemDir(systemDir);
+
+    conf.setSchemaDir(
+        FilePathUtils.regularizePath(conf.getSystemDir()) + IoTDBConstant.SCHEMA_FOLDER_NAME);
+
+    conf.setSyncDir(
+        FilePathUtils.regularizePath(conf.getSystemDir()) + IoTDBConstant.SYNC_FOLDER_NAME);
+
+    conf.setQueryDir(
+        FilePathUtils.regularizePath(conf.getSystemDir() + IoTDBConstant.QUERY_FOLDER_NAME));
+
+    conf.setTracingDir(properties.getProperty("tracing_dir", conf.getTracingDir()));
+
+    String dataDirs = properties.getProperty("data_dirs");
+    FSPath[][] fsDataDirs;
+    // parse path string to FSPath
+    if (dataDirs == null) {
+      fsDataDirs = conf.getDataDirs();
+    } else {
+      String[][] tierDataDirs = parseDataDirs(dataDirs);
+      fsDataDirs = new FSPath[tierDataDirs.length][];
+      for (int i = 0; i < tierDataDirs.length; ++i) {
+        fsDataDirs[i] = new FSPath[tierDataDirs[i].length];
+        for (int j = 0; j < tierDataDirs[i].length; ++j) {
+          fsDataDirs[i][j] = FSPath.parse(tierDataDirs[i][j]);
+        }
+      }
+    }
+    conf.setDataDirs(fsDataDirs);
+
+    conf.setWalDir(properties.getProperty("wal_dir", conf.getWalDir()));
   }
 
   private void loadWALProps(Properties properties) {
@@ -990,15 +1027,22 @@ public class IoTDBDescriptor {
       // update data dirs
       String dataDirs = properties.getProperty("data_dirs", null);
       if (dataDirs != null) {
-        conf.reloadDataDirs(dataDirs.split(","));
+        conf.reloadDataDirs(parseDataDirs(dataDirs));
       }
 
       // update dir strategy
       String multiDirStrategyClassName = properties.getProperty("multi_dir_strategy", null);
-      if (multiDirStrategyClassName != null
-          && !multiDirStrategyClassName.equals(conf.getMultiDirStrategyClassName())) {
-        conf.setMultiDirStrategyClassName(multiDirStrategyClassName);
-        DirectoryManager.getInstance().updateDirectoryStrategy();
+      if (multiDirStrategyClassName != null) {
+        conf.setMultiDirStrategyClassNames(multiDirStrategyClassName.split(";"));
+        TierManager.getInstance().updateDirectoryStrategies();
+      }
+
+      // update default migration strategy
+      String tierMigrationStrategyClassNames =
+          properties.getProperty("default_tier_migration_strategy", null);
+      if (tierMigrationStrategyClassNames != null) {
+        conf.setTierMigrationStrategyClassNames(tierMigrationStrategyClassNames.split(";"));
+        TierManager.getInstance().updateMigrationStrategies();
       }
 
       // update WAL conf
@@ -1051,6 +1095,15 @@ public class IoTDBDescriptor {
     } catch (Exception e) {
       throw new QueryProcessException(String.format("Fail to reload configuration because %s", e));
     }
+  }
+
+  private String[][] parseDataDirs(String dataDirs) {
+    String[] tiers = dataDirs.split(";");
+    String[][] tierDataDirs = new String[tiers.length][];
+    for (int i = 0; i < tiers.length; ++i) {
+      tierDataDirs[i] = tiers[i].split(",");
+    }
+    return tierDataDirs;
   }
 
   public void loadHotModifiedProps() throws QueryProcessException {

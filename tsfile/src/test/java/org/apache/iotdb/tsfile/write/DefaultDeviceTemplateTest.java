@@ -18,9 +18,12 @@
  */
 package org.apache.iotdb.tsfile.write;
 
+import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.exception.write.WriteProcessException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.ReadOnlyTsFile;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Path;
@@ -42,10 +45,12 @@ import java.util.List;
 import java.util.Map;
 
 public class DefaultDeviceTemplateTest {
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
 
   @Test
   public void testUsingDefaultDeviceTemplate() throws IOException, WriteProcessException {
-    File file = new File("target/defaultDeviceTemplate.tsfile");
+    File file = fsFactory.getFile("target/defaultDeviceTemplate.tsfile");
     try (TsFileWriter writer = new TsFileWriter(file)) {
       MeasurementSchema s1 = new MeasurementSchema("s1", TSDataType.INT64, TSEncoding.PLAIN);
       MeasurementSchema s2 = new MeasurementSchema("s2", TSDataType.INT64, TSEncoding.PLAIN);
@@ -87,7 +92,7 @@ public class DefaultDeviceTemplateTest {
       }
     }
 
-    try (TsFileSequenceReader reader = new TsFileSequenceReader(file.getPath());
+    try (TsFileSequenceReader reader = new TsFileSequenceReader(file);
         ReadOnlyTsFile readTsFile = new ReadOnlyTsFile(reader)) {
 
       // use these paths(all measurements) for all the queries

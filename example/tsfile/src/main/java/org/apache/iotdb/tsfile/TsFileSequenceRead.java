@@ -29,6 +29,7 @@ import org.apache.iotdb.tsfile.file.metadata.ChunkMetadata;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.BatchData;
 import org.apache.iotdb.tsfile.read.reader.page.PageReader;
@@ -39,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 
 public class TsFileSequenceRead {
+  private static final FSFactory fsFactory = FSFactoryProducer.getFSFactory(Constant.DEFAULT_FS);
 
   @SuppressWarnings({
     "squid:S3776",
@@ -49,9 +51,8 @@ public class TsFileSequenceRead {
     if (args.length >= 1) {
       filename = args[0];
     }
-    try (TsFileSequenceReader reader = new TsFileSequenceReader(filename)) {
-      System.out.println(
-          "file length: " + FSFactoryProducer.getFSFactory().getFile(filename).length());
+    try (TsFileSequenceReader reader = new TsFileSequenceReader(fsFactory.getFile(filename))) {
+      System.out.println("file length: " + fsFactory.getFile(filename).length());
       System.out.println("file magic head: " + reader.readHeadMagic());
       System.out.println("file magic tail: " + reader.readTailMagic());
       System.out.println("Level 1 metadata position: " + reader.getFileMetadataPos());

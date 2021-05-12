@@ -26,6 +26,7 @@ import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor.UpgradeTsFi
 import org.apache.iotdb.db.engine.storagegroup.timeindex.DeviceTimeIndex;
 import org.apache.iotdb.db.engine.storagegroup.timeindex.ITimeIndex;
 import org.apache.iotdb.db.engine.storagegroup.timeindex.TimeIndexLevel;
+import org.apache.iotdb.db.engine.tier.TierManager;
 import org.apache.iotdb.db.engine.upgrade.UpgradeTask;
 import org.apache.iotdb.db.exception.PartitionViolationException;
 import org.apache.iotdb.db.service.UpgradeSevice;
@@ -42,6 +43,7 @@ import org.apache.iotdb.tsfile.file.metadata.statistics.Statistics;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
+import org.apache.iotdb.tsfile.utils.FSUtils;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 import org.slf4j.Logger;
@@ -105,6 +107,7 @@ public class TsFileResource {
   private volatile boolean closed = false;
   private volatile boolean deleted = false;
   private volatile boolean isMerging = false;
+  private volatile boolean isMigrating = false;
 
   private TsFileLock tsFileLock = new TsFileLock();
 
@@ -121,8 +124,6 @@ public class TsFileResource {
 
   /** used for unsealed file to get TimeseriesMetadata */
   private ITimeSeriesMetadata timeSeriesMetadata;
-
-  private FSFactory fsFactory = FSFactoryProducer.getFSFactory();
 
   /** generated upgraded TsFile ResourceList used for upgrading v0.11.x/v2 -> 0.12/v3 */
   private List<TsFileResource> upgradedResources;
@@ -165,11 +166,11 @@ public class TsFileResource {
     this.closed = other.closed;
     this.deleted = other.deleted;
     this.isMerging = other.isMerging;
+    this.isMigrating = other.isMigrating;
     this.chunkMetadataList = other.chunkMetadataList;
     this.readOnlyMemChunk = other.readOnlyMemChunk;
     generateTimeSeriesMetadata();
     this.tsFileLock = other.tsFileLock;
-    this.fsFactory = other.fsFactory;
     this.maxPlanIndex = other.maxPlanIndex;
     this.minPlanIndex = other.minPlanIndex;
     this.version = FilePathUtils.splitAndGetTsFileVersion(this.file.getName());
@@ -320,6 +321,7 @@ public class TsFileResource {
   }
 
   public synchronized void serialize() throws IOException {
+    FSFactory fsFactory = getFSFactory();
     try (OutputStream outputStream =
         fsFactory.getBufferedOutputStream(file + RESOURCE_SUFFIX + TEMP_SUFFIX)) {
       ReadWriteIOUtils.write(VERSION_NUMBER, outputStream);
@@ -341,6 +343,7 @@ public class TsFileResource {
   }
 
   public void deserialize() throws IOException {
+    FSFactory fsFactory = getFSFactory();
     try (InputStream inputStream = fsFactory.getBufferedInputStream(file + RESOURCE_SUFFIX)) {
       readVersionNumber(inputStream);
       timeIndexType = ReadWriteIOUtils.readBytes(inputStream, 1)[0];
@@ -351,13 +354,14 @@ public class TsFileResource {
         String modFileName = ReadWriteIOUtils.readString(inputStream);
         if (modFileName != null) {
           File modF = new File(file.getParentFile(), modFileName);
-          modFile = new ModificationFile(modF.getPath());
+          modFile = new ModificationFile(modF);
         }
       }
     }
   }
 
   public void deserializeFromOldFile() throws IOException {
+    FSFactory fsFactory = getFSFactory();
     try (InputStream inputStream = fsFactory.getBufferedInputStream(file + RESOURCE_SUFFIX)) {
       // deserialize old TsfileResource
       int size = ReadWriteIOUtils.readInt(inputStream);
@@ -389,7 +393,7 @@ public class TsFileResource {
         String modFileName = ReadWriteIOUtils.readString(inputStream);
         if (modFileName != null) {
           File modF = new File(file.getParentFile(), modFileName);
-          modFile = new ModificationFile(modF.getPath());
+          modFile = new ModificationFile(modF);
         }
       }
     }
@@ -398,6 +402,10 @@ public class TsFileResource {
   /** read version number, used for checking compatibility of TsFileResource in the future */
   private byte readVersionNumber(InputStream inputStream) throws IOException {
     return ReadWriteIOUtils.readBytes(inputStream, 1)[0];
+  }
+
+  private FSFactory getFSFactory() {
+    return FSFactoryProducer.getFSFactory(FSUtils.getFSType(file));
   }
 
   public void updateStartTime(String device, long time) {
@@ -419,7 +427,7 @@ public class TsFileResource {
   }
 
   public boolean resourceFileExists() {
-    return fsFactory.getFile(file + RESOURCE_SUFFIX).exists();
+    return getFSFactory().getFile(file + RESOURCE_SUFFIX).exists();
   }
 
   public List<IChunkMetadata> getChunkMetadataList() {
@@ -432,7 +440,9 @@ public class TsFileResource {
 
   public synchronized ModificationFile getModFile() {
     if (modFile == null) {
-      modFile = new ModificationFile(file.getPath() + ModificationFile.FILE_SUFFIX);
+      FSFactory fsFactory = getFSFactory();
+      modFile =
+          new ModificationFile(fsFactory.getFile(file.getPath() + ModificationFile.FILE_SUFFIX));
     }
     return modFile;
   }
@@ -541,11 +551,13 @@ public class TsFileResource {
   /** Remove the data file, its resource file, and its modification file physically. */
   public void remove() {
     try {
+      FSFactory fsFactory = getFSFactory();
       fsFactory.deleteIfExists(file);
     } catch (IOException e) {
       logger.error("TsFile {} cannot be deleted: {}", file, e.getMessage());
     }
     removeResourceFile();
+    FSFactory fsFactory = getFSFactory();
     try {
       fsFactory.deleteIfExists(fsFactory.getFile(file.getPath() + ModificationFile.FILE_SUFFIX));
     } catch (IOException e) {
@@ -554,6 +566,7 @@ public class TsFileResource {
   }
 
   public void removeResourceFile() {
+    FSFactory fsFactory = getFSFactory();
     try {
       fsFactory.deleteIfExists(fsFactory.getFile(file.getPath() + RESOURCE_SUFFIX));
     } catch (IOException e) {
@@ -562,6 +575,7 @@ public class TsFileResource {
   }
 
   void moveTo(File targetDir) {
+    FSFactory fsFactory = getFSFactory();
     fsFactory.moveFile(file, fsFactory.getFile(targetDir, file.getName()));
     fsFactory.moveFile(
         fsFactory.getFile(file.getPath() + RESOURCE_SUFFIX),
@@ -608,12 +622,20 @@ public class TsFileResource {
     this.deleted = deleted;
   }
 
-  boolean isMerging() {
+  public boolean isMerging() {
     return isMerging;
   }
 
   public void setMerging(boolean merging) {
     isMerging = merging;
+  }
+
+  public boolean isMigrating() {
+    return isMigrating;
+  }
+
+  public void setMigrating(boolean migrating) {
+    isMigrating = migrating;
   }
 
   /** check if any of the device lives over the given time bound */
@@ -646,7 +668,7 @@ public class TsFileResource {
       boolean res = timeFilter.satisfyStartEndTime(startTime, endTime);
       if (debug && !res) {
         DEBUG_LOGGER.info(
-            "Path: {} file {} is not satisfied because of time filter!", deviceId, fsFactory);
+            "Path: {} file {} is not satisfied because of time filter!", deviceId, getFSFactory());
       }
       return res;
     }
@@ -769,10 +791,7 @@ public class TsFileResource {
   public void delete() throws IOException {
     if (file.exists()) {
       Files.delete(file.toPath());
-      Files.delete(
-          FSFactoryProducer.getFSFactory()
-              .getFile(file.toPath() + TsFileResource.RESOURCE_SUFFIX)
-              .toPath());
+      Files.delete(getFSFactory().getFile(file.toPath() + TsFileResource.RESOURCE_SUFFIX).toPath());
     }
   }
 
@@ -835,6 +854,10 @@ public class TsFileResource {
 
   public void setTimeIndex(ITimeIndex timeIndex) {
     this.timeIndex = timeIndex;
+  }
+
+  public int getTierLevel() {
+    return TierManager.getInstance().getTierLevel(file);
   }
 
   // change tsFile name

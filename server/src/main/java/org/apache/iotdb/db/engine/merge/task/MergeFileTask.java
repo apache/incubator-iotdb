@@ -35,6 +35,7 @@ import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Chunk;
+import org.apache.iotdb.tsfile.utils.FSUtils;
 import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.write.writer.ForceAppendTsFileWriter;
 import org.apache.iotdb.tsfile.write.writer.RestorableTsFileIOWriter;
@@ -66,8 +67,6 @@ public class MergeFileTask {
   private MergeLogger mergeLogger;
   private MergeResource resource;
   private List<TsFileResource> unmergedFiles;
-
-  private FSFactory fsFactory = FSFactoryProducer.getFSFactory();
 
   private int currentMergeIndex;
   private String currMergeFile;
@@ -179,8 +178,7 @@ public class MergeFileTask {
 
       RestorableTsFileIOWriter newFileWriter = resource.getMergeFileWriter(seqFile);
       newFileWriter.close();
-      try (TsFileSequenceReader newFileReader =
-          new TsFileSequenceReader(newFileWriter.getFile().getPath())) {
+      try (TsFileSequenceReader newFileReader = new TsFileSequenceReader(newFileWriter.getFile())) {
         Map<String, List<ChunkMetadata>> chunkMetadataListInChunkGroups =
             newFileWriter.getDeviceChunkMetadataMap();
         if (logger.isDebugEnabled()) {
@@ -211,6 +209,7 @@ public class MergeFileTask {
       newFileWriter.getFile().delete();
       // change tsFile name
       File nextMergeVersionFile = modifyTsFileNameUnseqMergCnt(seqFile.getTsFile());
+      FSFactory fsFactory = FSFactoryProducer.getFSFactory(FSUtils.getFSType(seqFile.getTsFile()));
       fsFactory.moveFile(seqFile.getTsFile(), nextMergeVersionFile);
       fsFactory.moveFile(
           fsFactory.getFile(seqFile.getTsFile().getAbsolutePath() + TsFileResource.RESOURCE_SUFFIX),
@@ -361,6 +360,7 @@ public class MergeFileTask {
       // change tsFile name
       seqFile.getTsFile().delete();
       File nextMergeVersionFile = modifyTsFileNameUnseqMergCnt(seqFile.getTsFile());
+      FSFactory fsFactory = FSFactoryProducer.getFSFactory(FSUtils.getFSType(fileWriter.getFile()));
       fsFactory.moveFile(fileWriter.getFile(), nextMergeVersionFile);
       fsFactory.moveFile(
           fsFactory.getFile(seqFile.getTsFile().getAbsolutePath() + TsFileResource.RESOURCE_SUFFIX),

@@ -42,7 +42,7 @@ public class FlinkTsFileStreamSource {
 
   public static void main(String[] args) {
     String path = "test.tsfile";
-    TsFileUtils.writeTsFile(path);
+    TsFileUtils.writeTsFile(new File(path));
     new File(path).deleteOnExit();
     String[] filedNames = {
       QueryConstant.RESERVED_TIME,

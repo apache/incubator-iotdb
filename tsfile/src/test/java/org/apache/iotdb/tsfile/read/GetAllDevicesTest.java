@@ -21,6 +21,9 @@ package org.apache.iotdb.tsfile.read;
 
 import org.apache.iotdb.tsfile.common.conf.TSFileConfig;
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
+import org.apache.iotdb.tsfile.constant.TestConstant;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.utils.FileGenerator;
 
 import org.junit.After;
@@ -36,6 +39,8 @@ public class GetAllDevicesTest {
   private final TSFileConfig conf = TSFileDescriptor.getInstance().getConfig();
   private int maxDegreeOfIndexNode;
   private static final String FILE_PATH = FileGenerator.outputDataFile;
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
 
   @Before
   public void before() {
@@ -71,7 +76,7 @@ public class GetAllDevicesTest {
 
   public void testGetAllDevices(int deviceNum, int measurementNum) throws IOException {
     FileGenerator.generateFile(10000, deviceNum, measurementNum);
-    try (TsFileSequenceReader fileReader = new TsFileSequenceReader(FILE_PATH)) {
+    try (TsFileSequenceReader fileReader = new TsFileSequenceReader(fsFactory.getFile(FILE_PATH))) {
 
       List<String> devices = fileReader.getAllDevices();
       Assert.assertEquals(deviceNum, devices.size());

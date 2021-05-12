@@ -47,7 +47,7 @@ import static org.junit.Assert.fail;
 
 public class ForceAppendTsFileWriterTest {
   private static final String FILE_NAME = TestConstant.BASE_OUTPUT_PATH.concat("test1.tsfile");
-  private static FSFactory fsFactory = FSFactoryProducer.getFSFactory();
+  private static FSFactory fsFactory = FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
 
   @Test
   public void test() throws Exception {
@@ -95,7 +95,7 @@ public class ForceAppendTsFileWriterTest {
             .addTuple(new FloatDataPoint("s1", 5))
             .addTuple(new FloatDataPoint("s2", 4)));
     writer.close();
-    ReadOnlyTsFile readOnlyTsFile = new ReadOnlyTsFile(new TsFileSequenceReader(file.getPath()));
+    ReadOnlyTsFile readOnlyTsFile = new ReadOnlyTsFile(new TsFileSequenceReader(file));
     List<Path> pathList = new ArrayList<>();
     pathList.add(new Path("d1", "s1"));
     pathList.add(new Path("d1", "s2"));

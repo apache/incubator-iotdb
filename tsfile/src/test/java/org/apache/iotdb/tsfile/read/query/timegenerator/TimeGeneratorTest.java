@@ -19,6 +19,9 @@
 package org.apache.iotdb.tsfile.read.query.timegenerator;
 
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
+import org.apache.iotdb.tsfile.constant.TestConstant;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.read.controller.CachedChunkLoaderImpl;
@@ -44,6 +47,8 @@ import java.io.IOException;
 public class TimeGeneratorTest {
 
   private static final String FILE_PATH = TsFileGeneratorForTest.outputDataFile;
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
   private TsFileSequenceReader fileReader;
   private MetadataQuerierByFileImpl metadataQuerierByFile;
   private IChunkLoader chunkLoader;
@@ -52,7 +57,7 @@ public class TimeGeneratorTest {
   public void before() throws IOException {
     TSFileDescriptor.getInstance().getConfig().setTimeEncoder("TS_2DIFF");
     TsFileGeneratorForTest.generateFile(1000, 10 * 1024 * 1024, 10000);
-    fileReader = new TsFileSequenceReader(FILE_PATH);
+    fileReader = new TsFileSequenceReader(fsFactory.getFile(FILE_PATH));
     metadataQuerierByFile = new MetadataQuerierByFileImpl(fileReader);
     chunkLoader = new CachedChunkLoaderImpl(fileReader);
   }

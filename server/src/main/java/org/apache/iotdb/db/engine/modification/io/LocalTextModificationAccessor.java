@@ -24,12 +24,15 @@ import org.apache.iotdb.db.engine.modification.Modification;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
+import org.apache.iotdb.tsfile.utils.FSUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -47,28 +50,30 @@ public class LocalTextModificationAccessor
   private static final String SEPARATOR = ",";
   private static final String ABORT_MARK = "aborted";
 
-  private String filePath;
+  private File file;
   private BufferedWriter writer;
+  private final FSFactory fsFactory;
 
   /**
    * Construct a LocalTextModificationAccessor using a file specified by filePath.
    *
-   * @param filePath the path of the file that is used for storing modifications.
+   * @param file the file that is used for storing modifications.
    */
-  public LocalTextModificationAccessor(String filePath) {
-    this.filePath = filePath;
+  public LocalTextModificationAccessor(File file) {
+    this.file = file;
+    this.fsFactory = FSFactoryProducer.getFSFactory(FSUtils.getFSType(file));
   }
 
   @Override
   public Collection<Modification> read() {
-    if (!FSFactoryProducer.getFSFactory().getFile(filePath).exists()) {
+    if (!file.exists()) {
       logger.debug("No modification has been written to this file");
       return new ArrayList<>();
     }
 
     String line;
     List<Modification> modificationList = new ArrayList<>();
-    try (BufferedReader reader = FSFactoryProducer.getFSFactory().getBufferedReader(filePath)) {
+    try (BufferedReader reader = fsFactory.getBufferedReader(file.getPath())) {
       while ((line = reader.readLine()) != null) {
         if (line.equals(ABORT_MARK) && !modificationList.isEmpty()) {
           modificationList.remove(modificationList.size() - 1);
@@ -96,7 +101,7 @@ public class LocalTextModificationAccessor
   @Override
   public void abort() throws IOException {
     if (writer == null) {
-      writer = FSFactoryProducer.getFSFactory().getBufferedWriter(filePath, true);
+      writer = fsFactory.getBufferedWriter(file.getPath(), true);
     }
     writer.write(ABORT_MARK);
     writer.newLine();
@@ -106,7 +111,7 @@ public class LocalTextModificationAccessor
   @Override
   public void write(Modification mod) throws IOException {
     if (writer == null) {
-      writer = FSFactoryProducer.getFSFactory().getBufferedWriter(filePath, true);
+      writer = fsFactory.getBufferedWriter(file.getPath(), true);
     }
     writer.write(encodeModification(mod));
     writer.newLine();

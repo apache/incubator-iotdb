@@ -18,6 +18,8 @@
  */
 package org.apache.iotdb.db.sync.conf;
 
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,11 +32,15 @@ public class SyncSenderConfig {
 
   private int syncPeriodInSecond = 600;
 
-  private String senderFolderPath;
+  private FSPath senderFolderPath;
 
-  private String lastFileInfoPath;
+  private FSPath lastFileInfoPath;
 
-  private String snapshotPath;
+  private FSPath deletedBlackListPath;
+
+  private FSPath toBeSyncedBlackListPath;
+
+  private FSPath snapshotPath;
 
   /** The maximum number of retry when syncing a file to receiver fails. */
   private int maxNumOfSyncFileRetry = 5;
@@ -43,17 +49,24 @@ public class SyncSenderConfig {
   private List<String> storageGroupList = new ArrayList<>();
 
   /** Update paths based on data directory */
-  public void update(String dataDirectory) {
+  public void update(FSPath dataDirectory) {
     senderFolderPath =
-        dataDirectory
-            + File.separatorChar
-            + SyncConstant.SYNC_SENDER
-            + File.separatorChar
-            + getSyncReceiverName();
-    lastFileInfoPath = senderFolderPath + File.separatorChar + SyncConstant.LAST_LOCAL_FILE_NAME;
-    snapshotPath = senderFolderPath + File.separatorChar + SyncConstant.DATA_SNAPSHOT_NAME;
-    if (!new File(snapshotPath).exists()) {
-      new File(snapshotPath).mkdirs();
+        dataDirectory.postConcat(
+            File.separatorChar
+                + SyncConstant.SYNC_SENDER
+                + File.separatorChar
+                + getSyncReceiverName());
+    lastFileInfoPath =
+        senderFolderPath.postConcat(File.separatorChar + SyncConstant.LAST_LOCAL_FILE_NAME);
+    deletedBlackListPath =
+        senderFolderPath.postConcat(File.separatorChar + SyncConstant.DELETED_BLACKLIST_FILE_NAME);
+    toBeSyncedBlackListPath =
+        senderFolderPath.postConcat(
+            File.separatorChar + SyncConstant.TO_BE_SYNCED_BLACKLIST_FILE_NAME);
+    snapshotPath =
+        senderFolderPath.postConcat(File.separatorChar + SyncConstant.DATA_SNAPSHOT_NAME);
+    if (!snapshotPath.toFile().exists()) {
+      snapshotPath.toFile().mkdirs();
     }
   }
 
@@ -81,28 +94,24 @@ public class SyncSenderConfig {
     this.syncPeriodInSecond = syncPeriodInSecond;
   }
 
-  public String getSenderFolderPath() {
+  public FSPath getSenderFolderPath() {
     return senderFolderPath;
   }
 
-  public void setSenderFolderPath(String senderFolderPath) {
-    this.senderFolderPath = senderFolderPath;
-  }
-
-  public String getLastFileInfoPath() {
+  public FSPath getLastFileInfoPath() {
     return lastFileInfoPath;
   }
 
-  public void setLastFileInfoPath(String lastFileInfoPath) {
-    this.lastFileInfoPath = lastFileInfoPath;
+  public FSPath getDeletedBlackListPath() {
+    return deletedBlackListPath;
   }
 
-  public String getSnapshotPath() {
+  public FSPath getToBeSyncedBlackListPath() {
+    return toBeSyncedBlackListPath;
+  }
+
+  public FSPath getSnapshotPath() {
     return snapshotPath;
-  }
-
-  public void setSnapshotPath(String snapshotPath) {
-    this.snapshotPath = snapshotPath;
   }
 
   public String getSyncReceiverName() {

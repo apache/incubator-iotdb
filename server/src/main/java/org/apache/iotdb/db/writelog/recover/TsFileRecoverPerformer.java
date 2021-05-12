@@ -19,7 +19,6 @@
 
 package org.apache.iotdb.db.writelog.recover;
 
-import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.engine.flush.MemTableFlushTask;
 import org.apache.iotdb.db.engine.memtable.IMemTable;
 import org.apache.iotdb.db.engine.memtable.PrimitiveMemTable;
@@ -31,7 +30,6 @@ import org.apache.iotdb.tsfile.exception.NotCompatibleTsFileException;
 import org.apache.iotdb.tsfile.file.metadata.ChunkMetadata;
 import org.apache.iotdb.tsfile.file.metadata.TimeseriesMetadata;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.write.writer.RestorableTsFileIOWriter;
 
@@ -58,7 +56,7 @@ public class TsFileRecoverPerformer {
 
   private static final Logger logger = LoggerFactory.getLogger(TsFileRecoverPerformer.class);
 
-  private final String filePath;
+  private final File file;
   private final String logNodePrefix;
   private final TsFileResource tsFileResource;
   private final boolean sequence;
@@ -69,7 +67,7 @@ public class TsFileRecoverPerformer {
       TsFileResource currentTsFileResource,
       boolean sequence,
       boolean isLastFile) {
-    this.filePath = currentTsFileResource.getTsFilePath();
+    this.file = currentTsFileResource.getTsFile();
     this.logNodePrefix = logNodePrefix;
     this.tsFileResource = currentTsFileResource;
     this.sequence = sequence;
@@ -88,9 +86,8 @@ public class TsFileRecoverPerformer {
       boolean needRedoWal, Supplier<ByteBuffer[]> supplier, Consumer<ByteBuffer[]> consumer)
       throws StorageGroupProcessorException {
 
-    File file = FSFactoryProducer.getFSFactory().getFile(filePath);
     if (!file.exists()) {
-      logger.error("TsFile {} is missing, will skip its recovery.", filePath);
+      logger.error("TsFile {} is missing, will skip its recovery.", file);
       return null;
     }
 
@@ -100,7 +97,7 @@ public class TsFileRecoverPerformer {
       restorableTsFileIOWriter = new RestorableTsFileIOWriter(file);
     } catch (NotCompatibleTsFileException e) {
       boolean result = file.delete();
-      logger.warn("TsFile {} is incompatible. Delete it successfully {}", filePath, result);
+      logger.warn("TsFile {} is incompatible. Delete it successfully {}", file, result);
       throw new StorageGroupProcessorException(e);
     } catch (IOException e) {
       throw new StorageGroupProcessorException(e);
@@ -113,7 +110,7 @@ public class TsFileRecoverPerformer {
         return restorableTsFileIOWriter;
       } catch (IOException e) {
         throw new StorageGroupProcessorException(
-            "recover the resource file failed: " + filePath + RESOURCE_SUFFIX + e);
+            "recover the resource file failed: " + file + RESOURCE_SUFFIX + e);
       }
     }
 
@@ -128,9 +125,7 @@ public class TsFileRecoverPerformer {
 
       // clean logs
       try {
-        MultiFileLogNodeManager.getInstance()
-            .deleteNode(
-                logNodePrefix + SystemFileFactory.INSTANCE.getFile(filePath).getName(), consumer);
+        MultiFileLogNodeManager.getInstance().deleteNode(logNodePrefix + file.getName(), consumer);
       } catch (IOException e) {
         throw new StorageGroupProcessorException(e);
       }
@@ -144,8 +139,7 @@ public class TsFileRecoverPerformer {
       recoverResourceFromFile();
     } else {
       // .resource file does not exist, read file metadata and recover tsfile resource
-      try (TsFileSequenceReader reader =
-          new TsFileSequenceReader(tsFileResource.getTsFile().getAbsolutePath())) {
+      try (TsFileSequenceReader reader = new TsFileSequenceReader(tsFileResource.getTsFile())) {
         FileLoaderUtils.updateTsFileResource(reader, tsFileResource);
       }
       // write .resource file
@@ -166,8 +160,7 @@ public class TsFileRecoverPerformer {
   }
 
   private void recoverResourceFromReader() throws IOException {
-    try (TsFileSequenceReader reader =
-        new TsFileSequenceReader(tsFileResource.getTsFile().getAbsolutePath(), true)) {
+    try (TsFileSequenceReader reader = new TsFileSequenceReader(tsFileResource.getTsFile(), true)) {
       for (Entry<String, List<TimeseriesMetadata>> entry :
           reader.getAllTimeseriesMetadata().entrySet()) {
         for (TimeseriesMetadata timeseriesMetaData : entry.getValue()) {
@@ -208,7 +201,7 @@ public class TsFileRecoverPerformer {
     LogReplayer logReplayer =
         new LogReplayer(
             logNodePrefix,
-            filePath,
+            file,
             tsFileResource.getModFile(),
             tsFileResource,
             recoverMemTable,

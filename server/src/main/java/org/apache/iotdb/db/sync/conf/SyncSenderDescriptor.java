@@ -73,7 +73,7 @@ public class SyncSenderDescriptor {
     }
 
     try {
-      inputStream = new FileInputStream(new File(url));
+      inputStream = new FileInputStream(url);
     } catch (FileNotFoundException e) {
       logger.warn("Fail to find sync config file {}", url, e);
       return;

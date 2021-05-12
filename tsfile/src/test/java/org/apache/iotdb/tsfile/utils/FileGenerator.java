@@ -24,6 +24,8 @@ import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.exception.write.WriteProcessException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.write.TsFileWriter;
 import org.apache.iotdb.tsfile.write.record.TSRecord;
@@ -51,6 +53,8 @@ public class FileGenerator {
   private static String inputDataFile;
   private static String errorOutputDataFile;
   private static final TSFileConfig config = TSFileDescriptor.getInstance().getConfig();
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
 
   public static void generateFile(int rowCount, int maxNumberOfPointsInPage) throws IOException {
     ROW_COUNT = rowCount;
@@ -107,22 +111,22 @@ public class FileGenerator {
   }
 
   public static void after(String filePath) {
-    File file = new File(inputDataFile);
+    File file = fsFactory.getFile(inputDataFile);
     if (file.exists()) {
       file.delete();
     }
-    file = new File(filePath);
+    file = fsFactory.getFile(filePath);
     if (file.exists()) {
       file.delete();
     }
-    file = new File(errorOutputDataFile);
+    file = fsFactory.getFile(errorOutputDataFile);
     if (file.exists()) {
       file.delete();
     }
   }
 
   private static void generateSampleInputDataFile() throws IOException {
-    File file = new File(inputDataFile);
+    File file = fsFactory.getFile(inputDataFile);
     if (file.exists()) {
       file.delete();
     }
@@ -185,7 +189,7 @@ public class FileGenerator {
 
   private static void generateSampleInputDataFile(int deviceNum, int measurementNum)
       throws IOException {
-    File file = new File(inputDataFile);
+    File file = fsFactory.getFile(inputDataFile);
     if (file.exists()) {
       Files.delete(file.toPath());
     }
@@ -209,8 +213,8 @@ public class FileGenerator {
   }
 
   public static void write(String filePath) throws IOException {
-    File file = new File(filePath);
-    File errorFile = new File(errorOutputDataFile);
+    File file = fsFactory.getFile(filePath);
+    File errorFile = fsFactory.getFile(errorOutputDataFile);
     if (file.exists()) {
       file.delete();
     }
@@ -301,7 +305,7 @@ public class FileGenerator {
   }
 
   private static Scanner getDataFile(String path) {
-    File file = new File(path);
+    File file = fsFactory.getFile(path);
     try {
       return new Scanner(file);
     } catch (FileNotFoundException e) {

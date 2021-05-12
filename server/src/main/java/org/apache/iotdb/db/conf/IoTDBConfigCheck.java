@@ -18,16 +18,17 @@
  */
 package org.apache.iotdb.db.conf;
 
-import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.engine.modification.ModificationFile;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
+import org.apache.iotdb.db.engine.tier.TierManager;
 import org.apache.iotdb.db.metadata.logfile.MLogWriter;
 import org.apache.iotdb.db.utils.FilePathUtils;
 import org.apache.iotdb.tsfile.common.conf.TSFileConfig;
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
 import org.apache.iotdb.tsfile.common.constant.TsFileConstant;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.FSPath;
 import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 
 import org.apache.commons.io.FileUtils;
@@ -55,8 +56,6 @@ public class IoTDBConfigCheck {
 
   private static final IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
 
-  private FSFactory fsFactory = FSFactoryProducer.getFSFactory();
-
   // this file is located in data/system/schema/system.properties
   // If user delete folder "data", system.properties can reset.
   private static final String PROPERTIES_FILE_NAME = "system.properties";
@@ -80,7 +79,7 @@ public class IoTDBConfigCheck {
   private static long partitionInterval = config.getPartitionInterval();
 
   private static final String TSFILE_FILE_SYSTEM_STRING = "tsfile_storage_fs";
-  private static String tsfileFileSystem = config.getTsFileStorageFs().toString();
+  private static String tsfileFileSystem = config.getRawTsFileStorageFs();
 
   private static final String ENABLE_PARTITION_STRING = "enable_partition";
   private static boolean enablePartition = config.isEnablePartition();
@@ -345,16 +344,17 @@ public class IoTDBConfigCheck {
           IoTDBConstant.VERSION);
       System.exit(-1);
     }
-    checkUnClosedTsFileV2InFolders(DirectoryManager.getInstance().getAllSequenceFileFolders());
-    checkUnClosedTsFileV2InFolders(DirectoryManager.getInstance().getAllUnSequenceFileFolders());
+    checkUnClosedTsFileV2InFolders(TierManager.getInstance().getAllSequenceFileFolders());
+    checkUnClosedTsFileV2InFolders(TierManager.getInstance().getAllUnSequenceFileFolders());
   }
 
-  private void checkUnClosedTsFileV2InFolders(List<String> folders) {
-    for (String baseDir : folders) {
-      File fileFolder = fsFactory.getFile(baseDir);
+  private void checkUnClosedTsFileV2InFolders(List<FSPath> folders) {
+    for (FSPath baseDir : folders) {
+      File fileFolder = baseDir.toFile();
       if (!fileFolder.isDirectory()) {
         continue;
       }
+      FSFactory fsFactory = FSFactoryProducer.getFSFactory(baseDir.getFsType());
       for (File storageGroup : fileFolder.listFiles()) {
         if (!storageGroup.isDirectory()) {
           continue;
@@ -416,18 +416,19 @@ public class IoTDBConfigCheck {
   }
 
   private void moveTsFileV2() {
-    moveFileToUpgradeFolder(DirectoryManager.getInstance().getAllSequenceFileFolders());
-    moveFileToUpgradeFolder(DirectoryManager.getInstance().getAllUnSequenceFileFolders());
+    moveFileToUpgradeFolder(TierManager.getInstance().getAllSequenceFileFolders());
+    moveFileToUpgradeFolder(TierManager.getInstance().getAllUnSequenceFileFolders());
     logger.info("Move version-2 TsFile successfully");
   }
 
   @SuppressWarnings("squid:S3776") // Suppress high Cognitive Complexity warning
-  private void moveFileToUpgradeFolder(List<String> folders) {
-    for (String baseDir : folders) {
-      File fileFolder = fsFactory.getFile(baseDir);
+  private void moveFileToUpgradeFolder(List<FSPath> folders) {
+    for (FSPath baseDir : folders) {
+      File fileFolder = baseDir.toFile();
       if (!fileFolder.isDirectory()) {
         continue;
       }
+      FSFactory fsFactory = FSFactoryProducer.getFSFactory(baseDir.getFsType());
       for (File storageGroup : fileFolder.listFiles()) {
         if (!storageGroup.isDirectory()) {
           continue;

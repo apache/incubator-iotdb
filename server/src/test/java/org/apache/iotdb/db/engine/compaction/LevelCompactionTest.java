@@ -36,6 +36,7 @@ import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.write.TsFileWriter;
 import org.apache.iotdb.tsfile.write.record.TSRecord;
@@ -55,6 +56,7 @@ import static org.apache.iotdb.db.conf.IoTDBConstant.PATH_SEPARATOR;
 
 abstract class LevelCompactionTest {
 
+  static final FSFactory fsFactory = FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
   static final String COMPACTION_TEST_SG = "root.compactionTest";
 
   protected int seqFileNum = 6;
@@ -125,7 +127,7 @@ abstract class LevelCompactionTest {
   void prepareFiles(int seqFileNum, int unseqFileNum) throws IOException, WriteProcessException {
     for (int i = 0; i < seqFileNum; i++) {
       File file =
-          new File(
+          fsFactory.getFile(
               TestConstant.BASE_OUTPUT_PATH.concat(
                   i
                       + IoTDBConstant.FILE_NAME_SEPARATOR
@@ -143,7 +145,7 @@ abstract class LevelCompactionTest {
     }
     for (int i = 0; i < unseqFileNum; i++) {
       File file =
-          new File(
+          fsFactory.getFile(
               TestConstant.BASE_OUTPUT_PATH.concat(
                   (10000 + i)
                       + IoTDBConstant.FILE_NAME_SEPARATOR
@@ -161,7 +163,7 @@ abstract class LevelCompactionTest {
     }
 
     File file =
-        new File(
+        fsFactory.getFile(
             TestConstant.BASE_OUTPUT_PATH.concat(
                 unseqFileNum
                     + IoTDBConstant.FILE_NAME_SEPARATOR
@@ -189,12 +191,11 @@ abstract class LevelCompactionTest {
         tsFileResource.remove();
       }
     }
-    File[] files = FSFactoryProducer.getFSFactory().listFilesBySuffix("target", ".tsfile");
+    File[] files = fsFactory.listFilesBySuffix("target", ".tsfile");
     for (File file : files) {
       file.delete();
     }
-    File[] resourceFiles =
-        FSFactoryProducer.getFSFactory().listFilesBySuffix("target", ".resource");
+    File[] resourceFiles = fsFactory.listFilesBySuffix("target", ".resource");
     for (File resourceFile : resourceFiles) {
       resourceFile.delete();
     }

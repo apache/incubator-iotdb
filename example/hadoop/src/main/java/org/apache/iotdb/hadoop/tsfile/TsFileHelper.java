@@ -135,7 +135,7 @@ public class TsFileHelper {
       file.delete();
     }
     writeTsFile(filePath);
-    try (TsFileSequenceReader reader = new TsFileSequenceReader(filePath)) {
+    try (TsFileSequenceReader reader = new TsFileSequenceReader(file)) {
       logger.info("Get file meta data: {}", reader.readFileMetadata());
     }
   }

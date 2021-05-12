@@ -19,6 +19,8 @@
 
 package org.apache.iotdb.tsfile;
 
+import org.apache.iotdb.tsfile.fileSystem.FSType;
+
 public class Constant {
 
   private Constant() {}
@@ -28,4 +30,6 @@ public class Constant {
   static final String SENSOR_3 = "sensor_3";
 
   static final String DEVICE_PREFIX = "device_";
+
+  static final FSType DEFAULT_FS = FSType.LOCAL;
 }

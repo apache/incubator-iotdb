@@ -26,6 +26,7 @@ import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.tsfile.file.metadata.ChunkMetadata;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.write.writer.RestorableTsFileIOWriter;
 
 import org.junit.After;
@@ -40,6 +41,9 @@ import static org.junit.Assert.assertTrue;
 
 public class MemTableFlushTaskTest {
 
+  private static final FSFactory fsFactory =
+      FSFactoryProducer.getFSFactory(TestConstant.DEFAULT_TEST_FS);
+
   private RestorableTsFileIOWriter writer;
   private String storageGroup = "storage_group1";
   private String filePath =
@@ -52,7 +56,7 @@ public class MemTableFlushTaskTest {
   public void setUp() throws Exception {
     EnvironmentUtils.envSetUp();
     MetadataManagerHelper.initMetadata();
-    writer = new RestorableTsFileIOWriter(FSFactoryProducer.getFSFactory().getFile(filePath));
+    writer = new RestorableTsFileIOWriter(fsFactory.getFile(filePath));
     memTable = new PrimitiveMemTable();
   }
 
@@ -60,7 +64,7 @@ public class MemTableFlushTaskTest {
   public void tearDown() throws Exception {
     writer.close();
     EnvironmentUtils.cleanEnv();
-    EnvironmentUtils.cleanDir(TestConstant.OUTPUT_DATA_DIR);
+    EnvironmentUtils.cleanDir(fsFactory.getFile(TestConstant.OUTPUT_DATA_DIR));
   }
 
   @Test
