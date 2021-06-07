@@ -31,8 +31,10 @@ import org.apache.iotdb.service.rpc.thrift.TSDeleteDataReq;
 import org.apache.iotdb.service.rpc.thrift.TSInsertRecordReq;
 import org.apache.iotdb.service.rpc.thrift.TSInsertRecordsOfOneDeviceReq;
 import org.apache.iotdb.service.rpc.thrift.TSInsertRecordsReq;
+import org.apache.iotdb.service.rpc.thrift.TSInsertSinglePointReq;
 import org.apache.iotdb.service.rpc.thrift.TSInsertStringRecordReq;
 import org.apache.iotdb.service.rpc.thrift.TSInsertStringRecordsReq;
+import org.apache.iotdb.service.rpc.thrift.TSInsertStringSinglePointReq;
 import org.apache.iotdb.service.rpc.thrift.TSInsertTabletReq;
 import org.apache.iotdb.service.rpc.thrift.TSInsertTabletsReq;
 import org.apache.iotdb.service.rpc.thrift.TSProtocolVersion;
@@ -828,6 +830,62 @@ public class Session {
     return request;
   }
 
+  public void insertStringSinglePoint(String deviceId, long time, String measurement, String value)
+      throws IoTDBConnectionException, StatementExecutionException {
+    TSInsertStringSinglePointReq request =
+        genTSInsertStringSinglePointReq(deviceId, time, measurement, value);
+    insertStringSinglePoint(deviceId, request);
+  }
+
+  private TSInsertStringSinglePointReq genTSInsertStringSinglePointReq(
+      String deviceId, long time, String measurement, String value) {
+    TSInsertStringSinglePointReq request = new TSInsertStringSinglePointReq();
+    request.setDeviceId(deviceId);
+    request.setTimestamp(time);
+    request.setMeasurement(measurement);
+    request.setValue(value);
+    return request;
+  }
+
+  public void insertSinglePoint(
+      String deviceId, long time, String measurement, TSDataType type, Object value)
+      throws IoTDBConnectionException, StatementExecutionException {
+    TSInsertSinglePointReq request =
+        genTSInsertSinglePointReq(deviceId, time, measurement, type, value);
+    insertSinglePoint(deviceId, request);
+  }
+
+  private void insertSinglePoint(String deviceId, TSInsertSinglePointReq request)
+      throws IoTDBConnectionException, StatementExecutionException {
+    try {
+      getSessionConnection(deviceId).insertSinglePoint(request);
+    } catch (RedirectException e) {
+      handleRedirection(deviceId, e.getEndPoint());
+    }
+  }
+
+  private void insertStringSinglePoint(String deviceId, TSInsertStringSinglePointReq request)
+      throws IoTDBConnectionException, StatementExecutionException {
+    try {
+      getSessionConnection(deviceId).insertStringSinglePoint(request);
+    } catch (RedirectException e) {
+      handleRedirection(deviceId, e.getEndPoint());
+    }
+  }
+
+  private TSInsertSinglePointReq genTSInsertSinglePointReq(
+      String deviceId, long time, String measurement, TSDataType type, Object value)
+      throws IoTDBConnectionException {
+    TSInsertSinglePointReq request = new TSInsertSinglePointReq();
+    request.setDeviceId(deviceId);
+    request.setTimestamp(time);
+    request.setMeasurement(measurement);
+    ByteBuffer buffer = ByteBuffer.allocate(calculateLength(type, value));
+    putValue(type, value, buffer);
+    request.setValue(buffer);
+    return request;
+  }
+
   /**
    * Insert multiple rows, which can reduce the overhead of network. This method is just like jdbc
    * executeBatch, we pack some insert request in batch and send them to server. If you want improve
@@ -1511,6 +1569,76 @@ public class Session {
       }
     }
     return res;
+  }
+
+  private int calculateLength(TSDataType type, Object value) throws IoTDBConnectionException {
+    int res = 0;
+    // types
+    res += Byte.BYTES;
+    switch (type) {
+      case BOOLEAN:
+        res += 1;
+        break;
+      case INT32:
+        res += Integer.BYTES;
+        break;
+      case INT64:
+        res += Long.BYTES;
+        break;
+      case FLOAT:
+        res += Float.BYTES;
+        break;
+      case DOUBLE:
+        res += Double.BYTES;
+        break;
+      case TEXT:
+        res += Integer.BYTES;
+        res += ((String) value).getBytes(TSFileConfig.STRING_CHARSET).length;
+        break;
+      default:
+        throw new IoTDBConnectionException(MSG_UNSUPPORTED_DATA_TYPE + type);
+    }
+
+    return res;
+  }
+
+  /**
+   * put value in buffer
+   *
+   * <p>// * @param types types list // * @param values values list
+   *
+   * @param buffer buffer to insert
+   * @throws IoTDBConnectionException
+   */
+  private void putValue(TSDataType type, Object value, ByteBuffer buffer)
+      throws IoTDBConnectionException {
+    ReadWriteIOUtils.write(type, buffer);
+    switch (type) {
+      case BOOLEAN:
+        ReadWriteIOUtils.write((Boolean) value, buffer);
+        break;
+      case INT32:
+        ReadWriteIOUtils.write((Integer) value, buffer);
+        break;
+      case INT64:
+        ReadWriteIOUtils.write((Long) value, buffer);
+        break;
+      case FLOAT:
+        ReadWriteIOUtils.write((Float) value, buffer);
+        break;
+      case DOUBLE:
+        ReadWriteIOUtils.write((Double) value, buffer);
+        break;
+      case TEXT:
+        byte[] bytes = ((String) value).getBytes(TSFileConfig.STRING_CHARSET);
+        ReadWriteIOUtils.write(bytes.length, buffer);
+        buffer.put(bytes);
+        break;
+      default:
+        throw new IoTDBConnectionException(MSG_UNSUPPORTED_DATA_TYPE + type);
+    }
+
+    buffer.flip();
   }
 
   /**

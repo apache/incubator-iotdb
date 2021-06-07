@@ -52,6 +52,7 @@ import org.apache.iotdb.db.monitor.StatMonitor;
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowsOfOneDevicePlan;
+import org.apache.iotdb.db.qp.physical.crud.InsertSinglePointPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.QueryFileManager;
@@ -578,6 +579,33 @@ public class StorageEngine implements IService {
     }
   }
 
+  /**
+   * insert an InsertSinglePointPlan to a storage group.
+   *
+   * @param insertSinglePointPlan physical plan of insertion
+   */
+  public void insertSinglePoint(InsertSinglePointPlan insertSinglePointPlan)
+      throws StorageEngineException {
+
+    StorageGroupProcessor storageGroupProcessor = getProcessor(insertSinglePointPlan.getDeviceId());
+
+    try {
+      storageGroupProcessor.InsertSinglePoint(insertSinglePointPlan);
+      if (config.isEnableStatMonitor()) {
+        try {
+          StorageGroupMNode storageGroupMNode =
+              IoTDB.metaManager.getStorageGroupNodeByPath(insertSinglePointPlan.getDeviceId());
+          updateMonitorStatistics(
+              processorMap.get(storageGroupMNode.getPartialPath()), insertSinglePointPlan);
+        } catch (MetadataException e) {
+          logger.error("failed to record status", e);
+        }
+      }
+    } catch (WriteProcessException e) {
+      throw new StorageEngineException(e);
+    }
+  }
+
   /** insert a InsertTabletPlan to a storage group */
   public void insertTablet(InsertTabletPlan insertTabletPlan)
       throws StorageEngineException, BatchProcessException {
@@ -624,6 +652,18 @@ public class StorageEngine implements IService {
     virtualStorageGroupManager.updateMonitorSeriesValue(successPointsNum);
     // update to global statistics
     monitor.updateStatGlobalValue(successPointsNum);
+  }
+
+  private void updateMonitorStatistics(
+      VirtualStorageGroupManager virtualStorageGroupManager,
+      InsertSinglePointPlan insertSinglePointPlan) {
+    StatMonitor monitor = StatMonitor.getInstance();
+    //  Only one point is involved, so if getFailedMeasurementNumber = 1  success point is 0
+    int isSuccessPoint = (insertSinglePointPlan.getFailedMeasurementNumber() == 1) ? 0 : 1;
+    // update to storage group statistics
+    virtualStorageGroupManager.updateMonitorSeriesValue(isSuccessPoint);
+    // update to global statistics
+    monitor.updateStatGlobalValue(isSuccessPoint);
   }
 
   /** flush command Sync asyncCloseOneProcessor all file node processors. */

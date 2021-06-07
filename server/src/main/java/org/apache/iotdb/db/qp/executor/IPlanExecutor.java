@@ -30,6 +30,7 @@ import org.apache.iotdb.db.qp.physical.crud.InsertMultiTabletPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowsOfOneDevicePlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowsPlan;
+import org.apache.iotdb.db.qp.physical.crud.InsertSinglePointPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.tsfile.exception.filter.QueryFilterOptimizationException;
@@ -124,4 +125,11 @@ public interface IPlanExecutor {
    * @throws QueryProcessException when some of the rows failed
    */
   void insertTablet(InsertMultiTabletPlan insertMultiTabletPlan) throws QueryProcessException;
+
+  /**
+   * execute insert command and return whether the operator is successful.
+   *
+   * @param insertSinglePointPlan physical insert rows plan, which contains multi insertRowPlans
+   */
+  void insertSinglePoint(InsertSinglePointPlan insertSinglePointPlan) throws QueryProcessException;
 }

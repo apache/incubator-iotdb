@@ -49,6 +49,7 @@ import org.apache.iotdb.db.qp.physical.PhysicalPlan;
 import org.apache.iotdb.db.qp.physical.crud.CreateTemplatePlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowPlan;
+import org.apache.iotdb.db.qp.physical.crud.InsertSinglePointPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
 import org.apache.iotdb.db.qp.physical.crud.SetDeviceTemplatePlan;
 import org.apache.iotdb.db.qp.physical.sys.AutoCreateDeviceMNodePlan;
@@ -2314,6 +2315,125 @@ public class MManager {
               "Only support insert and insertTablet, plan is [%s]", plan.getOperatorType()));
     }
     return dataType;
+  }
+
+  /** get schema for device. Attention!!! Only support insertSinglePointPlan */
+  @SuppressWarnings("squid:S3776") // Suppress high Cognitive Complexity warning
+  public MNode getSeriesSchemasAndReadLockDevice(InsertSinglePointPlan plan)
+      throws MetadataException, IOException {
+
+    PartialPath deviceId = plan.getDeviceId();
+    String measurement = plan.getMeasurement();
+    MeasurementMNode measurementMNode = null;
+
+    // 1. get device node
+    Pair<MNode, Template> deviceMNode = getDeviceNodeWithAutoCreate(deviceId);
+    if (deviceMNode.left.getDeviceTemplate() != null) {
+      deviceMNode.right = deviceMNode.left.getDeviceTemplate();
+    }
+
+    // 2. get schema of  measurement
+    // if do not have measurement
+
+    try {
+      boolean isVector = false;
+      String firstMeasurementOfVector = null;
+      if (measurement.contains("(") && measurement.contains(",")) {
+        isVector = true;
+        firstMeasurementOfVector = measurement.replace("(", "").replace(")", "").split(",")[0];
+      }
+
+      MNode child = getMNode(deviceMNode.left, isVector ? firstMeasurementOfVector : measurement);
+      if (child instanceof MeasurementMNode) {
+        measurementMNode = (MeasurementMNode) child;
+      } else if (child instanceof StorageGroupMNode) {
+        throw new PathAlreadyExistException(deviceId + PATH_SEPARATOR + measurement);
+      } else if ((measurementMNode = findTemplate(deviceMNode, measurement)) != null) {
+        // empty
+      } else {
+        if (!config.isAutoCreateSchemaEnabled()) {
+          throw new PathNotExistException(deviceId + PATH_SEPARATOR + measurement);
+        } else {
+          if (plan instanceof InsertSinglePointPlan) {
+            List<String> measurements =
+                Arrays.asList(measurement.replace("(", "").replace(")", "").split(","));
+            if (measurements.size() == 1) {
+              internalCreateTimeseries(deviceId.concatNode(measurement), plan.getDataType());
+              measurementMNode = (MeasurementMNode) deviceMNode.left.getChild(measurement);
+
+            } else {
+              List<TSDataType> dataTypes = new ArrayList<>();
+              for (int j = 0; j < measurements.size(); j++) {
+                dataTypes.add(plan.getDataType());
+              }
+              internalAlignedCreateTimeseries(deviceId, measurements, dataTypes);
+              measurementMNode = (MeasurementMNode) deviceMNode.left.getChild(measurements.get(0));
+            }
+          } else {
+            throw new MetadataException(
+                String.format(
+                    "Only support insertRow and insertTablet, plan is [%s]",
+                    plan.getOperatorType()));
+          }
+        }
+      }
+
+      // check type is match
+      boolean mismatch = false;
+      TSDataType insertDataType = null;
+      if (plan instanceof InsertSinglePointPlan) {
+        if (measurement.contains("(") && measurement.contains(",")) {
+          for (int j = 0; j < measurement.split(",").length; j++) {
+            TSDataType dataTypeInNode =
+                measurementMNode.getSchema().getValueTSDataTypeList().get(j);
+            insertDataType = plan.getDataType();
+            if (insertDataType == null) {
+              insertDataType = dataTypeInNode;
+            }
+            if (dataTypeInNode != insertDataType) {
+              mismatch = true;
+              insertDataType = dataTypeInNode;
+              break;
+            }
+          }
+        } else {
+          insertDataType = measurementMNode.getSchema().getType();
+          mismatch = measurementMNode.getSchema().getType() != insertDataType;
+        }
+      }
+
+      if (mismatch) {
+        logger.warn(
+            "DataType mismatch, Insert measurement {} type {}, metadata tree type {}",
+            measurement,
+            insertDataType,
+            measurementMNode.getSchema().getType());
+        DataTypeMismatchException mismatchException =
+            new DataTypeMismatchException(
+                measurement, insertDataType, measurementMNode.getSchema().getType());
+        if (!config.isEnablePartialInsert()) {
+          throw mismatchException;
+        } else {
+          // mark failed measurement
+          plan.markFailedMeasurementInsertion(mismatchException);
+        }
+      }
+
+      // set measurementName instead of alias
+      measurement = measurementMNode.getName();
+    } catch (MetadataException e) {
+      logger.warn(
+          "meet error when check {}.{}, message: {}", deviceId, measurement, e.getMessage());
+      if (config.isEnablePartialInsert()) {
+        // mark failed measurement
+        plan.markFailedMeasurementInsertion(e);
+      } else {
+        throw e;
+      }
+    }
+    plan.setMeasurementMNode(measurementMNode);
+
+    return deviceMNode.left;
   }
 
   public MNode getMNode(MNode deviceMNode, String measurementName) {

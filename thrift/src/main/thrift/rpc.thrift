@@ -246,6 +246,22 @@ struct TSInsertRecordsOfOneDeviceReq {
     5: required list<i64> timestamps
 }
 
+struct TSInsertSinglePointReq {
+  1: required i64 sessionId
+  2: required string deviceId
+  3: required string measurement
+  4: required binary value
+  5: required i64 timestamp
+}
+
+struct TSInsertStringSinglePointReq {
+  1: required i64 sessionId
+  2: required string deviceId
+  3: required string measurement
+  4: required string value
+  5: required i64 timestamp
+}
+
 struct TSInsertStringRecordsReq {
   1: required i64 sessionId
   2: required list<string> deviceIds
@@ -385,6 +401,10 @@ service TSIService {
 
   TSStatus insertRecords(1:TSInsertRecordsReq req);
 
+  TSStatus insertSinglePoint(1:TSInsertSinglePointReq req);
+
+  TSStatus insertStringSinglePoint(1:TSInsertStringSinglePointReq req);
+
   TSStatus insertRecordsOfOneDevice(1:TSInsertRecordsOfOneDeviceReq req);
 
   TSStatus insertStringRecords(1:TSInsertStringRecordsReq req);
@@ -398,6 +418,10 @@ service TSIService {
   TSStatus testInsertStringRecord(1:TSInsertStringRecordReq req);
 
   TSStatus testInsertRecords(1:TSInsertRecordsReq req);
+
+  TSStatus testInsertSinglePoint(1:TSInsertSinglePointReq req);
+
+  TSStatus testInsertStringSinglePoint(1:TSInsertStringSinglePointReq req);
 
   TSStatus testInsertRecordsOfOneDevice(1:TSInsertRecordsOfOneDeviceReq req);
 

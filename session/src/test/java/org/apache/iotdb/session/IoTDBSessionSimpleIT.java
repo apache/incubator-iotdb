@@ -726,6 +726,35 @@ public class IoTDBSessionSimpleIT {
     session.close();
   }
 
+  @Test
+  public void testInsertSinglePoint() throws IoTDBConnectionException, StatementExecutionException {
+
+    session = new Session("127.0.0.1", 6667, "root", "root");
+    session.open();
+
+    String deviceId = "root.sg1.d1";
+    List<String> measurements = new ArrayList<>();
+    measurements.add("s1 ");
+
+    session.createTimeseries(
+        "root.sg1.d1.s1", TSDataType.INT64, TSEncoding.RLE, CompressionType.SNAPPY);
+    session.insertStringSinglePoint(deviceId, 1000L, "s1", "1000");
+    session.insertSinglePoint(deviceId, 1005L, "s1", TSDataType.INT64, 1005L);
+
+    SessionDataSet dataSet = session.executeQueryStatement("select * from root.sg1.d1");
+
+    List<String> Expected = new ArrayList<>();
+    Expected.add("1000");
+    Expected.add("1005");
+    List<String> Actual = new ArrayList<>();
+    while (dataSet.hasNext()) {
+      Actual.add(dataSet.next().getFields().get(0).toString());
+    }
+    assertEquals(Expected, Actual);
+
+    session.close();
+  }
+
   private void checkResult(Session session)
       throws StatementExecutionException, IoTDBConnectionException {
     SessionDataSet dataSet = session.executeQueryStatement("select * from root.sg.d1");

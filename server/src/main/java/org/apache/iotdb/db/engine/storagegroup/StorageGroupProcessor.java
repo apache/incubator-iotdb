@@ -60,6 +60,7 @@ import org.apache.iotdb.db.metadata.mnode.MeasurementMNode;
 import org.apache.iotdb.db.qp.physical.crud.DeletePlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowsOfOneDevicePlan;
+import org.apache.iotdb.db.qp.physical.crud.InsertSinglePointPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.QueryFileManager;
@@ -832,6 +833,43 @@ public class StorageGroupProcessor {
     }
   }
 
+  public void InsertSinglePoint(InsertSinglePointPlan insertSinglePointPlan)
+      throws WriteProcessException {
+    // reject insertions that are out of ttl
+    if (!isAlive(insertSinglePointPlan.getTime())) {
+      throw new OutOfTTLException(
+          insertSinglePointPlan.getTime(), (System.currentTimeMillis() - dataTTL));
+    }
+
+    writeLock();
+    try {
+      // init map
+      long timePartitionId = StorageEngine.getTimePartition(insertSinglePointPlan.getTime());
+
+      partitionLatestFlushedTimeForEachDevice.computeIfAbsent(
+          timePartitionId, id -> new HashMap<>());
+
+      boolean isSequence =
+          insertSinglePointPlan.getTime()
+              > partitionLatestFlushedTimeForEachDevice
+                  .get(timePartitionId)
+                  .getOrDefault(insertSinglePointPlan.getDeviceId().getFullPath(), Long.MIN_VALUE);
+
+      // is unsequence and user set config to discard out of order data
+      if (!isSequence
+          && IoTDBDescriptor.getInstance().getConfig().isEnableDiscardOutOfOrderData()) {
+        return;
+      }
+
+      latestTimeForEachDevice.computeIfAbsent(timePartitionId, l -> new HashMap<>());
+      // insert to sequence or unSequence file
+      insertSinglePointToTsFileProcessor(insertSinglePointPlan, isSequence, timePartitionId);
+
+    } finally {
+      writeUnlock();
+    }
+  }
+
   /**
    * Insert a tablet (rows belonging to the same devices) into this storage group.
    *
@@ -1090,6 +1128,38 @@ public class StorageGroupProcessor {
     }
   }
 
+  private void insertSinglePointToTsFileProcessor(
+      InsertSinglePointPlan insertSinglePointPlan, boolean sequence, long timePartitionId)
+      throws WriteProcessException {
+    TsFileProcessor tsFileProcessor = getOrCreateTsFileProcessor(timePartitionId, sequence);
+    if (tsFileProcessor == null) {
+      return;
+    }
+
+    tsFileProcessor.InsertSinglePoint(insertSinglePointPlan);
+
+    // try to update the latest time of the device of this tsRecord
+    if (latestTimeForEachDevice
+            .get(timePartitionId)
+            .getOrDefault(insertSinglePointPlan.getDeviceId().getFullPath(), Long.MIN_VALUE)
+        < insertSinglePointPlan.getTime()) {
+      latestTimeForEachDevice
+          .get(timePartitionId)
+          .put(insertSinglePointPlan.getDeviceId().getFullPath(), insertSinglePointPlan.getTime());
+    }
+
+    long globalLatestFlushTime =
+        globalLatestFlushedTimeForEachDevice.getOrDefault(
+            insertSinglePointPlan.getDeviceId().getFullPath(), Long.MIN_VALUE);
+
+    tryToUpdateInsertSinglePointLastCache(insertSinglePointPlan, globalLatestFlushTime);
+
+    // check memtable size and may asyncTryToFlush the work memtable
+    if (tsFileProcessor.shouldFlush()) {
+      fileFlushPolicy.apply(this, tsFileProcessor, sequence);
+    }
+  }
+
   private void tryToUpdateInsertLastCache(InsertRowPlan plan, Long latestFlushedTime) {
     if (!IoTDBDescriptor.getInstance().getConfig().isLastCacheEnabled()) {
       return;
@@ -1119,6 +1189,31 @@ public class StorageGroupProcessor {
         }
         columnIndex++;
       }
+    }
+  }
+
+  private void tryToUpdateInsertSinglePointLastCache(
+      InsertSinglePointPlan plan, Long latestFlushedTime) {
+    if (!IoTDBDescriptor.getInstance().getConfig().isLastCacheEnabled()) {
+      return;
+    }
+    MeasurementMNode mNode = plan.getMeasurementMNode();
+    if (plan.getValue() == null) {
+      return;
+    }
+    // Update cached last value with high priority
+    if (mNode != null) {
+      // in stand alone version, the seriesPath is not needed, just use measurementMNodes[i] to
+      // update last cache
+      IoTDB.metaManager.updateLastCache(
+          null, plan.composeTimeValuePair(), true, latestFlushedTime, mNode);
+    } else {
+      IoTDB.metaManager.updateLastCache(
+          plan.getDeviceId().concatNode(plan.getMeasurement()),
+          plan.composeTimeValuePair(),
+          true,
+          latestFlushedTime,
+          null);
     }
   }
 

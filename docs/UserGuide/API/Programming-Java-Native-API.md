@@ -130,6 +130,18 @@ void deleteData(List<String> paths, long time)
 void insertRecord(String deviceId, long time, List<String> measurements, List<String> values)
 ```
 
+* Insert single point，which contains one measurement value of a device at a timestamp.  With type info the server has no need to do type inference, which leads a better performance
+
+```java
+void insertSinglePoint(String deviceId, long time, String measurement, TSDataType type, String value)
+```
+
+* Insert single point，which contains one measurement string value of a device at a timestamp. Without type info the server has to do type inference, which may cost some time
+
+```java
+void insertStringSinglePoint(String deviceId, long time, String measurement, String value)
+```
+
 * Insert a Tablet，which is multiple rows of a device, each row has the same measurements
 
 ```java

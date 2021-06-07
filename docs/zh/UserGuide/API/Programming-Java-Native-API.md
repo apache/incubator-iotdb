@@ -158,6 +158,18 @@ void insertRecord(String deviceId, long time, List<String> measurements,
    List<TSDataType> types, List<Object> values)
 ```
 
+* 插入单个点，一个 Record 是一个设备一个时间戳下单个测点的数据。提供数据类型后，服务器不需要做类型推断，可以提高性能
+
+```java
+void insertSinglePoint(String deviceId, long time, String measurement, TSDataType type, String value)
+```
+
+* 插入单个点，一个 Record 是一个设备一个时间戳下单个测点的数据。服务器需要做类型推断，可能会有额外耗时
+
+```java
+void insertStringSinglePoint(String deviceId, long time, String measurement, String value)
+```
+
 * 插入多个 Record。提供数据类型后，服务器不需要做类型推断，可以提高性能
 
 ```java

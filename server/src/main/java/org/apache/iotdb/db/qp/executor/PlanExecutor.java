@@ -70,6 +70,7 @@ import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowsOfOneDevicePlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowsPlan;
+import org.apache.iotdb.db.qp.physical.crud.InsertSinglePointPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
 import org.apache.iotdb.db.qp.physical.crud.LastQueryPlan;
 import org.apache.iotdb.db.qp.physical.crud.QueryIndexPlan;
@@ -237,6 +238,9 @@ public class PlanExecutor implements IPlanExecutor {
         return true;
       case INSERT:
         insert((InsertRowPlan) plan);
+        return true;
+      case INSERTSINGLEPOINT:
+        insertSinglePoint((InsertSinglePointPlan) plan);
         return true;
       case BATCH_INSERT_ONE_DEVICE:
         insert((InsertRowsOfOneDevicePlan) plan);
@@ -1184,6 +1188,11 @@ public class PlanExecutor implements IPlanExecutor {
     }
   }
 
+  protected MNode getSeriesSchemas(InsertSinglePointPlan insertSinglePointPlan)
+      throws MetadataException, IOException {
+    return IoTDB.metaManager.getSeriesSchemasAndReadLockDevice(insertSinglePointPlan);
+  }
+
   private void checkFailedMeasurments(InsertPlan plan)
       throws PathNotExistException, StorageEngineException {
     // check if all path not exist exceptions
@@ -1207,6 +1216,31 @@ public class PlanExecutor implements IPlanExecutor {
           INSERT_MEASUREMENTS_FAILED_MESSAGE
               + plan.getFailedMeasurements()
               + (!exceptions.isEmpty() ? (" caused by " + exceptions.get(0).getMessage()) : ""));
+    }
+  }
+
+  private void checkFailedMeasurments(InsertSinglePointPlan plan)
+      throws PathNotExistException, StorageEngineException {
+    // check if all path not exist exceptions
+    String failedPath = plan.getFailedMeasurement();
+    Exception exception = plan.getFailedException();
+    boolean isPathNotExistException = true;
+
+    Throwable curException = exception;
+    while (curException.getCause() != null) {
+      curException = curException.getCause();
+    }
+    if (!(curException instanceof PathNotExistException)) {
+      isPathNotExistException = false;
+    }
+
+    if (isPathNotExistException) {
+      throw new PathNotExistException(failedPath);
+    } else {
+      throw new StorageEngineException(
+          INSERT_MEASUREMENTS_FAILED_MESSAGE
+              + plan.getFailedMeasurement()
+              + (!(exception == null) ? (" caused by " + exception.getMessage()) : ""));
     }
   }
 
@@ -1290,6 +1324,30 @@ public class PlanExecutor implements IPlanExecutor {
     }
     if (!plan.getResults().isEmpty()) {
       throw new BatchProcessException(plan.getFailingStatus());
+    }
+  }
+
+  @Override
+  public void insertSinglePoint(InsertSinglePointPlan insertSinglePointPlan)
+      throws QueryProcessException {
+    try {
+      // check whether types are match
+      getSeriesSchemas(insertSinglePointPlan);
+      insertSinglePointPlan.transferType();
+      StorageEngine.getInstance().insertSinglePoint(insertSinglePointPlan);
+      if (insertSinglePointPlan.getFailedMeasurement() != null) {
+        checkFailedMeasurments(insertSinglePointPlan);
+      }
+    } catch (StorageEngineException e) {
+      if (IoTDBDescriptor.getInstance().getConfig().isEnableStatMonitor()) {
+        StatMonitor.getInstance().updateFailedStatValue();
+      }
+      throw new QueryProcessException(e);
+    } catch (Exception e) {
+      // update failed statistics
+      if (IoTDBDescriptor.getInstance().getConfig().isEnableStatMonitor()) {
+        StatMonitor.getInstance().updateFailedStatValue();
+      }
     }
   }
 
