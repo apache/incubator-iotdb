@@ -52,6 +52,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -469,6 +470,31 @@ public class TsFileIOWriter {
           chunkNum--;
         } else {
           startTimeIdxes.put(path, startTimeIdx + 1);
+        }
+      }
+      if (chunkNum == 0) {
+        chunkGroupMetaDataIterator.remove();
+      }
+    }
+  }
+
+  /** Remove such ChunkMetadata if heavy hitters has merged */
+  public void filterChunksHitter(Set<Path> mergedPaths) {
+    Iterator<ChunkGroupMetadata> chunkGroupMetaDataIterator = chunkGroupMetadataList.iterator();
+    while (chunkGroupMetaDataIterator.hasNext()) {
+      ChunkGroupMetadata chunkGroupMetaData = chunkGroupMetaDataIterator.next();
+      String deviceId = chunkGroupMetaData.getDevice();
+      int chunkNum = chunkGroupMetaData.getChunkMetadataList().size();
+      Iterator<ChunkMetadata> chunkMetaDataIterator =
+          chunkGroupMetaData.getChunkMetadataList().iterator();
+      while (chunkMetaDataIterator.hasNext()) {
+        ChunkMetadata chunkMetaData = chunkMetaDataIterator.next();
+        Path path = new Path(deviceId, chunkMetaData.getMeasurementUid());
+
+        boolean chunkInValid = mergedPaths.contains(path);
+        if (chunkInValid) {
+          chunkMetaDataIterator.remove();
+          chunkNum--;
         }
       }
       if (chunkNum == 0) {

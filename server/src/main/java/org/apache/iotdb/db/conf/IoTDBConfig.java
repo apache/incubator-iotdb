@@ -20,6 +20,7 @@ package org.apache.iotdb.db.conf;
 
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
+import org.apache.iotdb.db.engine.compaction.heavyhitter.QueryHitterStrategy;
 import org.apache.iotdb.db.engine.merge.selector.MergeFileStrategy;
 import org.apache.iotdb.db.engine.storagegroup.timeindex.TimeIndexLevel;
 import org.apache.iotdb.db.exception.LoadConfigurationException;
@@ -314,6 +315,15 @@ public class IoTDBConfig {
 
   /** LEVEL_COMPACTION, NO_COMPACTION */
   private CompactionStrategy compactionStrategy = CompactionStrategy.LEVEL_COMPACTION;
+
+  /** Query hitter strategy */
+  private QueryHitterStrategy queryHitterStrategy = QueryHitterStrategy.SPACE_SAVING_STRATEGY;
+
+  /** max query paths hitter contains */
+  private int maxHitterNum = 5000;
+
+  /** Counter ratio of the query hitter */
+  private int counterRatio = 2;
 
   /**
    * Works when the compaction_strategy is LEVEL_COMPACTION. Whether to merge unseq files into seq
@@ -1482,6 +1492,30 @@ public class IoTDBConfig {
 
   public void setCompactionStrategy(CompactionStrategy compactionStrategy) {
     this.compactionStrategy = compactionStrategy;
+  }
+
+  public QueryHitterStrategy getQueryHitterStrategy() {
+    return queryHitterStrategy;
+  }
+
+  public void setQueryHitterStrategy(QueryHitterStrategy queryHitterStrategy) {
+    this.queryHitterStrategy = queryHitterStrategy;
+  }
+
+  public int getMaxHitterNum() {
+    return maxHitterNum;
+  }
+
+  public void setMaxHitterNum(int maxHitterNum) {
+    this.maxHitterNum = maxHitterNum;
+  }
+
+  public int getCounterRatio() {
+    return counterRatio;
+  }
+
+  public void setCounterRatio(int counterRatio) {
+    this.counterRatio = counterRatio;
   }
 
   public boolean isEnableUnseqCompaction() {

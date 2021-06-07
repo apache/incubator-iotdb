@@ -20,6 +20,7 @@ package org.apache.iotdb.db.conf;
 
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
+import org.apache.iotdb.db.engine.compaction.heavyhitter.QueryHitterStrategy;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.utils.FilePathUtils;
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
@@ -353,6 +354,19 @@ public class IoTDBDescriptor {
               properties.getProperty(
                   "unseq_file_num_in_each_level",
                   Integer.toString(conf.getUnseqFileNumInEachLevel()))));
+
+      conf.setQueryHitterStrategy(
+          QueryHitterStrategy.valueOf(
+              properties.getProperty(
+                  "query_hitter_strategy", conf.getQueryHitterStrategy().toString())));
+
+      conf.setMaxHitterNum(
+          Integer.parseInt(
+              properties.getProperty("max_hitter_num", Integer.toString(conf.getMaxHitterNum()))));
+
+      conf.setCounterRatio(
+          Integer.parseInt(
+              properties.getProperty("counter_ratio", Integer.toString(conf.getCounterRatio()))));
 
       conf.setQueryTimeoutThreshold(
           Integer.parseInt(

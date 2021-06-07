@@ -19,6 +19,9 @@
 package org.apache.iotdb.db.qp.strategy;
 
 import org.apache.iotdb.db.auth.AuthException;
+import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
+import org.apache.iotdb.db.engine.compaction.heavyhitter.QueryHitterManager;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.query.LogicalOperatorException;
 import org.apache.iotdb.db.exception.query.LogicalOptimizeException;
@@ -626,6 +629,16 @@ public class PhysicalGenerator {
       queryPlan.setDataTypes(dataTypes);
 
       queryPlan.deduplicate(this);
+
+      // estimate time series' query frequency
+      if (IoTDBDescriptor.getInstance().getConfig().getCompactionStrategy()
+              == CompactionStrategy.HITTER_LEVEL_COMPACTION
+          && queryPlan instanceof RawDataQueryPlan) {
+        QueryHitterManager.getInstance()
+            .submitTask(
+                QueryHitterManager.getInstance()
+                .new HitterTask(((RawDataQueryPlan) queryPlan).getDeduplicatedPaths()));
+      }
     } catch (MetadataException e) {
       throw new QueryProcessException(e);
     }

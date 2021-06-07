@@ -178,7 +178,7 @@ abstract class LevelCompactionTest {
     prepareFile(tsFileResource, 0, ptNum * unseqFileNum, 20000);
   }
 
-  private void removeFiles() throws IOException {
+  void removeFiles() throws IOException {
     for (TsFileResource tsFileResource : seqResources) {
       if (tsFileResource.getTsFile().exists()) {
         tsFileResource.remove();

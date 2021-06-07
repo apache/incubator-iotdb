@@ -35,6 +35,7 @@ public enum ThreadName {
   FLUSH_SERVICE("Flush"),
   FLUSH_SUB_TASK_SERVICE("Flush-SubTask"),
   COMPACTION_SERVICE("Compaction"),
+  HITTER_SERVICE("Hitter"),
   WAL_DAEMON("WAL-Sync"),
   WAL_FORCE_DAEMON("WAL-Force"),
   INDEX_SERVICE("Index"),

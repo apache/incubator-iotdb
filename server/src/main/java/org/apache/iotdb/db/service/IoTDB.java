@@ -26,6 +26,8 @@ import org.apache.iotdb.db.cost.statistic.Measurement;
 import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.cache.CacheHitRatioMonitor;
 import org.apache.iotdb.db.engine.compaction.CompactionMergeTaskPoolManager;
+import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
+import org.apache.iotdb.db.engine.compaction.heavyhitter.QueryHitterManager;
 import org.apache.iotdb.db.engine.flush.FlushManager;
 import org.apache.iotdb.db.engine.merge.manage.MergeManager;
 import org.apache.iotdb.db.engine.trigger.service.TriggerRegistrationService;
@@ -116,6 +118,10 @@ public class IoTDB implements IoTDBMBean {
     registerManager.register(UDFRegistrationService.getInstance());
     registerManager.register(TriggerRegistrationService.getInstance());
 
+    if (IoTDBDescriptor.getInstance().getConfig().getCompactionStrategy()
+        == CompactionStrategy.HITTER_LEVEL_COMPACTION) {
+      registerManager.register(QueryHitterManager.getInstance());
+    }
     // in cluster mode, RPC service is not enabled.
     if (IoTDBDescriptor.getInstance().getConfig().isEnableRpcService()) {
       registerManager.register(RPCService.getInstance());
