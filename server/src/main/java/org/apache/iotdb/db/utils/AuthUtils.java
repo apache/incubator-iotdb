@@ -135,9 +135,11 @@ public class AuthUtils {
       switch (type) {
         case READ_TIMESERIES:
         case SET_STORAGE_GROUP:
+        case DELETE_STORAGE_GROUP:
         case CREATE_TIMESERIES:
         case DELETE_TIMESERIES:
         case INSERT_TIMESERIES:
+        case ALTER_TIMESERIES:
           return;
         default:
           throw new AuthException(
@@ -147,9 +149,11 @@ public class AuthUtils {
       switch (type) {
         case READ_TIMESERIES:
         case SET_STORAGE_GROUP:
+        case DELETE_STORAGE_GROUP:
         case CREATE_TIMESERIES:
         case DELETE_TIMESERIES:
         case INSERT_TIMESERIES:
+        case ALTER_TIMESERIES:
           validatePath(path);
           return;
         default:

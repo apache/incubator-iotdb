@@ -117,8 +117,14 @@ public class AuthorityChecker {
         return PrivilegeType.REVOKE_USER_ROLE.ordinal();
       case SET_STORAGE_GROUP:
         return PrivilegeType.SET_STORAGE_GROUP.ordinal();
+      case DELETE_STORAGE_GROUP:
+        return PrivilegeType.DELETE_STORAGE_GROUP.ordinal();
       case CREATE_TIMESERIES:
+      case CREATE_ALIGNED_TIMESERIES:
+      case CREATE_MULTI_TIMESERIES:
         return PrivilegeType.CREATE_TIMESERIES.ordinal();
+      case ALTER_TIMESERIES:
+        return PrivilegeType.ALTER_TIMESERIES.ordinal();
       case DELETE_TIMESERIES:
       case DELETE:
       case DROP_INDEX:
@@ -133,8 +139,12 @@ public class AuthorityChecker {
       case FILL:
       case GROUP_BY_FILL:
         return PrivilegeType.READ_TIMESERIES.ordinal();
-      case INSERT:
       case LOAD_DATA:
+      case INSERT:
+      case BATCH_INSERT:
+      case BATCH_INSERT_ROWS:
+      case BATCH_INSERT_ONE_DEVICE:
+      case MULTI_BATCH_INSERT:
       case CREATE_INDEX:
         return PrivilegeType.INSERT_TIMESERIES.ordinal();
       case LIST_ROLE:
@@ -157,6 +167,8 @@ public class AuthorityChecker {
         return PrivilegeType.START_TRIGGER.ordinal();
       case STOP_TRIGGER:
         return PrivilegeType.STOP_TRIGGER.ordinal();
+      case TTL:
+        return PrivilegeType.TTL.ordinal();
       default:
         logger.error("Unrecognizable operator type ({}) for AuthorityChecker.", type);
         return -1;
