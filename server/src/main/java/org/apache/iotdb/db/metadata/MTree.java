@@ -1838,8 +1838,8 @@ public class MTree implements Serializable {
 
   /**
    * Try determining the storage group using the children of a mNode. If one child is a storage
-   * group node, put a storageGroupName-fullPath pair into paths. Otherwise put the children that
-   * match the path into the queue and discard other children.
+   * group node, put a fullStorageGroupName-fullPath pair into paths. Otherwise put the children
+   * that match the path into the queue and discard other children.
    */
   private void determineStorageGroup(
       int depth,

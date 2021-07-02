@@ -74,15 +74,12 @@ public class IoTDBGroupByUnseqIT {
         "flush"
       };
 
-  private boolean enableUnseqCompaction;
   private int maxNumberOfPointsInPage;
 
   @Before
   public void setUp() throws Exception {
     Class.forName(Config.JDBC_DRIVER_NAME);
     EnvironmentUtils.closeStatMonitor();
-    enableUnseqCompaction = IoTDBDescriptor.getInstance().getConfig().isEnableUnseqCompaction();
-    IoTDBDescriptor.getInstance().getConfig().setEnableUnseqCompaction(false);
     maxNumberOfPointsInPage =
         TSFileDescriptor.getInstance().getConfig().getMaxNumberOfPointsInPage();
     TSFileDescriptor.getInstance().getConfig().setMaxNumberOfPointsInPage(4);
@@ -92,7 +89,6 @@ public class IoTDBGroupByUnseqIT {
   @After
   public void tearDown() throws Exception {
     EnvironmentUtils.cleanEnv();
-    IoTDBDescriptor.getInstance().getConfig().setEnableUnseqCompaction(enableUnseqCompaction);
     TSFileDescriptor.getInstance().getConfig().setMaxNumberOfPointsInPage(maxNumberOfPointsInPage);
   }
 

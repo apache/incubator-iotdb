@@ -20,7 +20,6 @@
 package org.apache.iotdb.db.integration;
 
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
 import org.apache.iotdb.db.qp.logical.crud.AggregationQueryOperator;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.jdbc.Config;
@@ -118,9 +117,6 @@ public class IOTDBGroupByIT {
   public void setUp() throws Exception {
     EnvironmentUtils.closeStatMonitor();
     prevPartitionInterval = IoTDBDescriptor.getInstance().getConfig().getPartitionInterval();
-    IoTDBDescriptor.getInstance()
-        .getConfig()
-        .setCompactionStrategy(CompactionStrategy.NO_COMPACTION);
     IoTDBDescriptor.getInstance().getConfig().setPartitionInterval(1000);
     EnvironmentUtils.envSetUp();
     Class.forName(Config.JDBC_DRIVER_NAME);
@@ -131,9 +127,6 @@ public class IOTDBGroupByIT {
   public void tearDown() throws Exception {
     EnvironmentUtils.cleanEnv();
     IoTDBDescriptor.getInstance().getConfig().setPartitionInterval(prevPartitionInterval);
-    IoTDBDescriptor.getInstance()
-        .getConfig()
-        .setCompactionStrategy(CompactionStrategy.LEVEL_COMPACTION);
   }
 
   @Test

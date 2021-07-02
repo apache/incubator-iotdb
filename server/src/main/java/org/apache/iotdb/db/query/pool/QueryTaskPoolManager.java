@@ -22,7 +22,7 @@ package org.apache.iotdb.db.query.pool;
 import org.apache.iotdb.db.concurrent.IoTDBThreadPoolFactory;
 import org.apache.iotdb.db.concurrent.ThreadName;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.engine.flush.pool.AbstractPoolManager;
+import org.apache.iotdb.db.rescon.AbstractPoolManager;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

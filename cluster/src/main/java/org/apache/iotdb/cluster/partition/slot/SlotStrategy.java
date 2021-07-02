@@ -24,7 +24,7 @@ import org.apache.iotdb.tsfile.utils.Murmur128Hash;
 
 import static org.apache.iotdb.cluster.config.ClusterConstant.HASH_SALT;
 
-/** SlotStrategy determines how a {storageGroupName, value} pair is distributed to a slot. */
+/** SlotStrategy determines how a {fullStorageGroupName, value} pair is distributed to a slot. */
 public interface SlotStrategy {
   int calculateSlotByTime(String storageGroupName, long timestamp, int maxSlotNum);
 

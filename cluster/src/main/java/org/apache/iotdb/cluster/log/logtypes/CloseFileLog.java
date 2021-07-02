@@ -90,7 +90,7 @@ public class CloseFileLog extends Log {
   @Override
   public String toString() {
     return "CloseFileLog{"
-        + "storageGroupName='"
+        + "fullStorageGroupName='"
         + storageGroupName
         + '\''
         + ", isSeq="

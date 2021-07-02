@@ -20,7 +20,6 @@
 package org.apache.iotdb.db.integration;
 
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.jdbc.Config;
 
@@ -43,18 +42,12 @@ public class IoTDBMergeIT {
 
   private static final Logger logger = LoggerFactory.getLogger(IoTDBMergeIT.class);
   private long prevPartitionInterval;
-  private CompactionStrategy prevTsFileManagementStrategy;
 
   @Before
   public void setUp() throws Exception {
     EnvironmentUtils.closeStatMonitor();
     prevPartitionInterval = IoTDBDescriptor.getInstance().getConfig().getPartitionInterval();
-    prevTsFileManagementStrategy =
-        IoTDBDescriptor.getInstance().getConfig().getCompactionStrategy();
     IoTDBDescriptor.getInstance().getConfig().setPartitionInterval(1);
-    IoTDBDescriptor.getInstance()
-        .getConfig()
-        .setCompactionStrategy(CompactionStrategy.LEVEL_COMPACTION);
     EnvironmentUtils.envSetUp();
     Class.forName(Config.JDBC_DRIVER_NAME);
   }
@@ -63,7 +56,6 @@ public class IoTDBMergeIT {
   public void tearDown() throws Exception {
     EnvironmentUtils.cleanEnv();
     IoTDBDescriptor.getInstance().getConfig().setPartitionInterval(prevPartitionInterval);
-    IoTDBDescriptor.getInstance().getConfig().setCompactionStrategy(prevTsFileManagementStrategy);
   }
 
   @Test
@@ -228,7 +220,7 @@ public class IoTDBMergeIT {
 
       statement.execute("MERGE");
       try {
-        Thread.sleep(500);
+        Thread.sleep(2000);
       } catch (InterruptedException e) {
         e.printStackTrace();
       }
@@ -300,6 +292,9 @@ public class IoTDBMergeIT {
 
       statement.execute("MERGE");
 
+      //      while (CompactionScheduler.currentTaskNum.get() > 0) {
+      //        // wait
+      //      }
       int cnt;
       try (ResultSet resultSet = statement.executeQuery("SELECT * FROM root.mergeTest")) {
         cnt = 0;
@@ -380,7 +375,7 @@ public class IoTDBMergeIT {
       }
       // it is uncertain whether the sub tasks are created at this time point, and we are only
       // sure that the main task is created
-      assertEquals(4, cnt);
+      assertEquals(3, cnt);
     }
   }
 }

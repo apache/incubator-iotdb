@@ -18,8 +18,6 @@
  */
 package org.apache.iotdb.db.integration;
 
-import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.jdbc.Config;
 
@@ -46,9 +44,6 @@ public class IoTDBGroupByMonthIT {
 
   @Before
   public void setUp() throws Exception {
-    IoTDBDescriptor.getInstance()
-        .getConfig()
-        .setCompactionStrategy(CompactionStrategy.NO_COMPACTION);
     df.setTimeZone(TimeZone.getTimeZone("GMT+00:00"));
     EnvironmentUtils.envSetUp();
     Class.forName(Config.JDBC_DRIVER_NAME);
@@ -58,9 +53,6 @@ public class IoTDBGroupByMonthIT {
   @After
   public void tearDown() throws Exception {
     EnvironmentUtils.cleanEnv();
-    IoTDBDescriptor.getInstance()
-        .getConfig()
-        .setCompactionStrategy(CompactionStrategy.LEVEL_COMPACTION);
   }
 
   /**

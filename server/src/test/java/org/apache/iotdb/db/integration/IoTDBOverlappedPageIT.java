@@ -20,7 +20,6 @@
 package org.apache.iotdb.db.integration;
 
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.jdbc.Config;
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
@@ -45,7 +44,6 @@ import static org.junit.Assert.fail;
 public class IoTDBOverlappedPageIT {
 
   private static int beforeMaxNumberOfPointsInPage;
-  private static boolean enableUnseqCompaction;
 
   private static String[] dataSet1 =
       new String[] {
@@ -72,11 +70,6 @@ public class IoTDBOverlappedPageIT {
   public static void setUp() throws Exception {
     Class.forName(Config.JDBC_DRIVER_NAME);
     EnvironmentUtils.closeStatMonitor();
-    IoTDBDescriptor.getInstance()
-        .getConfig()
-        .setCompactionStrategy(CompactionStrategy.NO_COMPACTION);
-    enableUnseqCompaction = IoTDBDescriptor.getInstance().getConfig().isEnableUnseqCompaction();
-    IoTDBDescriptor.getInstance().getConfig().setEnableUnseqCompaction(false);
 
     // max_number_of_points_in_page = 10
     beforeMaxNumberOfPointsInPage =
@@ -89,10 +82,6 @@ public class IoTDBOverlappedPageIT {
   public static void tearDown() throws Exception {
     // recovery value
     EnvironmentUtils.cleanEnv();
-    IoTDBDescriptor.getInstance()
-        .getConfig()
-        .setCompactionStrategy(CompactionStrategy.LEVEL_COMPACTION);
-    IoTDBDescriptor.getInstance().getConfig().setEnableUnseqCompaction(enableUnseqCompaction);
     IoTDBDescriptor.getInstance()
         .getConfig()
         .setMemtableSizeThreshold(beforeMaxNumberOfPointsInPage);

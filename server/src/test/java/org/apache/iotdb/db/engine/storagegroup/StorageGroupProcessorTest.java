@@ -22,9 +22,9 @@ import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.constant.TestConstant;
 import org.apache.iotdb.db.engine.MetadataManagerHelper;
-import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
+import org.apache.iotdb.db.engine.compaction.CompactionScheduler;
+import org.apache.iotdb.db.engine.compaction.cross.inplace.manage.MergeManager;
 import org.apache.iotdb.db.engine.flush.TsFileFlushPolicy;
-import org.apache.iotdb.db.engine.merge.manage.MergeManager;
 import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
 import org.apache.iotdb.db.engine.querycontext.ReadOnlyMemChunk;
 import org.apache.iotdb.db.exception.StorageGroupProcessorException;
@@ -69,9 +69,6 @@ public class StorageGroupProcessorTest {
 
   @Before
   public void setUp() throws Exception {
-    IoTDBDescriptor.getInstance()
-        .getConfig()
-        .setCompactionStrategy(CompactionStrategy.NO_COMPACTION);
     MetadataManagerHelper.initMetadata();
     EnvironmentUtils.envSetUp();
     processor = new DummySGP(systemDir, storageGroup);
@@ -85,9 +82,6 @@ public class StorageGroupProcessorTest {
     EnvironmentUtils.cleanDir(TestConstant.OUTPUT_DATA_DIR);
     MergeManager.getINSTANCE().stop();
     EnvironmentUtils.cleanEnv();
-    IoTDBDescriptor.getInstance()
-        .getConfig()
-        .setCompactionStrategy(CompactionStrategy.LEVEL_COMPACTION);
   }
 
   private void insertToStorageGroupProcessor(TSRecord record)
@@ -611,13 +605,18 @@ public class StorageGroupProcessorTest {
 
     processor.syncCloseAllWorkingTsFileProcessors();
     processor.merge(IoTDBDescriptor.getInstance().getConfig().isForceFullMerge());
-    while (processor.getTsFileManagement().isUnseqMerging) {
+    while (CompactionScheduler.currentTaskNum.get() > 0) {
       // wait
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
     }
 
     QueryDataSource queryDataSource =
         processor.query(new PartialPath(deviceId, measurementId), context, null, null);
-    Assert.assertEquals(10, queryDataSource.getSeqResources().size());
+    Assert.assertEquals(1, queryDataSource.getSeqResources().size());
     for (TsFileResource resource : queryDataSource.getSeqResources()) {
       Assert.assertTrue(resource.isClosed());
     }

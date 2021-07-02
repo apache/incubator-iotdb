@@ -21,7 +21,6 @@ package org.apache.iotdb.db.integration;
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.StorageEngine;
-import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.engine.storagegroup.timeindex.TimeIndexLevel;
 import org.apache.iotdb.db.engine.storagegroup.virtualSg.HashVirtualPartitioner;
@@ -133,9 +132,6 @@ public class IoTDBLoadExternalTsfileIT {
 
   @Before
   public void setUp() throws Exception {
-    IoTDBDescriptor.getInstance()
-        .getConfig()
-        .setCompactionStrategy(CompactionStrategy.NO_COMPACTION);
     IoTDBDescriptor.getInstance().getConfig().setVirtualStorageGroupNum(1);
     HashVirtualPartitioner.getInstance().setStorageGroupNum(1);
     EnvironmentUtils.closeStatMonitor();
@@ -148,9 +144,6 @@ public class IoTDBLoadExternalTsfileIT {
   @After
   public void tearDown() throws Exception {
     EnvironmentUtils.cleanEnv();
-    IoTDBDescriptor.getInstance()
-        .getConfig()
-        .setCompactionStrategy(CompactionStrategy.LEVEL_COMPACTION);
     IoTDBDescriptor.getInstance().getConfig().setVirtualStorageGroupNum(virtualPartitionNum);
     HashVirtualPartitioner.getInstance().setStorageGroupNum(virtualPartitionNum);
   }

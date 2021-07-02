@@ -20,7 +20,6 @@
 package org.apache.iotdb.db.integration;
 
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.jdbc.Config;
 
@@ -42,7 +41,6 @@ import static org.junit.Assert.fail;
 public class IoTDBDeleteTimeseriesIT {
 
   private long memtableSizeThreshold;
-  private CompactionStrategy tsFileManagementStrategy;
 
   @Before
   public void setUp() throws ClassNotFoundException {
@@ -51,16 +49,11 @@ public class IoTDBDeleteTimeseriesIT {
     EnvironmentUtils.envSetUp();
     memtableSizeThreshold = IoTDBDescriptor.getInstance().getConfig().getMemtableSizeThreshold();
     IoTDBDescriptor.getInstance().getConfig().setMemtableSizeThreshold(16);
-    tsFileManagementStrategy = IoTDBDescriptor.getInstance().getConfig().getCompactionStrategy();
-    IoTDBDescriptor.getInstance()
-        .getConfig()
-        .setCompactionStrategy(CompactionStrategy.NO_COMPACTION);
   }
 
   @After
   public void tearDown() throws Exception {
     IoTDBDescriptor.getInstance().getConfig().setMemtableSizeThreshold(memtableSizeThreshold);
-    IoTDBDescriptor.getInstance().getConfig().setCompactionStrategy(tsFileManagementStrategy);
     EnvironmentUtils.cleanEnv();
   }
 

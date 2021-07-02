@@ -29,10 +29,10 @@ import java.util.function.Supplier;
 public interface WriteLogNodeManager {
 
   /**
-   * Get a WriteLogNode by a identifier like "{storageGroupName}-{BufferWrite/Overflow}-{
+   * Get a WriteLogNode by a identifier like "{fullStorageGroupName}-{BufferWrite/Overflow}-{
    * nameOfTsFile}". The WriteLogNode will be automatically created if not exist.
    *
-   * @param identifier -identifier, the format: "{storageGroupName}-{BufferWrite/Overflow}-{
+   * @param identifier -identifier, the format: "{fullStorageGroupName}-{BufferWrite/Overflow}-{
    *     nameOfTsFile}"
    */
   WriteLogNode getNode(String identifier, Supplier<ByteBuffer[]> supplier);

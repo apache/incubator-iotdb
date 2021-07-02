@@ -23,7 +23,7 @@ import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
-import org.apache.iotdb.db.engine.storagegroup.virtualSg.VirtualStorageGroupManager;
+import org.apache.iotdb.db.engine.storagegroup.virtualSg.StorageGroupManager;
 import org.apache.iotdb.db.exception.StartupException;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
@@ -233,13 +233,13 @@ public class StatMonitor implements StatMonitorMBean, IService {
   @Override
   public long getStorageGroupTotalPointsNum(String storageGroupName) {
     try {
-      VirtualStorageGroupManager virtualStorageGroupManager =
+      StorageGroupManager storageGroupManager =
           storageEngine.getProcessorMap().get(new PartialPath(storageGroupName));
-      if (virtualStorageGroupManager == null) {
+      if (storageGroupManager == null) {
         return 0;
       }
 
-      return virtualStorageGroupManager.getMonitorSeriesValue();
+      return storageGroupManager.getMonitorSeriesValue();
     } catch (IllegalPathException e) {
       logger.error(e.getMessage());
       return -1;

@@ -18,8 +18,6 @@
  */
 package org.apache.iotdb.db.integration;
 
-import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.jdbc.Config;
 
@@ -103,18 +101,12 @@ public class IoTDBAlignByDeviceIT {
   public static void setUp() throws Exception {
     EnvironmentUtils.closeStatMonitor();
     EnvironmentUtils.envSetUp();
-    IoTDBDescriptor.getInstance()
-        .getConfig()
-        .setCompactionStrategy(CompactionStrategy.NO_COMPACTION);
     insertData();
   }
 
   @AfterClass
   public static void tearDown() throws Exception {
     EnvironmentUtils.cleanEnv();
-    IoTDBDescriptor.getInstance()
-        .getConfig()
-        .setCompactionStrategy(CompactionStrategy.LEVEL_COMPACTION);
   }
 
   private static void insertData() throws ClassNotFoundException {

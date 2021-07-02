@@ -20,7 +20,6 @@ package org.apache.iotdb.db.integration;
 
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.constant.TestConstant;
-import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.jdbc.Config;
 import org.apache.iotdb.tsfile.common.conf.TSFileConfig;
@@ -53,9 +52,6 @@ public class IoTDBMultiStatementsIT {
   public static void setUp() throws Exception {
 
     EnvironmentUtils.closeStatMonitor();
-    IoTDBDescriptor.getInstance()
-        .getConfig()
-        .setCompactionStrategy(CompactionStrategy.NO_COMPACTION);
 
     // use small page setting
     // origin value
@@ -81,9 +77,6 @@ public class IoTDBMultiStatementsIT {
     tsFileConfig.setPageSizeInByte(pageSizeInByte);
     tsFileConfig.setGroupSizeInByte(groupSizeInByte);
     IoTDBDescriptor.getInstance().getConfig().setMemtableSizeThreshold(groupSizeInByte);
-    IoTDBDescriptor.getInstance()
-        .getConfig()
-        .setCompactionStrategy(CompactionStrategy.LEVEL_COMPACTION);
     EnvironmentUtils.cleanEnv();
   }
 

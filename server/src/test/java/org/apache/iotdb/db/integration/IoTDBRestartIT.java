@@ -19,7 +19,7 @@
 package org.apache.iotdb.db.integration;
 
 import org.apache.iotdb.db.engine.StorageEngine;
-import org.apache.iotdb.db.engine.compaction.CompactionMergeTaskPoolManager;
+import org.apache.iotdb.db.engine.compaction.CompactionTaskManager;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.jdbc.Config;
@@ -379,7 +379,7 @@ public class IoTDBRestartIT {
     }
 
     try {
-      CompactionMergeTaskPoolManager.getInstance().waitAllCompactionFinish();
+      CompactionTaskManager.getInstance().waitAllCompactionFinish();
       Thread.sleep(10000);
       EnvironmentUtils.restartDaemon();
     } catch (Exception e) {

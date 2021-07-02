@@ -31,9 +31,9 @@ import org.apache.iotdb.db.cq.ContinuousQueryService;
 import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.cache.ChunkCache;
 import org.apache.iotdb.db.engine.cache.TimeSeriesMetadataCache;
+import org.apache.iotdb.db.engine.compaction.cross.inplace.manage.MergeManager;
+import org.apache.iotdb.db.engine.compaction.cross.inplace.manage.MergeManager.TaskStatus;
 import org.apache.iotdb.db.engine.flush.pool.FlushTaskPoolManager;
-import org.apache.iotdb.db.engine.merge.manage.MergeManager;
-import org.apache.iotdb.db.engine.merge.manage.MergeManager.TaskStatus;
 import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor.TimePartitionFilter;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.engine.trigger.service.TriggerRegistrationService;
@@ -1054,6 +1054,7 @@ public class PlanExecutor implements IPlanExecutor {
   }
 
   private void operateLoadFiles(OperateFilePlan plan) throws QueryProcessException {
+    logger.info("enter operate load files");
     File file = plan.getFile();
     if (!file.exists()) {
       throw new QueryProcessException(
@@ -1078,6 +1079,7 @@ public class PlanExecutor implements IPlanExecutor {
   }
 
   private void loadFile(File file, OperateFilePlan plan) throws QueryProcessException {
+    logger.info("start loading files");
     if (!file.getName().endsWith(TSFILE_SUFFIX)) {
       return;
     }
@@ -1130,6 +1132,7 @@ public class PlanExecutor implements IPlanExecutor {
         StorageEngine.getInstance().loadNewTsFile(resource);
       }
     } catch (Exception e) {
+      e.printStackTrace();
       throw new QueryProcessException(
           String.format("Cannot load file %s because %s", file.getAbsolutePath(), e.getMessage()));
     }

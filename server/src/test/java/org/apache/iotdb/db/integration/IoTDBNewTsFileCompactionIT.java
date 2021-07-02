@@ -20,9 +20,9 @@ package org.apache.iotdb.db.integration;
 
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.StorageEngine;
-import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
-import org.apache.iotdb.db.engine.compaction.level.LevelCompactionTsFileManagement;
+import org.apache.iotdb.db.engine.compaction.CompactionScheduler;
 import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor;
+import org.apache.iotdb.db.engine.storagegroup.TsFileResourceManager;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
@@ -46,11 +46,8 @@ import static org.junit.Assert.fail;
 
 public class IoTDBNewTsFileCompactionIT {
 
-  private int prevSeqLevelFileNum;
-  private int prevSeqLevelNum;
   private int prevMergePagePointNumber;
   private int preMaxNumberOfPointsInPage;
-  private CompactionStrategy preCompactionStrategy;
   private PartialPath storageGroupPath;
   // the unit is ns
   private static final long MAX_WAIT_TIME_FOR_MERGE = Long.MAX_VALUE;
@@ -59,21 +56,13 @@ public class IoTDBNewTsFileCompactionIT {
   @Before
   public void setUp() throws Exception {
     EnvironmentUtils.closeStatMonitor();
-    prevSeqLevelFileNum = IoTDBDescriptor.getInstance().getConfig().getSeqFileNumInEachLevel();
-    prevSeqLevelNum = IoTDBDescriptor.getInstance().getConfig().getSeqLevelNum();
     prevMergePagePointNumber =
         IoTDBDescriptor.getInstance().getConfig().getMergePagePointNumberThreshold();
     preMaxNumberOfPointsInPage =
         TSFileDescriptor.getInstance().getConfig().getMaxNumberOfPointsInPage();
-    preCompactionStrategy = IoTDBDescriptor.getInstance().getConfig().getCompactionStrategy();
     storageGroupPath = new PartialPath("root.sg1");
-    IoTDBDescriptor.getInstance().getConfig().setSeqFileNumInEachLevel(2);
-    IoTDBDescriptor.getInstance().getConfig().setSeqLevelNum(2);
     IoTDBDescriptor.getInstance().getConfig().setMergePagePointNumberThreshold(1);
     TSFileDescriptor.getInstance().getConfig().setMaxNumberOfPointsInPage(1);
-    IoTDBDescriptor.getInstance()
-        .getConfig()
-        .setCompactionStrategy(CompactionStrategy.LEVEL_COMPACTION);
     EnvironmentUtils.envSetUp();
     Class.forName(Config.JDBC_DRIVER_NAME);
 
@@ -89,15 +78,12 @@ public class IoTDBNewTsFileCompactionIT {
   @After
   public void tearDown() throws Exception {
     EnvironmentUtils.cleanEnv();
-    IoTDBDescriptor.getInstance().getConfig().setSeqFileNumInEachLevel(prevSeqLevelFileNum);
-    IoTDBDescriptor.getInstance().getConfig().setSeqLevelNum(prevSeqLevelNum);
     IoTDBDescriptor.getInstance()
         .getConfig()
         .setMergePagePointNumberThreshold(prevMergePagePointNumber);
     TSFileDescriptor.getInstance()
         .getConfig()
         .setMaxNumberOfPointsInPage(preMaxNumberOfPointsInPage);
-    IoTDBDescriptor.getInstance().getConfig().setCompactionStrategy(preCompactionStrategy);
   }
 
   /**
@@ -127,6 +113,7 @@ public class IoTDBNewTsFileCompactionIT {
       statement.execute("INSERT INTO root.sg1.d1(time,s1) values(2, 2)");
       statement.execute("FLUSH");
 
+      statement.execute("MERGE");
       assertTrue(waitForMergeFinish());
 
       int cnt;
@@ -181,6 +168,7 @@ public class IoTDBNewTsFileCompactionIT {
       statement.execute("INSERT INTO root.sg1.d1(time,s1) values(3, 3)");
       statement.execute("FLUSH");
 
+      statement.execute("MERGE");
       assertTrue(waitForMergeFinish());
 
       int cnt;
@@ -234,6 +222,7 @@ public class IoTDBNewTsFileCompactionIT {
       statement.execute("INSERT INTO root.sg1.d1(time,s1) values(3, 3)");
       statement.execute("FLUSH");
 
+      statement.execute("MERGE");
       assertTrue(waitForMergeFinish());
 
       int cnt;
@@ -293,6 +282,7 @@ public class IoTDBNewTsFileCompactionIT {
       statement.execute("INSERT INTO root.sg1.d1(time,s1) values(5, 5)");
       statement.execute("FLUSH");
 
+      statement.execute("MERGE");
       assertTrue(waitForMergeFinish());
 
       int cnt;
@@ -347,6 +337,7 @@ public class IoTDBNewTsFileCompactionIT {
       statement.execute("INSERT INTO root.sg1.d1(time,s1) values(3, 3)");
       statement.execute("FLUSH");
 
+      statement.execute("MERGE");
       assertTrue(waitForMergeFinish());
 
       int cnt;
@@ -406,6 +397,7 @@ public class IoTDBNewTsFileCompactionIT {
 
       statement.execute("FLUSH");
 
+      statement.execute("MERGE");
       assertTrue(waitForMergeFinish());
 
       int cnt;
@@ -461,6 +453,7 @@ public class IoTDBNewTsFileCompactionIT {
       statement.execute("INSERT INTO root.sg1.d1(time,s1) values(4, 4)");
       statement.execute("FLUSH");
 
+      statement.execute("MERGE");
       assertTrue(waitForMergeFinish());
 
       int cnt;
@@ -523,6 +516,7 @@ public class IoTDBNewTsFileCompactionIT {
       statement.execute("INSERT INTO root.sg1.d1(time,s1) values(6, 6)");
       statement.execute("FLUSH");
 
+      statement.execute("MERGE");
       assertTrue(waitForMergeFinish());
 
       int cnt;
@@ -578,6 +572,7 @@ public class IoTDBNewTsFileCompactionIT {
       statement.execute("INSERT INTO root.sg1.d1(time,s1) values(3, 3)");
       statement.execute("FLUSH");
 
+      statement.execute("MERGE");
       assertTrue(waitForMergeFinish());
 
       int cnt;
@@ -635,6 +630,7 @@ public class IoTDBNewTsFileCompactionIT {
       statement.execute("INSERT INTO root.sg1.d1(time,s1) values(4, 4)");
       statement.execute("FLUSH");
 
+      statement.execute("MERGE");
       assertTrue(waitForMergeFinish());
 
       int cnt;
@@ -685,7 +681,6 @@ public class IoTDBNewTsFileCompactionIT {
         Statement statement = connection.createStatement()) {
 
       IoTDBDescriptor.getInstance().getConfig().setAvgSeriesPointNumberThreshold(10000);
-
       // first file
       statement.execute("INSERT INTO root.sg1.d1(time,s1) values(1, 1)");
       statement.execute("INSERT INTO root.sg1.d1(time,s1) values(2, 2)");
@@ -697,6 +692,7 @@ public class IoTDBNewTsFileCompactionIT {
       statement.execute("INSERT INTO root.sg1.d1(time,s1) values(4, 4)");
       statement.execute("FLUSH");
 
+      statement.execute("MERGE");
       assertTrue(waitForMergeFinish());
 
       int cnt;
@@ -759,6 +755,7 @@ public class IoTDBNewTsFileCompactionIT {
       statement.execute("INSERT INTO root.sg1.d1(time,s1) values(6, 6)");
       statement.execute("FLUSH");
 
+      statement.execute("MERGE");
       assertTrue(waitForMergeFinish());
 
       int cnt;
@@ -819,6 +816,7 @@ public class IoTDBNewTsFileCompactionIT {
       statement.execute("INSERT INTO root.sg1.d1(time,s1) values(5, 5)");
       statement.execute("FLUSH");
 
+      statement.execute("MERGE");
       assertTrue(waitForMergeFinish());
 
       int cnt;
@@ -882,6 +880,7 @@ public class IoTDBNewTsFileCompactionIT {
       statement.execute("INSERT INTO root.sg1.d1(time,s1) values(6, 6)");
       statement.execute("FLUSH");
 
+      statement.execute("MERGE");
       assertTrue(waitForMergeFinish());
 
       int cnt;
@@ -945,6 +944,7 @@ public class IoTDBNewTsFileCompactionIT {
       statement.execute("INSERT INTO root.sg1.d1(time,s1) values(6, 6)");
       statement.execute("FLUSH");
 
+      statement.execute("MERGE");
       assertTrue(waitForMergeFinish());
 
       int cnt;
@@ -1011,6 +1011,7 @@ public class IoTDBNewTsFileCompactionIT {
       statement.execute("INSERT INTO root.sg1.d1(time,s1) values(8, 8)");
       statement.execute("FLUSH");
 
+      statement.execute("MERGE");
       assertTrue(waitForMergeFinish());
 
       int cnt;
@@ -1028,6 +1029,7 @@ public class IoTDBNewTsFileCompactionIT {
     } catch (StorageEngineException | InterruptedException e) {
       e.printStackTrace();
       fail();
+
     } finally {
       IoTDBDescriptor.getInstance()
           .getConfig()
@@ -1039,19 +1041,17 @@ public class IoTDBNewTsFileCompactionIT {
   private boolean waitForMergeFinish() throws StorageEngineException, InterruptedException {
     StorageGroupProcessor storageGroupProcessor =
         StorageEngine.getInstance().getProcessor(storageGroupPath);
-    LevelCompactionTsFileManagement tsFileManagement =
-        (LevelCompactionTsFileManagement) storageGroupProcessor.getTsFileManagement();
+    TsFileResourceManager resourceManager = storageGroupProcessor.getTsFileResourceManager();
 
     long startTime = System.nanoTime();
     // get the size of level 1's tsfile list to judge whether merge is finished
-    while (tsFileManagement.getSequenceTsFileResources().get(0L).size() < 2
-        || tsFileManagement.getSequenceTsFileResources().get(0L).get(1).size() != 1) {
+    while (CompactionScheduler.currentTaskNum.get() != 0) {
       TimeUnit.MILLISECONDS.sleep(100);
       // wait too long, just break
       if ((System.nanoTime() - startTime) >= MAX_WAIT_TIME_FOR_MERGE) {
         break;
       }
     }
-    return tsFileManagement.getSequenceTsFileResources().get(0L).get(1).size() == 1;
+    return resourceManager.getTsFileList(true).size() == 1;
   }
 }

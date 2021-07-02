@@ -19,7 +19,9 @@
 package org.apache.iotdb.db.conf;
 
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
-import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
+import org.apache.iotdb.db.engine.compaction.CompactionPriority;
+import org.apache.iotdb.db.engine.compaction.cross.CrossCompactionStrategy;
+import org.apache.iotdb.db.engine.compaction.inner.InnerCompactionStrategy;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.qp.utils.DatetimeUtils;
 import org.apache.iotdb.db.utils.FilePathUtils;
@@ -311,49 +313,49 @@ public class IoTDBDescriptor {
               properties.getProperty(
                   "merge_page_point_number",
                   Integer.toString(conf.getMergePagePointNumberThreshold()))));
-
-      conf.setCompactionStrategy(
-          CompactionStrategy.valueOf(
+      conf.setCompactionInterval(
+          Long.parseLong(
               properties.getProperty(
-                  "compaction_strategy", conf.getCompactionStrategy().toString())));
+                  "compaction_interval", Long.toString(conf.getCompactionInterval()))));
 
-      conf.setEnableUnseqCompaction(
+      conf.setEnableCrossSpaceCompaction(
           Boolean.parseBoolean(
               properties.getProperty(
-                  "enable_unseq_compaction", Boolean.toString(conf.isEnableUnseqCompaction()))));
+                  "enable_cross_space_compaction",
+                  Boolean.toString(conf.isEnableCrossSpaceCompaction()))));
 
-      conf.setEnableContinuousCompaction(
+      conf.setEnableSeqSpaceCompaction(
           Boolean.parseBoolean(
               properties.getProperty(
-                  "enable_continuous_compaction",
-                  Boolean.toString(conf.isEnableContinuousCompaction()))));
+                  "enable_seq_space_compaction",
+                  Boolean.toString(conf.isEnableSeqSpaceCompaction()))));
 
-      conf.setSeqLevelNum(
-          Integer.parseInt(
-              properties.getProperty("seq_level_num", Integer.toString(conf.getSeqLevelNum()))));
-
-      conf.setSeqFileNumInEachLevel(
-          Integer.parseInt(
+      conf.setEnableUnseqSpaceCompaction(
+          Boolean.parseBoolean(
               properties.getProperty(
-                  "seq_file_num_in_each_level",
-                  Integer.toString(conf.getSeqFileNumInEachLevel()))));
+                  "enable_unseq_space_compaction",
+                  Boolean.toString(conf.isEnableUnseqSpaceCompaction()))));
 
-      conf.setUnseqLevelNum(
-          Integer.parseInt(
+      conf.setCrossCompactionStrategy(
+          CrossCompactionStrategy.valueOf(
               properties.getProperty(
-                  "unseq_level_num", Integer.toString(conf.getUnseqLevelNum()))));
+                  "cross_compaction_strategy", conf.getCrossCompactionStrategy().toString())));
 
-      conf.setMaxOpenFileNumInEachUnseqCompaction(
+      conf.setInnerCompactionStrategy(
+          InnerCompactionStrategy.valueOf(
+              properties.getProperty(
+                  "inner_compaction_strategy", conf.getInnerCompactionStrategy().toString())));
+
+      conf.setCompactionPriority(
+          CompactionPriority.valueOf(
+              properties.getProperty(
+                  "compaction_priority", conf.getCompactionPriority().toString())));
+
+      conf.setMaxOpenFileNumInCrossSpaceCompaction(
           Integer.parseInt(
               properties.getProperty(
                   "max_open_file_num_in_each_unseq_compaction",
-                  Integer.toString(conf.getMaxOpenFileNumInEachUnseqCompaction()))));
-
-      conf.setUnseqFileNumInEachLevel(
-          Integer.parseInt(
-              properties.getProperty(
-                  "unseq_file_num_in_each_level",
-                  Integer.toString(conf.getUnseqFileNumInEachLevel()))));
+                  Integer.toString(conf.getMaxOpenFileNumInCrossSpaceCompaction()))));
 
       conf.setQueryTimeoutThreshold(
           Integer.parseInt(
@@ -457,10 +459,6 @@ public class IoTDBDescriptor {
           Long.parseLong(
               properties.getProperty(
                   "merge_memory_budget", Long.toString(conf.getMergeMemoryBudget()))));
-      conf.setMergeThreadNum(
-          Integer.parseInt(
-              properties.getProperty(
-                  "merge_thread_num", Integer.toString(conf.getMergeThreadNum()))));
       conf.setMergeChunkSubThreadNum(
           Integer.parseInt(
               properties.getProperty(
@@ -484,10 +482,16 @@ public class IoTDBDescriptor {
           Boolean.parseBoolean(
               properties.getProperty(
                   "force_full_merge", Boolean.toString(conf.isForceFullMerge()))));
-      conf.setCompactionThreadNum(
+      conf.setConcurrentCompactionThread(
           Integer.parseInt(
               properties.getProperty(
-                  "compaction_thread_num", Integer.toString(conf.getCompactionThreadNum()))));
+                  "concurrent_compaction_thread",
+                  Integer.toString(conf.getConcurrentCompactionThread()))));
+      conf.setTargetCompactionFileSize(
+          Long.parseLong(
+              properties.getProperty(
+                  "target_compaction_file_size",
+                  Long.toString(conf.getTargetCompactionFileSize()))));
 
       conf.setMergeWriteThroughputMbPerSec(
           Integer.parseInt(
@@ -1035,10 +1039,6 @@ public class IoTDBDescriptor {
 
       // update slow_query_threshold
       conf.setSlowQueryThreshold(Long.parseLong(properties.getProperty("slow_query_threshold")));
-
-      // update enable_continuous_compaction
-      conf.setEnableContinuousCompaction(
-          Boolean.parseBoolean(properties.getProperty("enable_continuous_compaction")));
 
       // update merge_write_throughput_mb_per_sec
       conf.setMergeWriteThroughputMbPerSec(

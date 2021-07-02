@@ -22,6 +22,7 @@ package org.apache.iotdb.db.engine.modification;
 import org.apache.iotdb.db.engine.modification.io.LocalTextModificationAccessor;
 import org.apache.iotdb.db.engine.modification.io.ModificationReader;
 import org.apache.iotdb.db.engine.modification.io.ModificationWriter;
+import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.tsfile.common.constant.TsFileConstant;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 
@@ -46,6 +47,7 @@ public class ModificationFile implements AutoCloseable {
 
   private static final Logger logger = LoggerFactory.getLogger(ModificationFile.class);
   public static final String FILE_SUFFIX = ".mods";
+  public static final String COMPACTION_FILE_SUFFIX = ".compaction.mods";
 
   private List<Modification> modifications;
   private ModificationWriter writer;
@@ -166,5 +168,14 @@ public class ModificationFile implements AutoCloseable {
         return null;
       }
     }
+  }
+
+  public static ModificationFile getNormalMods(TsFileResource tsFileResource) {
+    return new ModificationFile(tsFileResource.getTsFilePath() + ModificationFile.FILE_SUFFIX);
+  }
+
+  public static ModificationFile getCompactionMods(TsFileResource tsFileResource) {
+    return new ModificationFile(
+        tsFileResource.getTsFilePath() + ModificationFile.COMPACTION_FILE_SUFFIX);
   }
 }

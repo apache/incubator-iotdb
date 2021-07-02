@@ -39,7 +39,7 @@ import java.util.List;
 public interface PartitionTable {
 
   /**
-   * Given the storageGroupName and the timestamp, return the list of nodes on which the storage
+   * Given the fullStorageGroupName and the timestamp, return the list of nodes on which the storage
    * group and the corresponding time interval is managed.
    *
    * @param storageGroupName

@@ -20,7 +20,6 @@
 package org.apache.iotdb.db.integration;
 
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.jdbc.Config;
 
@@ -43,15 +42,12 @@ import static org.junit.Assert.fail;
  */
 public class IoTDBMultiOverlappedChunkInUnseqIT {
 
-  private static long beforeMemtableSizeThreshold;
+  private static long previousMemtableSizeThreshold;
 
   @BeforeClass
   public static void setUp() throws Exception {
     EnvironmentUtils.closeStatMonitor();
-    IoTDBDescriptor.getInstance()
-        .getConfig()
-        .setCompactionStrategy(CompactionStrategy.NO_COMPACTION);
-    beforeMemtableSizeThreshold =
+    previousMemtableSizeThreshold =
         IoTDBDescriptor.getInstance().getConfig().getMemtableSizeThreshold();
     IoTDBDescriptor.getInstance().getConfig().setMemtableSizeThreshold(1024);
     EnvironmentUtils.envSetUp();
@@ -63,10 +59,9 @@ public class IoTDBMultiOverlappedChunkInUnseqIT {
   public static void tearDown() throws Exception {
     // recovery value
     EnvironmentUtils.cleanEnv();
-    IoTDBDescriptor.getInstance().getConfig().setMemtableSizeThreshold(beforeMemtableSizeThreshold);
     IoTDBDescriptor.getInstance()
         .getConfig()
-        .setCompactionStrategy(CompactionStrategy.LEVEL_COMPACTION);
+        .setMemtableSizeThreshold(previousMemtableSizeThreshold);
   }
 
   @Test

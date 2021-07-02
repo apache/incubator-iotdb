@@ -55,15 +55,15 @@ There are two options when recovering, one is to continue the previous progress,
 
 In addition, each custom MergeTask needs to inherit the Callable \<void\> interface to ensure that it can be called back
 
-* org.apache.iotdb.db.engine.merge.manage.MergeContext
+* org.apache.iotdb.db.engine.compaction.cross.inplace.manage.MergeContext
 
     Common context classes in the Merge process
 
-* org.apache.iotdb.db.engine.merge.manage.MergeManager
+* org.apache.iotdb.db.engine.compaction.cross.inplace.manage.MergeManager
 
     The thread pool class in the Merge process, which manages the operation of multiple merge tasks
 
-* org.apache.iotdb.db.engine.merge.manage.MergeResource
+* org.apache.iotdb.db.engine.compaction.cross.inplace.manage.MergeResource
 
     Resource class in the Merge process, responsible for managing files, readers, writers, measurement Schemas, modifications, and other resources during the merge process
 

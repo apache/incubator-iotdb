@@ -23,7 +23,6 @@ import org.apache.iotdb.cluster.common.TestUtils;
 import org.apache.iotdb.cluster.server.member.BaseMember;
 import org.apache.iotdb.cluster.server.monitor.NodeStatusManager;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.query.aggregation.AggregateResult;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -52,6 +51,8 @@ public class BaseQueryTest extends BaseMember {
 
   protected List<PartialPath> pathList;
   protected List<TSDataType> dataTypes;
+  protected int defaultCompactionThread =
+      IoTDBDescriptor.getInstance().getConfig().getConcurrentCompactionThread();
 
   protected static void checkAggregations(
       List<AggregateResult> aggregationResults, Object[] answer) {
@@ -72,9 +73,7 @@ public class BaseQueryTest extends BaseMember {
   @Override
   @Before
   public void setUp() throws Exception {
-    IoTDBDescriptor.getInstance()
-        .getConfig()
-        .setCompactionStrategy(CompactionStrategy.NO_COMPACTION);
+    IoTDBDescriptor.getInstance().getConfig().setConcurrentCompactionThread(0);
     super.setUp();
     pathList = new ArrayList<>();
     dataTypes = new ArrayList<>();
@@ -93,7 +92,7 @@ public class BaseQueryTest extends BaseMember {
     NodeStatusManager.getINSTANCE().setMetaGroupMember(null);
     IoTDBDescriptor.getInstance()
         .getConfig()
-        .setCompactionStrategy(CompactionStrategy.LEVEL_COMPACTION);
+        .setConcurrentCompactionThread(defaultCompactionThread);
   }
 
   void checkSequentialDataset(QueryDataSet dataSet, int offset, int size) throws IOException {

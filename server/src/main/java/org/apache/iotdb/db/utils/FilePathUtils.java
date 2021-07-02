@@ -68,7 +68,7 @@ public class FilePathUtils {
    * IMPORTANT, when the path of TsFile changes, the following methods should be changed
    * accordingly. The sequence TsFile is located at ${IOTDB_DATA_DIR}/data/sequence/. The unsequence
    * TsFile is located at ${IOTDB_DATA_DIR}/data/unsequence/. Where different storage group's TsFile
-   * is located at <logicalStorageGroupName>/<virtualStorageGroupName>/<timePartitionId>/<fileName>.
+   * is located at <fullStorageGroupName>/<virtualStorageGroupName>/<timePartitionId>/<fileName>.
    * For example, one sequence TsFile may locate at
    * /data/data/sequence/root.group_9/0/0/1611199237113-4-0.tsfile
    *

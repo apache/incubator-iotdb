@@ -284,8 +284,8 @@ public class MetaGroupMember extends RaftMember {
   }
 
   /**
-   * Find the DataGroupMember that manages the partition of "storageGroupName"@"partitionId", and
-   * close the partition through that member. Notice: only partitions owned by this node can be
+   * Find the DataGroupMember that manages the partition of "fullStorageGroupName"@"partitionId",
+   * and close the partition through that member. Notice: only partitions owned by this node can be
    * closed by the method.
    */
   public boolean closePartition(String storageGroupName, long partitionId, boolean isSeq) {

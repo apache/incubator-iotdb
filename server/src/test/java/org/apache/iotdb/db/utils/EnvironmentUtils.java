@@ -28,7 +28,7 @@ import org.apache.iotdb.db.cq.ContinuousQueryService;
 import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.cache.ChunkCache;
 import org.apache.iotdb.db.engine.cache.TimeSeriesMetadataCache;
-import org.apache.iotdb.db.engine.compaction.CompactionMergeTaskPoolManager;
+import org.apache.iotdb.db.engine.compaction.CompactionTaskManager;
 import org.apache.iotdb.db.engine.trigger.service.TriggerRegistrationService;
 import org.apache.iotdb.db.exception.*;
 import org.apache.iotdb.db.query.context.QueryContext;
@@ -84,8 +84,10 @@ public class EnvironmentUtils {
       Boolean.parseBoolean(System.getProperty("test.port.closed", "false"));
 
   public static void cleanEnv() throws IOException, StorageEngineException {
+    logger.warn("waiting for compaction finish");
     // wait all compaction finished
-    CompactionMergeTaskPoolManager.getInstance().waitAllCompactionFinish();
+    CompactionTaskManager.getInstance().waitAllCompactionFinish();
+    logger.info("all compaction finish");
 
     // deregister all user defined classes
     try {

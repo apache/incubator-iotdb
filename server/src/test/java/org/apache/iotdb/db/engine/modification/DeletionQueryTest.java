@@ -19,7 +19,6 @@
 
 package org.apache.iotdb.db.engine.modification;
 
-import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
@@ -60,8 +59,6 @@ public class DeletionQueryTest {
   private TSEncoding encoding = TSEncoding.PLAIN;
   private QueryRouter router = new QueryRouter();
 
-  private int prevUnseqLevelNum = 0;
-
   static {
     for (int i = 0; i < 10; i++) {
       measurements[i] = "m" + i;
@@ -70,8 +67,6 @@ public class DeletionQueryTest {
 
   @Before
   public void setup() throws MetadataException {
-    prevUnseqLevelNum = IoTDBDescriptor.getInstance().getConfig().getUnseqLevelNum();
-    IoTDBDescriptor.getInstance().getConfig().setUnseqLevelNum(2);
     EnvironmentUtils.envSetUp();
     IoTDB.metaManager.setStorageGroup(new PartialPath(processorName));
     for (int i = 0; i < 10; i++) {
@@ -87,13 +82,6 @@ public class DeletionQueryTest {
   @After
   public void teardown() throws IOException, StorageEngineException {
     EnvironmentUtils.cleanEnv();
-    IoTDBDescriptor.getInstance().getConfig().setUnseqLevelNum(prevUnseqLevelNum);
-  }
-
-  private void insertToStorageEngine(TSRecord record)
-      throws StorageEngineException, IllegalPathException {
-    InsertRowPlan insertRowPlan = new InsertRowPlan(record);
-    StorageEngine.getInstance().insert(insertRowPlan);
   }
 
   @Test
