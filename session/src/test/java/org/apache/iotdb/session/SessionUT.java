@@ -30,6 +30,7 @@ import org.apache.iotdb.tsfile.utils.Binary;
 import org.apache.iotdb.tsfile.write.record.Tablet;
 import org.apache.iotdb.tsfile.write.schema.IMeasurementSchema;
 import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
+import org.apache.iotdb.tsfile.write.schema.VectorMeasurementSchema;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -213,7 +214,6 @@ public class SessionUT {
     for (int i = 0; i < 10; i++) {
       measurements.add("s" + i);
     }
-    measurementList.add(measurements);
 
     List<List<TSDataType>> dataTypeList = new ArrayList<>();
     dataTypeList.add(Collections.singletonList(TSDataType.INT64));
@@ -221,7 +221,6 @@ public class SessionUT {
     for (int i = 0; i < 10; i++) {
       dataTypes.add(TSDataType.INT64);
     }
-    dataTypeList.add(dataTypes);
 
     List<List<TSEncoding>> encodingList = new ArrayList<>();
     encodingList.add(Collections.singletonList(TSEncoding.RLE));
@@ -229,6 +228,9 @@ public class SessionUT {
     for (int i = 0; i < 10; i++) {
       encodings.add(TSEncoding.RLE);
     }
+
+    measurementList.add(measurements);
+    dataTypeList.add(dataTypes);
     encodingList.add(encodings);
 
     List<CompressionType> compressionTypes = new ArrayList<>();
@@ -243,5 +245,18 @@ public class SessionUT {
     session.createSchemaTemplate(
         "template1", schemaNames, measurementList, dataTypeList, encodingList, compressionTypes);
     session.setSchemaTemplate("template1", "root.sg.1");
+
+    MeasurementSchema testMeasurementSchema =
+        new MeasurementSchema("sensor_1", TSDataType.FLOAT, TSEncoding.RLE);
+    session.createSchemaTemplate("template2", Collections.singletonList(testMeasurementSchema));
+
+    String[] measurementArray = measurements.toArray(new String[measurements.size()]);
+    TSDataType[] dataTypeArray = dataTypes.toArray(new TSDataType[dataTypes.size()]);
+    TSEncoding[] encodingArray = encodings.toArray(new TSEncoding[encodings.size()]);
+    VectorMeasurementSchema testVectorMeasurementSchema =
+        new VectorMeasurementSchema(
+            "vector_1", measurementArray, dataTypeArray, encodingArray, CompressionType.SNAPPY);
+    session.createSchemaTemplate(
+        "template3", Collections.singletonList(testVectorMeasurementSchema));
   }
 }

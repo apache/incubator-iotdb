@@ -48,6 +48,7 @@ import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.apache.iotdb.tsfile.write.record.Tablet;
 import org.apache.iotdb.tsfile.write.schema.IMeasurementSchema;
 import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
+import org.apache.iotdb.tsfile.write.schema.VectorMeasurementSchema;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1793,6 +1794,42 @@ public class Session {
     TSCreateSchemaTemplateReq request =
         getTSCreateSchemaTemplateReq(
             name, schemaNames, measurements, dataTypes, encodings, compressors);
+    defaultSessionConnection.createSchemaTemplate(request);
+  }
+
+  public void createSchemaTemplate(String templateName, List<IMeasurementSchema> measurementSchemas)
+      throws IoTDBConnectionException, StatementExecutionException {
+    List<String> schemaNames = new ArrayList<>();
+    List<List<String>> measurements = new ArrayList<>();
+    List<List<TSDataType>> dataTypes = new ArrayList<>();
+    List<List<TSEncoding>> encodings = new ArrayList<>();
+    List<CompressionType> compressors = new ArrayList<>();
+
+    for (IMeasurementSchema measurementSchema : measurementSchemas) {
+      List<String> measurementsList;
+      List<TSDataType> dataTypeList;
+      List<TSEncoding> encodingList;
+
+      schemaNames.add(measurementSchema.getMeasurementId());
+      compressors.add(measurementSchema.getCompressor());
+
+      if (measurementSchema instanceof VectorMeasurementSchema) {
+        measurementsList = measurementSchema.getValueMeasurementIdList();
+        dataTypeList = measurementSchema.getValueTSDataTypeList();
+        encodingList = measurementSchema.getValueTSEncodingList();
+        measurements.add(measurementsList);
+        dataTypes.add(dataTypeList);
+        encodings.add(encodingList);
+      } else {
+        measurements.add(Collections.singletonList(measurementSchema.getMeasurementId()));
+        dataTypes.add(Collections.singletonList(measurementSchema.getType()));
+        encodings.add(Collections.singletonList(measurementSchema.getEncodingType()));
+      }
+    }
+
+    TSCreateSchemaTemplateReq request =
+        getTSCreateSchemaTemplateReq(
+            templateName, schemaNames, measurements, dataTypes, encodings, compressors);
     defaultSessionConnection.createSchemaTemplate(request);
   }
 
