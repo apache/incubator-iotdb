@@ -267,11 +267,16 @@ public class VirtualStorageGroupManager {
   }
 
   /** push delete operation down to all virtual storage group processors */
-  public void delete(PartialPath path, long startTime, long endTime, long planIndex)
+  public void delete(
+      PartialPath path,
+      long startTime,
+      long endTime,
+      long planIndex,
+      TimePartitionFilter timePartitionFilter)
       throws IOException {
     for (StorageGroupProcessor storageGroupProcessor : virtualStorageGroupProcessor) {
       if (storageGroupProcessor != null) {
-        storageGroupProcessor.delete(path, startTime, endTime, planIndex);
+        storageGroupProcessor.delete(path, startTime, endTime, planIndex, timePartitionFilter);
       }
     }
   }

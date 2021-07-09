@@ -39,6 +39,7 @@ import org.apache.iotdb.db.qp.physical.BatchPlan;
 import org.apache.iotdb.db.qp.physical.PhysicalPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.utils.SchemaUtils;
+import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.rpc.TSStatusCode;
 import org.apache.iotdb.service.rpc.thrift.TSStatus;
 
@@ -184,5 +185,10 @@ abstract class BaseApplier implements LogApplier {
       queryExecutor = new ClusterPlanExecutor(metaGroupMember);
     }
     return queryExecutor;
+  }
+
+  @TestOnly
+  public void setQueryExecutor(PlanExecutor queryExecutor) {
+    this.queryExecutor = queryExecutor;
   }
 }

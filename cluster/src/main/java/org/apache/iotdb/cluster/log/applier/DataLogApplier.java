@@ -35,11 +35,13 @@ import org.apache.iotdb.db.exception.metadata.StorageGroupNotSetException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.physical.PhysicalPlan;
+import org.apache.iotdb.db.qp.physical.crud.DeletePlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertMultiTabletPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowsPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
+import org.apache.iotdb.db.qp.physical.sys.DeleteTimeSeriesPlan;
 import org.apache.iotdb.db.service.IoTDB;
 
 import org.slf4j.Logger;
@@ -79,6 +81,12 @@ public class DataLogApplier extends BaseApplier {
       } else if (log instanceof PhysicalPlanLog) {
         PhysicalPlanLog physicalPlanLog = (PhysicalPlanLog) log;
         PhysicalPlan plan = physicalPlanLog.getPlan();
+        if (plan instanceof DeletePlan) {
+          ((DeletePlan) plan).setPartitionFilter(dataGroupMember.getTimePartitionFilter());
+        } else if (plan instanceof DeleteTimeSeriesPlan) {
+          ((DeleteTimeSeriesPlan) plan)
+              .setPartitionFilter(dataGroupMember.getTimePartitionFilter());
+        }
         if (plan instanceof InsertMultiTabletPlan) {
           applyInsert((InsertMultiTabletPlan) plan);
         } else if (plan instanceof InsertRowsPlan) {

@@ -18,6 +18,7 @@
  */
 package org.apache.iotdb.db.qp.physical.crud;
 
+import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor.TimePartitionFilter;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.logical.Operator;
@@ -35,6 +36,12 @@ public class DeletePlan extends PhysicalPlan {
   private long deleteStartTime;
   private long deleteEndTime;
   private List<PartialPath> paths = new ArrayList<>();
+  /**
+   * This deletion only affects those time partitions that evaluate true by the filter. If the
+   * filter is null, all partitions are processed. This is to avoid redundant data deletions when
+   * one timeseries deletion is split and executed into different replication groups.
+   */
+  private TimePartitionFilter partitionFilter;
 
   public DeletePlan() {
     super(false, Operator.OperatorType.DELETE);
@@ -100,6 +107,14 @@ public class DeletePlan extends PhysicalPlan {
   @Override
   public void setPaths(List<PartialPath> paths) {
     this.paths = paths;
+  }
+
+  public TimePartitionFilter getPartitionFilter() {
+    return partitionFilter;
+  }
+
+  public void setPartitionFilter(TimePartitionFilter partitionFilter) {
+    this.partitionFilter = partitionFilter;
   }
 
   @Override

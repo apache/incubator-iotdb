@@ -55,6 +55,7 @@ import org.apache.iotdb.cluster.partition.slot.SlotManager.SlotStatus;
 import org.apache.iotdb.cluster.partition.slot.SlotNodeAdditionResult;
 import org.apache.iotdb.cluster.partition.slot.SlotNodeRemovalResult;
 import org.apache.iotdb.cluster.partition.slot.SlotPartitionTable;
+import org.apache.iotdb.cluster.partition.slot.SlotTimePartitionFilter;
 import org.apache.iotdb.cluster.query.LocalQueryExecutor;
 import org.apache.iotdb.cluster.query.manage.ClusterQueryManager;
 import org.apache.iotdb.cluster.rpc.thrift.ElectionRequest;
@@ -825,6 +826,18 @@ public class DataGroupMember extends RaftMember {
         peerMap.putIfAbsent(newNodeToGroup, new Peer(logManager.getLastLogIndex()));
       }
     }
+  }
+
+  /**
+   * Return a TimePartitionFilter that tells whether a time partition is managed by this member.
+   *
+   * @return a TimePartitionFilter that tells whether a time partition is managed by this member.
+   */
+  public TimePartitionFilter getTimePartitionFilter() {
+    Set<Integer> slotSet =
+        new HashSet<>(
+            ((SlotPartitionTable) metaGroupMember.getPartitionTable()).getNodeSlots(getHeader()));
+    return new SlotTimePartitionFilter(slotSet);
   }
 
   /**

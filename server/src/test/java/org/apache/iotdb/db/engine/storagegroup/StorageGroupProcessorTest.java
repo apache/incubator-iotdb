@@ -120,7 +120,7 @@ public class StorageGroupProcessorTest {
       processor.insert(new InsertRowPlan(record));
     }
 
-    processor.delete(new PartialPath(deviceId, measurementId), 0, 15L, -1);
+    processor.delete(new PartialPath(deviceId, measurementId), 0, 15L, -1, null);
 
     List<TsFileResource> tsfileResourcesForQuery = new ArrayList<>();
     for (TsFileProcessor tsfileProcessor : processor.getWorkUnsequenceTsFileProcessors()) {

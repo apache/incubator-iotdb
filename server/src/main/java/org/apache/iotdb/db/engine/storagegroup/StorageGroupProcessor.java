@@ -1766,8 +1766,14 @@ public class StorageGroupProcessor {
    * @param path the timeseries path of the to be deleted.
    * @param startTime the startTime of delete range.
    * @param endTime the endTime of delete range.
+   * @param timePartitionFilter
    */
-  public void delete(PartialPath path, long startTime, long endTime, long planIndex)
+  public void delete(
+      PartialPath path,
+      long startTime,
+      long endTime,
+      long planIndex,
+      TimePartitionFilter timePartitionFilter)
       throws IOException {
     // If there are still some old version tsfiles, the delete won't succeeded.
     if (upgradeFileCount.get() != 0) {
@@ -1798,7 +1804,7 @@ public class StorageGroupProcessor {
       }
 
       // write log to impacted working TsFileProcessors
-      logDeletion(startTime, endTime, path);
+      logDeletion(startTime, endTime, path, timePartitionFilter);
 
       Deletion deletion = new Deletion(path, MERGE_MOD_START_VERSION_NUM, startTime, endTime);
       if (tsFileManagement.mergingModification != null) {
@@ -1807,9 +1813,19 @@ public class StorageGroupProcessor {
       }
 
       deleteDataInFiles(
-          tsFileManagement.getTsFileList(true), deletion, devicePaths, updatedModFiles, planIndex);
+          tsFileManagement.getTsFileList(true),
+          deletion,
+          devicePaths,
+          updatedModFiles,
+          planIndex,
+          timePartitionFilter);
       deleteDataInFiles(
-          tsFileManagement.getTsFileList(false), deletion, devicePaths, updatedModFiles, planIndex);
+          tsFileManagement.getTsFileList(false),
+          deletion,
+          devicePaths,
+          updatedModFiles,
+          planIndex,
+          timePartitionFilter);
 
     } catch (Exception e) {
       // roll back
@@ -1822,19 +1838,27 @@ public class StorageGroupProcessor {
     }
   }
 
-  private void logDeletion(long startTime, long endTime, PartialPath path) throws IOException {
+  private void logDeletion(
+      long startTime, long endTime, PartialPath path, TimePartitionFilter timePartitionFilter)
+      throws IOException {
     long timePartitionStartId = StorageEngine.getTimePartition(startTime);
     long timePartitionEndId = StorageEngine.getTimePartition(endTime);
     if (IoTDBDescriptor.getInstance().getConfig().isEnableWal()) {
       DeletePlan deletionPlan = new DeletePlan(startTime, endTime, path);
       for (Map.Entry<Long, TsFileProcessor> entry : workSequenceTsFileProcessors.entrySet()) {
-        if (timePartitionStartId <= entry.getKey() && entry.getKey() <= timePartitionEndId) {
+        if (timePartitionStartId <= entry.getKey()
+            && entry.getKey() <= timePartitionEndId
+            && (timePartitionFilter == null
+                || timePartitionFilter.satisfy(logicalStorageGroupName, entry.getKey()))) {
           entry.getValue().getLogNode().write(deletionPlan);
         }
       }
 
       for (Map.Entry<Long, TsFileProcessor> entry : workUnsequenceTsFileProcessors.entrySet()) {
-        if (timePartitionStartId <= entry.getKey() && entry.getKey() <= timePartitionEndId) {
+        if (timePartitionStartId <= entry.getKey()
+            && entry.getKey() <= timePartitionEndId
+            && (timePartitionFilter == null
+                || timePartitionFilter.satisfy(logicalStorageGroupName, entry.getKey()))) {
           entry.getValue().getLogNode().write(deletionPlan);
         }
       }
@@ -1845,7 +1869,13 @@ public class StorageGroupProcessor {
       TsFileResource tsFileResource,
       Set<PartialPath> devicePaths,
       long deleteStart,
-      long deleteEnd) {
+      long deleteEnd,
+      TimePartitionFilter timePartitionFilter) {
+    if (timePartitionFilter != null
+        && !timePartitionFilter.satisfy(
+            logicalStorageGroupName, tsFileResource.getTimePartition())) {
+      return true;
+    }
     for (PartialPath device : devicePaths) {
       String deviceId = device.getFullPath();
       long endTime = tsFileResource.getEndTime(deviceId);
@@ -1866,11 +1896,16 @@ public class StorageGroupProcessor {
       Deletion deletion,
       Set<PartialPath> devicePaths,
       List<ModificationFile> updatedModFiles,
-      long planIndex)
+      long planIndex,
+      TimePartitionFilter timePartitionFilter)
       throws IOException {
     for (TsFileResource tsFileResource : tsFileResourceList) {
       if (canSkipDelete(
-          tsFileResource, devicePaths, deletion.getStartTime(), deletion.getEndTime())) {
+          tsFileResource,
+          devicePaths,
+          deletion.getStartTime(),
+          deletion.getEndTime(),
+          timePartitionFilter)) {
         continue;
       }
 
