@@ -392,13 +392,16 @@ public abstract class Cases {
 
   // test https://issues.apache.org/jira/browse/IOTDB-1407
   @Test
-  public void showTimeseriesTagsTest() throws SQLException {
+  public void showTimeseriesTagsTest() throws SQLException, InterruptedException {
     String createTimeSeries1 =
         "create timeseries root.ln.wf01.wt1 WITH DATATYPE=DOUBLE, ENCODING=RLE, compression=SNAPPY tags(tag1=v1, tag2=v2)";
     String createTimeSeries2 =
         "create timeseries root.ln.wf01.wt2 WITH DATATYPE=DOUBLE, ENCODING=RLE, compression=SNAPPY tags(tag1=v1, tag2=v2)";
     writeStatement.execute(createTimeSeries1);
     writeStatement.execute(createTimeSeries2);
+
+    Thread.sleep(200);
+
     // try to read data on each node. select .*
     for (Statement readStatement : readStatements) {
       ResultSet resultSet =
