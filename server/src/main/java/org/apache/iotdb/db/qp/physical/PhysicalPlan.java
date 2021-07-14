@@ -408,13 +408,13 @@ public abstract class PhysicalPlan {
     }
   }
 
+  /** If you want to add new PhysicalPlanType, you must add it in the last. */
   public enum PhysicalPlanType {
     INSERT,
     DELETE,
     BATCHINSERT,
     SET_STORAGE_GROUP,
     CREATE_TIMESERIES,
-    CREATE_ALIGNED_TIMESERIES,
     TTL,
     GRANT_WATERMARK_EMBEDDING,
     REVOKE_WATERMARK_EMBEDDING,
@@ -443,7 +443,6 @@ public abstract class PhysicalPlan {
     MNODE,
     MEASUREMENT_MNODE,
     STORAGE_GROUP_MNODE,
-    CLUSTER_LOG,
     BATCH_INSERT_ONE_DEVICE,
     MULTI_BATCH_INSERT,
     BATCH_INSERT_ROWS,
@@ -452,6 +451,8 @@ public abstract class PhysicalPlan {
     SET_DEVICE_TEMPLATE,
     SET_USING_DEVICE_TEMPLATE,
     AUTO_CREATE_DEVICE_MNODE,
+    CREATE_ALIGNED_TIMESERIES,
+    CLUSTER_LOG,
     CREATE_TRIGGER,
     DROP_TRIGGER,
     START_TRIGGER,
