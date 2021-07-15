@@ -18,14 +18,18 @@
  */
 package org.apache.iotdb.jdbc;
 
-public class Constant {
+import org.apache.iotdb.tsfile.read.common.RowRecord;
 
-  private Constant() {}
+public interface WatermarkEncoder {
+  int encodeInt(int value, long time);
 
-  public static final String GLOBAL_DB_NAME = "IoTDB";
+  long encodeLong(long value, long time);
 
-  static final String METHOD_NOT_SUPPORTED = "Method not supported";
-  static final String PARAMETER_NOT_NULL = "The parameter cannot be null";
-  static final String PARAMETER_SUPPORTED =
-      "Parameter only supports BOOLEAN,INT32,INT64,FLOAT,DOUBLE,TEXT data type";
+  float encodeFloat(float value, long time);
+
+  double encodeDouble(double value, long time);
+
+  boolean needEncode(long timestamp);
+
+  RowRecord encodeRecord(RowRecord record);
 }

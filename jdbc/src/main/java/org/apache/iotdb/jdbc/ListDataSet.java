@@ -18,14 +18,36 @@
  */
 package org.apache.iotdb.jdbc;
 
-public class Constant {
+import org.apache.iotdb.tsfile.read.common.RowRecord;
+import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 
-  private Constant() {}
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
-  public static final String GLOBAL_DB_NAME = "IoTDB";
+public class ListDataSet extends QueryDataSet {
+  private final List<RowRecord> records = new ArrayList<>();
+  private int index = 0;
 
-  static final String METHOD_NOT_SUPPORTED = "Method not supported";
-  static final String PARAMETER_NOT_NULL = "The parameter cannot be null";
-  static final String PARAMETER_SUPPORTED =
-      "Parameter only supports BOOLEAN,INT32,INT64,FLOAT,DOUBLE,TEXT data type";
+  @Override
+  public boolean hasNextWithoutConstraint() {
+    return index < records.size();
+  }
+
+  @Override
+  public RowRecord nextWithoutConstraint() {
+    return records.get(index++);
+  }
+
+  public void putRecord(RowRecord newRecord) {
+    records.add(newRecord);
+  }
+
+  public void sortByTime() {
+    records.sort((o1, o2) -> Long.compare(o2.getTimestamp(), o1.getTimestamp()));
+  }
+
+  public void sort(Comparator<RowRecord> c) {
+    records.sort(c);
+  }
 }

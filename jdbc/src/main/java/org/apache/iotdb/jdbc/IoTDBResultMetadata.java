@@ -140,7 +140,7 @@ public class IoTDBResultMetadata implements ResultSetMetaData {
   public String getColumnTypeName(int column) throws SQLException {
     checkColumnIndex(column);
     if (column == 1 && !ignoreTimestamp) {
-      return "TIMESTAMP";
+      return "TIME";
     }
     // BOOLEAN, INT32, INT64, FLOAT, DOUBLE, TEXT,
     String columnType;
@@ -162,67 +162,139 @@ public class IoTDBResultMetadata implements ResultSetMetaData {
   }
 
   @Override
-  public int getPrecision(int arg0) throws SQLException {
-    throw new SQLException(Constant.METHOD_NOT_SUPPORTED);
+  public int getPrecision(int column) throws SQLException {
+    checkColumnIndex(column);
+    if (column == 1 && !ignoreTimestamp) {
+      return 13;
+    }
+    // BOOLEAN, INT32, INT64, FLOAT, DOUBLE, TEXT,
+    String columnType;
+    if (!ignoreTimestamp) {
+      columnType = columnTypeList.get(column - 2);
+    } else {
+      columnType = columnTypeList.get(column - 1);
+    }
+    switch (columnType.toUpperCase()) {
+      case "BOOLEAN":
+        return 1;
+      case "INT32":
+        return 10;
+      case "INT64":
+        return 19;
+      case "FLOAT":
+        return 38;
+      case "DOUBLE":
+        return 308;
+      case "TEXT":
+        return Integer.MAX_VALUE;
+      default:
+        break;
+    }
+    return 0;
   }
 
   @Override
-  public int getScale(int arg0) throws SQLException {
-    throw new SQLException(Constant.METHOD_NOT_SUPPORTED);
+  public int getScale(int column) throws SQLException {
+    checkColumnIndex(column);
+    if (column == 1 && !ignoreTimestamp) {
+      return 0;
+    }
+    String columnType;
+    if (!ignoreTimestamp) {
+      columnType = columnTypeList.get(column - 2);
+    } else {
+      columnType = columnTypeList.get(column - 1);
+    }
+    switch (columnType.toUpperCase()) {
+      case "BOOLEAN":
+      case "INT32":
+      case "INT64":
+      case "TEXT":
+        return 0;
+      case "FLOAT":
+        return 6;
+      case "DOUBLE":
+        return 15;
+      default:
+        break;
+    }
+    return 0;
   }
 
   @Override
-  public String getSchemaName(int arg0) throws SQLException {
-    throw new SQLException(Constant.METHOD_NOT_SUPPORTED);
+  public String getSchemaName(int column) throws SQLException {
+    checkColumnIndex(column);
+    if (column == 1 && !ignoreTimestamp) {
+      return "TIME";
+    }
+    // Temporarily use column names as getSchemaName
+    String columName;
+    if (!ignoreTimestamp) {
+      columName = columnInfoList.get(column - 2);
+    } else {
+      columName = columnInfoList.get(column - 1);
+    }
+    return columName;
   }
 
   @Override
-  public String getTableName(int arg0) throws SQLException {
-    throw new SQLException(Constant.METHOD_NOT_SUPPORTED);
+  public String getTableName(int column) throws SQLException {
+    checkColumnIndex(column);
+    if (column == 1 && !ignoreTimestamp) {
+      return "TIME";
+    }
+    // Temporarily use column names as table names
+    String columName;
+    if (!ignoreTimestamp) {
+      columName = columnInfoList.get(column - 2);
+    } else {
+      columName = columnInfoList.get(column - 1);
+    }
+    return columName;
   }
 
   @Override
   public boolean isAutoIncrement(int arg0) throws SQLException {
-    throw new SQLException(Constant.METHOD_NOT_SUPPORTED);
+    return false;
   }
 
   @Override
   public boolean isCaseSensitive(int arg0) throws SQLException {
-    throw new SQLException(Constant.METHOD_NOT_SUPPORTED);
+    return true;
   }
 
   @Override
   public boolean isCurrency(int arg0) throws SQLException {
-    throw new SQLException(Constant.METHOD_NOT_SUPPORTED);
+    return false;
   }
 
   @Override
   public boolean isDefinitelyWritable(int arg0) throws SQLException {
-    throw new SQLException(Constant.METHOD_NOT_SUPPORTED);
+    return false;
   }
 
   @Override
   public int isNullable(int arg0) throws SQLException {
-    throw new SQLException(Constant.METHOD_NOT_SUPPORTED);
+    return 1;
   }
 
   @Override
   public boolean isReadOnly(int arg0) throws SQLException {
-    throw new SQLException(Constant.METHOD_NOT_SUPPORTED);
+    return true;
   }
 
   @Override
   public boolean isSearchable(int arg0) throws SQLException {
-    throw new SQLException(Constant.METHOD_NOT_SUPPORTED);
+    return true;
   }
 
   @Override
   public boolean isSigned(int arg0) throws SQLException {
-    throw new SQLException(Constant.METHOD_NOT_SUPPORTED);
+    return true;
   }
 
   @Override
   public boolean isWritable(int arg0) throws SQLException {
-    throw new SQLException(Constant.METHOD_NOT_SUPPORTED);
+    return false;
   }
 }

@@ -84,6 +84,13 @@ public class IoTDBConnection implements Connection {
 
   private ZoneId zoneId;
   private boolean autoCommit;
+  private String url;
+
+  public String getUserName() {
+    return userName;
+  }
+
+  private String userName;
 
   public IoTDBConnection() {
     // allowed to create an instance without parameter input.
@@ -94,7 +101,8 @@ public class IoTDBConnection implements Connection {
       throw new IoTDBURLException("Input url cannot be null");
     }
     params = Utils.parseUrl(url, info);
-
+    this.url = url;
+    this.userName = info.get("user").toString();
     openTransport();
     if (Config.rpcThriftCompressionEnable) {
       setClient(new TSIService.Client(new TCompactProtocol(transport)));
@@ -106,6 +114,10 @@ public class IoTDBConnection implements Connection {
     // Wrap the client with a thread-safe proxy to serialize the RPC calls
     setClient(RpcUtils.newSynchronizedClient(getClient()));
     autoCommit = false;
+  }
+
+  public String getUrl() {
+    return url;
   }
 
   @Override
@@ -222,7 +234,7 @@ public class IoTDBConnection implements Connection {
 
   @Override
   public String getCatalog() {
-    return "no catalog";
+    return "Apache IoTDB";
   }
 
   @Override

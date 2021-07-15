@@ -30,21 +30,7 @@ import java.io.Reader;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.net.URL;
-import java.sql.Array;
-import java.sql.Blob;
-import java.sql.Clob;
-import java.sql.Date;
-import java.sql.NClob;
-import java.sql.Ref;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.RowId;
-import java.sql.SQLException;
-import java.sql.SQLWarning;
-import java.sql.SQLXML;
-import java.sql.Statement;
-import java.sql.Time;
-import java.sql.Timestamp;
+import java.sql.*;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +41,7 @@ public abstract class AbstractIoTDBJDBCResultSet implements ResultSet {
   protected SQLWarning warningChain = null;
   protected List<String> columnTypeList;
   protected IoTDBRpcDataSet ioTDBRpcDataSet;
+  private boolean isRpcFetchResult = true;
 
   public AbstractIoTDBJDBCResultSet(
       Statement statement,
@@ -84,6 +71,38 @@ public abstract class AbstractIoTDBJDBCResultSet implements ResultSet {
             timeout);
     this.statement = statement;
     this.columnTypeList = columnTypeList;
+  }
+
+  public AbstractIoTDBJDBCResultSet(
+      Statement statement,
+      List<String> columnNameList,
+      List<String> columnTypeList,
+      Map<String, Integer> columnNameIndex,
+      boolean ignoreTimeStamp,
+      TSIService.Iface client,
+      String sql,
+      long queryId,
+      long sessionId,
+      long timeout,
+      boolean isRpcFetchResult)
+      throws SQLException {
+    this.ioTDBRpcDataSet =
+        new IoTDBRpcDataSet(
+            sql,
+            columnNameList,
+            columnTypeList,
+            columnNameIndex,
+            ignoreTimeStamp,
+            queryId,
+            ((IoTDBStatement) statement).getStmtId(),
+            client,
+            sessionId,
+            null,
+            statement.getFetchSize(),
+            timeout);
+    this.statement = statement;
+    this.columnTypeList = columnTypeList;
+    this.isRpcFetchResult = isRpcFetchResult;
   }
 
   @Override
@@ -656,7 +675,7 @@ public abstract class AbstractIoTDBJDBCResultSet implements ResultSet {
     if (ioTDBRpcDataSet.emptyResultSet) {
       return false;
     }
-    if (fetchResults()) {
+    if (isRpcFetchResult && fetchResults()) {
       constructOneRow();
       return true;
     }

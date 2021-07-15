@@ -318,6 +318,13 @@ struct ServerProperties {
   1: required string version;
   2: required list<string> supportedTimeAggregationOperations;
   3: required string timestampPrecision;
+  4: i32 maxConcurrentClientNum;
+  5: optional string watermarkSecretKey;
+  6: optional string watermarkBitString
+  7: optional i32 watermarkParamMarkRate;
+  8: optional i32 watermarkParamMaxRightBit;
+  9: optional i32 thriftMaxFrameSize;
+  10:optional bool isReadOnly;
 }
 
 struct TSSetSchemaTemplateReq {

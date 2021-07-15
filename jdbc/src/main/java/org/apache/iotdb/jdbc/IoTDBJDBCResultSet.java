@@ -58,6 +58,35 @@ public class IoTDBJDBCResultSet extends AbstractIoTDBJDBCResultSet {
     ioTDBRpcDataSet.setTsQueryDataSet(dataset);
   }
 
+  public IoTDBJDBCResultSet(
+      Statement statement,
+      List<String> columnNameList,
+      List<String> columnTypeList,
+      Map<String, Integer> columnNameIndex,
+      boolean ignoreTimeStamp,
+      TSIService.Iface client,
+      String sql,
+      long queryId,
+      long sessionId,
+      TSQueryDataSet dataset,
+      long timeout,
+      boolean isRpcFetchResult)
+      throws SQLException {
+    super(
+        statement,
+        columnNameList,
+        columnTypeList,
+        columnNameIndex,
+        ignoreTimeStamp,
+        client,
+        sql,
+        queryId,
+        sessionId,
+        timeout,
+        isRpcFetchResult);
+    ioTDBRpcDataSet.setTsQueryDataSet(dataset);
+  }
+
   @Override
   public long getLong(String columnName) throws SQLException {
     try {
