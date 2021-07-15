@@ -36,19 +36,25 @@ public class FlinkIoTDBSink {
     // run the flink job on local mini cluster
     StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
-    IoTDBSinkOptions options = new IoTDBSinkOptions();
-    options.setHost("127.0.0.1");
-    options.setPort(6667);
-    options.setUser("root");
-    options.setPassword("root");
-    options.setStorageGroup("root.sg");
+    String host = "127.0.0.1";
+    int port = 6667;
+    String user = "root";
+    String password = "root";
 
     // If the server enables auto_create_schema, then we do not need to register all timeseries
     // here.
-    options.setTimeseriesOptionList(
-        Lists.newArrayList(
-            new IoTDBSinkOptions.TimeseriesOption(
-                "root.sg.d1.s1", TSDataType.DOUBLE, TSEncoding.GORILLA, CompressionType.SNAPPY)));
+    IoTDBSinkOptions options =
+        new IoTDBSinkOptions(
+            host,
+            port,
+            user,
+            password,
+            Lists.newArrayList(
+                new IoTDBSinkOptions.TimeseriesOption(
+                    "root.sg.d1.s1",
+                    TSDataType.DOUBLE,
+                    TSEncoding.GORILLA,
+                    CompressionType.SNAPPY)));
 
     IoTSerializationSchema serializationSchema = new DefaultIoTSerializationSchema();
     IoTDBSink ioTDBSink =

@@ -28,7 +28,6 @@ import java.util.List;
 /** IoTDBOptions describes the configuration related information for IoTDB and timeseries. */
 public class IoTDBSinkOptions extends IoTDBOptions {
 
-  private String storageGroup;
   private List<TimeseriesOption> timeseriesOptionList;
 
   public IoTDBSinkOptions() {}
@@ -38,19 +37,9 @@ public class IoTDBSinkOptions extends IoTDBOptions {
       int port,
       String user,
       String password,
-      String storageGroup,
       List<TimeseriesOption> timeseriesOptionList) {
     super(host, port, user, password);
-    this.storageGroup = storageGroup;
     this.timeseriesOptionList = timeseriesOptionList;
-  }
-
-  public String getStorageGroup() {
-    return storageGroup;
-  }
-
-  public void setStorageGroup(String storageGroup) {
-    this.storageGroup = storageGroup;
   }
 
   public List<TimeseriesOption> getTimeseriesOptionList() {

@@ -19,8 +19,6 @@
 package org.apache.iotdb.flink;
 
 import org.apache.iotdb.flink.options.IoTDBSinkOptions;
-import org.apache.iotdb.rpc.StatementExecutionException;
-import org.apache.iotdb.rpc.TSStatusCode;
 import org.apache.iotdb.session.pool.SessionPool;
 import org.apache.iotdb.tsfile.common.constant.TsFileConstant;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -78,7 +76,7 @@ public class IoTDBSink<IN> extends RichSinkFunction<IN> {
     initScheduler();
   }
 
-  void initSession() throws Exception {
+  void initSession() {
     pool =
         new SessionPool(
             options.getHost(),
@@ -86,28 +84,6 @@ public class IoTDBSink<IN> extends RichSinkFunction<IN> {
             options.getUser(),
             options.getPassword(),
             sessionPoolSize);
-
-    try {
-      pool.setStorageGroup(options.getStorageGroup());
-    } catch (StatementExecutionException e) {
-      if (e.getStatusCode() != TSStatusCode.PATH_ALREADY_EXIST_ERROR.getStatusCode()) {
-        throw e;
-      }
-    }
-
-    for (IoTDBSinkOptions.TimeseriesOption option : options.getTimeseriesOptionList()) {
-      if (!pool.checkTimeseriesExists(option.getPath())) {
-        try {
-          pool.createTimeseries(
-              option.getPath(), option.getDataType(), option.getEncoding(), option.getCompressor());
-        } catch (StatementExecutionException e) {
-          // path could have been created by the other process here
-          if (e.getStatusCode() != TSStatusCode.PATH_ALREADY_EXIST_ERROR.getStatusCode()) {
-            throw e;
-          }
-        }
-      }
-    }
   }
 
   void initScheduler() {
