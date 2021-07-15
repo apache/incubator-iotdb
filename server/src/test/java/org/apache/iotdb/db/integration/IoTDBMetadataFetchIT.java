@@ -24,10 +24,7 @@ import org.apache.iotdb.jdbc.Config;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,7 +65,6 @@ public class IoTDBMetadataFetchIT {
             "SET STORAGE GROUP TO root.ln1.wf01.wt01",
             "SET STORAGE GROUP TO root.ln2.wf01.wt01",
             "CREATE TIMESERIES root.ln.wf01.wt01.status WITH DATATYPE = BOOLEAN, ENCODING = PLAIN",
-            "CREATE TIMESERIES root.ln.wf01.wt01.status.s1 WITH DATATYPE = BOOLEAN, ENCODING = PLAIN",
             "CREATE TIMESERIES root.ln.wf01.wt01.temperature WITH DATATYPE = FLOAT, ENCODING = RLE, "
                 + "compressor = SNAPPY, MAX_POINT_NUMBER = 3"
           };
@@ -115,22 +111,18 @@ public class IoTDBMetadataFetchIT {
           new Set[] {
             new HashSet<>(
                 Arrays.asList(
-                    "root.ln.wf01.wt01.status,null,root.ln.wf01.wt01,BOOLEAN,PLAIN,SNAPPY,null,null,",
-                    "root.ln.wf01.wt01.status.s1,null,root.ln.wf01.wt01,BOOLEAN,PLAIN,SNAPPY,null,null,")),
+                    "root.ln.wf01.wt01.status,null,root.ln.wf01.wt01,BOOLEAN,PLAIN,SNAPPY,null,null,")),
             new HashSet<>(
                 Arrays.asList(
                     "root.ln.wf01.wt01.status,null,root.ln.wf01.wt01,BOOLEAN,PLAIN,SNAPPY,null,null,",
-                    "root.ln.wf01.wt01.status.s1,null,root.ln.wf01.wt01,BOOLEAN,PLAIN,SNAPPY,null,null,",
                     "root.ln.wf01.wt01.temperature,null,root.ln.wf01.wt01,FLOAT,RLE,SNAPPY,null,null,")),
             new HashSet<>(
                 Arrays.asList(
                     "root.ln.wf01.wt01.status,null,root.ln.wf01.wt01,BOOLEAN,PLAIN,SNAPPY,null,null,",
-                    "root.ln.wf01.wt01.status.s1,null,root.ln.wf01.wt01,BOOLEAN,PLAIN,SNAPPY,null,null,",
                     "root.ln.wf01.wt01.temperature,null,root.ln.wf01.wt01,FLOAT,RLE,SNAPPY,null,null,")),
             new HashSet<>(
                 Arrays.asList(
                     "root.ln.wf01.wt01.status,null,root.ln.wf01.wt01,BOOLEAN,PLAIN,SNAPPY,null,null,",
-                    "root.ln.wf01.wt01.status.s1,null,root.ln.wf01.wt01,BOOLEAN,PLAIN,SNAPPY,null,null,",
                     "root.ln.wf01.wt01.temperature,null,root.ln.wf01.wt01,FLOAT,RLE,SNAPPY,null,null,")),
             new HashSet<>(Collections.singletonList(""))
           };
@@ -410,7 +402,7 @@ public class IoTDBMetadataFetchIT {
                 Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement()) {
       String[] sqls = new String[] {"COUNT TIMESERIES root.ln", "COUNT TIMESERIES"};
-      String[] standards = new String[] {"3,\n", "3,\n"};
+      String[] standards = new String[] {"2,\n", "2,\n"};
       for (int n = 0; n < sqls.length; n++) {
         String sql = sqls[n];
         String standard = standards[n];
@@ -448,7 +440,7 @@ public class IoTDBMetadataFetchIT {
           new String[] {
             "COUNT DEVICES root.ln", "COUNT DEVICES", "COUNT DEVICES root.ln.wf01.wt01.temperature"
           };
-      String[] standards = new String[] {"2,\n", "2,\n", "0,\n"};
+      String[] standards = new String[] {"1,\n", "1,\n", "0,\n"};
       for (int n = 0; n < sqls.length; n++) {
         String sql = sqls[n];
         String standard = standards[n];
@@ -524,7 +516,7 @@ public class IoTDBMetadataFetchIT {
         Statement statement = connection.createStatement()) {
       String[] sqls = new String[] {"COUNT TIMESERIES root group by level=1"};
       Set<String>[] standards =
-          new Set[] {new HashSet<>(Arrays.asList("root.ln,3,", "root.ln1,0,", "root.ln2,0,"))};
+          new Set[] {new HashSet<>(Arrays.asList("root.ln,2,", "root.ln1,0,", "root.ln2,0,"))};
       for (int n = 0; n < sqls.length; n++) {
         String sql = sqls[n];
         Set<String> standard = standards[n];
@@ -607,12 +599,10 @@ public class IoTDBMetadataFetchIT {
             + "\t\t\t\t\t\t\"Encoding\":\"RLE\"\n"
             + "\t\t\t\t\t},\n"
             + "\t\t\t\t\t\"status\":{\n"
-            + "\t\t\t\t\t\t\"s1\":{\n"
             + "\t\t\t\t\t\t\t\"StorageGroup\":\"root.ln.wf01.wt01\",\n"
             + "\t\t\t\t\t\t\t\"DataType\":\"BOOLEAN\",\n"
             + "\t\t\t\t\t\t\t\"Compressor\":\"SNAPPY\",\n"
             + "\t\t\t\t\t\t\t\"Encoding\":\"PLAIN\"\n"
-            + "\t\t\t\t\t\t}\n"
             + "\t\t\t\t\t}\n"
             + "\t\t\t\t}\n"
             + "\t\t\t}\n"

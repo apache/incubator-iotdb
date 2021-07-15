@@ -203,7 +203,17 @@ public class VectorMeasurementSchema
 
   @Override
   public int getMeasurementIdColumnIndex(String measurementId) {
-    return measurementsToIndexMap.get(measurementId);
+    return measurementsToIndexMap.getOrDefault(measurementId, -1);
+  }
+
+  @Override
+  public int getMeasurementCount() {
+    return measurementsToIndexMap.size();
+  }
+
+  @Override
+  public boolean isCompatible(String measurementId) {
+    return measurementsToIndexMap.containsKey(measurementId);
   }
 
   @Override

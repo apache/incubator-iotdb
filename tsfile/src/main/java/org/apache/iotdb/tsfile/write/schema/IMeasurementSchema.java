@@ -59,6 +59,11 @@ public interface IMeasurementSchema {
 
   int getMeasurementIdColumnIndex(String measurementId);
 
+  int getMeasurementCount();
+
+  /* test whether the schema contains Measurement with given measurementId */
+  boolean isCompatible(String measurementId);
+
   int serializeTo(ByteBuffer buffer);
 
   int serializeTo(OutputStream outputStream) throws IOException;

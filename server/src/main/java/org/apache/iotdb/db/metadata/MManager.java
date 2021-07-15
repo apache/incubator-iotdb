@@ -2400,6 +2400,13 @@ public class MManager {
           throw new MetadataException("Incompatible template");
         }
 
+        for (String schemaName : template.getSchemaMap().keySet()) {
+          if (node.left.hasChild(schemaName)) {
+            throw new PathAlreadyExistException(
+                node.left.getPartialPath().concatNode(schemaName).getFullPath());
+          }
+        }
+
         node.left.setDeviceTemplate(template);
       }
 

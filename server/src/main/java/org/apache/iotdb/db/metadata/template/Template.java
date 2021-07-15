@@ -120,6 +120,10 @@ public class Template {
         || schemaMap.containsKey(path.getDevicePath().getMeasurement()));
   }
 
+  public boolean hasSchema(String measurementId) {
+    return schemaMap.containsKey(measurementId);
+  }
+
   public List<MeasurementMNode> getMeasurementMNode() {
     Set<IMeasurementSchema> deduplicateSchema = new HashSet<>();
     List<MeasurementMNode> res = new ArrayList<>();

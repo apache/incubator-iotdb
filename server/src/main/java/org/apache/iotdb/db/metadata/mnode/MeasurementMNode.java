@@ -28,12 +28,18 @@ import org.apache.iotdb.tsfile.read.TimeValuePair;
 import org.apache.iotdb.tsfile.write.schema.IMeasurementSchema;
 import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 /** Represents an MNode which has a Measurement or Sensor attached to it. */
 public class MeasurementMNode extends MNode {
+
+  private static final Logger logger = LoggerFactory.getLogger(MeasurementMNode.class);
 
   private static final long serialVersionUID = -1199657856921206435L;
 
@@ -71,6 +77,57 @@ public class MeasurementMNode extends MNode {
     super(parent, measurementName);
     this.schema = schema;
     this.alias = alias;
+  }
+
+  @Override
+  public boolean hasChild(String name) {
+    return false;
+  }
+
+  @Override
+  public void addChild(String name, MNode child) {
+    // Do nothing
+  }
+
+  @Override
+  public void deleteChild(String name) {
+    // Do nothing
+  }
+
+  @Override
+  public void deleteAliasChild(String alias) {
+    // Do nothing
+  }
+
+  @Override
+  public MNode getChild(String name) {
+    logger.warn("current node {} is a MeasurementMNode, can not get child {}", super.name, name);
+    throw new RuntimeException(
+        String.format(
+            "current node %s is a MeasurementMNode, can not get child %s", super.name, name));
+  }
+
+  @Override
+  public int getMeasurementMNodeCount() {
+    return 1;
+  }
+
+  public int getMeasurementCount() {
+    return schema.getMeasurementCount();
+  }
+
+  @Override
+  public boolean addAlias(String alias, MNode child) {
+    return false;
+  }
+
+  @Override
+  public Map<String, MNode> getChildren() {
+    return Collections.emptyMap();
+  }
+
+  public void setChildren(Map<String, MNode> children) {
+    // Do nothing
   }
 
   public IMeasurementSchema getSchema() {

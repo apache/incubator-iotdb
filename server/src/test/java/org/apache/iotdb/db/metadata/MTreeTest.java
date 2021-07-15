@@ -21,6 +21,7 @@ package org.apache.iotdb.db.metadata;
 import org.apache.iotdb.db.exception.metadata.AliasAlreadyExistException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
+import org.apache.iotdb.db.exception.metadata.PathAlreadyExistException;
 import org.apache.iotdb.db.metadata.mnode.MNode;
 import org.apache.iotdb.db.metadata.mnode.MeasurementMNode;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
@@ -710,7 +711,7 @@ public class MTreeTest {
         Collections.emptyMap(),
         null);
     root.createTimeseries(
-        new PartialPath("root.laptop.d1.s1.b"),
+        new PartialPath("root.laptop.d1.s2.b"),
         TSDataType.INT32,
         TSEncoding.RLE,
         TSFileDescriptor.getInstance().getConfig().getCompressor(),
@@ -767,83 +768,6 @@ public class MTreeTest {
   }
 
   @Test
-  public void testDeleteChildOfMeasurementMNode() throws MetadataException {
-    MTree root = new MTree();
-    String sgPath = "root.sg1";
-    root.setStorageGroup(new PartialPath(sgPath));
-    try {
-      root.createTimeseries(
-          new PartialPath("root.sg1.a.b"),
-          TSDataType.INT32,
-          TSEncoding.RLE,
-          TSFileDescriptor.getInstance().getConfig().getCompressor(),
-          Collections.emptyMap(),
-          null);
-      root.createTimeseries(
-          new PartialPath("root.sg1.a.b.c"),
-          TSDataType.INT32,
-          TSEncoding.RLE,
-          TSFileDescriptor.getInstance().getConfig().getCompressor(),
-          Collections.emptyMap(),
-          null);
-      assertTrue(root.isPathExist(new PartialPath("root.sg1.a.b")));
-      assertTrue(root.isPathExist(new PartialPath("root.sg1.a.b.c")));
-
-      root.deleteTimeseriesAndReturnEmptyStorageGroup(new PartialPath("root.sg1.a.b.c"));
-
-      assertFalse(root.isPathExist(new PartialPath("root.sg1.a.b.c")));
-      assertTrue(root.isPathExist(new PartialPath("root.sg1.a.b")));
-
-    } catch (MetadataException e1) {
-      fail(e1.getMessage());
-    }
-  }
-
-  @Test
-  public void testGetMeasurementMNodeCount() throws MetadataException {
-    MTree root = new MTree();
-    PartialPath sgPath = new PartialPath("root.sg1");
-    root.setStorageGroup(sgPath);
-    try {
-      root.createTimeseries(
-          new PartialPath("root.sg1.a.b"),
-          TSDataType.INT32,
-          TSEncoding.RLE,
-          TSFileDescriptor.getInstance().getConfig().getCompressor(),
-          Collections.emptyMap(),
-          null);
-      MNode sgNode = root.getNodeByPath(sgPath);
-      assertEquals(1, sgNode.getMeasurementMNodeCount()); // b
-
-      root.createTimeseries(
-          new PartialPath("root.sg1.a.b.c"),
-          TSDataType.INT32,
-          TSEncoding.RLE,
-          TSFileDescriptor.getInstance().getConfig().getCompressor(),
-          Collections.emptyMap(),
-          null);
-      assertEquals(2, sgNode.getMeasurementMNodeCount()); // b and c
-      MNode cNode = sgNode.getChild("a").getChild("b").getChild("c");
-      assertEquals(1, cNode.getMeasurementMNodeCount()); // c
-
-      root.createTimeseries(
-          new PartialPath("root.sg1.a.b.c.d"),
-          TSDataType.INT32,
-          TSEncoding.RLE,
-          TSFileDescriptor.getInstance().getConfig().getCompressor(),
-          Collections.emptyMap(),
-          null);
-      assertEquals(3, sgNode.getMeasurementMNodeCount()); // b, c and d
-      assertEquals(2, cNode.getMeasurementMNodeCount()); // c and d
-      MNode dNode = cNode.getChild("d");
-      assertEquals(1, dNode.getMeasurementMNodeCount()); // d
-
-    } catch (MetadataException e1) {
-      fail(e1.getMessage());
-    }
-  }
-
-  @Test
   public void testCreateTimeseries() throws MetadataException {
     MTree root = new MTree();
     String sgPath = "root.sg1";
@@ -857,15 +781,20 @@ public class MTreeTest {
         Collections.emptyMap(),
         null);
 
-    root.createTimeseries(
-        new PartialPath("root.sg1.a.b"),
-        TSDataType.INT32,
-        TSEncoding.RLE,
-        TSFileDescriptor.getInstance().getConfig().getCompressor(),
-        Collections.emptyMap(),
-        null);
+    try {
+      // mtree doesn't support nested timeseries which means MeasurementMNode is leaf of the tree.
+      root.createTimeseries(
+          new PartialPath("root.sg1.a.b"),
+          TSDataType.INT32,
+          TSEncoding.RLE,
+          TSFileDescriptor.getInstance().getConfig().getCompressor(),
+          Collections.emptyMap(),
+          null);
+    } catch (PathAlreadyExistException e) {
+      assertEquals("Path [root.sg1.a.b] already exist", e.getMessage());
+    }
 
     MNode node = root.getNodeByPath(new PartialPath("root.sg1.a.b"));
-    Assert.assertTrue(node instanceof MeasurementMNode);
+    Assert.assertFalse(node instanceof MeasurementMNode);
   }
 }

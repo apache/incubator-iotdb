@@ -21,10 +21,7 @@ package org.apache.iotdb.db.integration;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.jdbc.Config;
 
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -35,7 +32,11 @@ import java.sql.Types;
 
 import static org.junit.Assert.fail;
 
-/** Test if measurement is also a sub device. */
+/**
+ * Test if measurement is also a sub device. This test will be ignored since nested measurement has
+ * been removed from v0.13
+ */
+@Ignore // nested measurement has been forbidden
 public class IoTDBAddSubDeviceIT {
 
   private static String[] sqls =
