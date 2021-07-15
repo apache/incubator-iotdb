@@ -16,16 +16,22 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.iotdb.db.metadata;
+package org.apache.iotdb.db.metadata.logfile;
 
 import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
+import org.apache.iotdb.db.metadata.MetadataConstant;
+import org.apache.iotdb.db.metadata.MetadataOperationType;
+import org.apache.iotdb.db.qp.physical.crud.CreateTemplatePlan;
+import org.apache.iotdb.db.qp.physical.crud.SetDeviceTemplatePlan;
 import org.apache.iotdb.db.qp.physical.sys.CreateAlignedTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.CreateContinuousQueryPlan;
 import org.apache.iotdb.db.qp.physical.sys.CreateTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.DropContinuousQueryPlan;
 import org.apache.iotdb.db.qp.physical.sys.MNodePlan;
 import org.apache.iotdb.db.qp.physical.sys.MeasurementMNodePlan;
+import org.apache.iotdb.db.qp.physical.sys.SetUsingDeviceTemplatePlan;
 import org.apache.iotdb.db.qp.physical.sys.StorageGroupMNodePlan;
+import org.apache.iotdb.tsfile.common.constant.TsFileConstant;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
@@ -309,6 +315,69 @@ public class MLogTxtWriter implements AutoCloseable {
     s.append(plan.getChildSize());
     s.append(LINE_SEPARATOR);
     ByteBuffer buff = ByteBuffer.wrap(s.toString().getBytes());
+    channel.write(buff);
+    lineNumber.incrementAndGet();
+  }
+
+  public void setTemplate(SetDeviceTemplatePlan plan) throws IOException {
+    StringBuilder buf = new StringBuilder(String.valueOf(MetadataOperationType.SET_TEMPLATE));
+    buf.append(",");
+    buf.append(plan.getTemplateName());
+    buf.append(",");
+    buf.append(plan.getPrefixPath());
+    buf.append(LINE_SEPARATOR);
+    ByteBuffer buff = ByteBuffer.wrap(buf.toString().getBytes());
+    channel.write(buff);
+    lineNumber.incrementAndGet();
+  }
+
+  public void setUsingTemplate(SetUsingDeviceTemplatePlan plan) throws IOException {
+    StringBuilder buf = new StringBuilder(String.valueOf(MetadataOperationType.SET_USING_TEMPLATE));
+    buf.append(",");
+    buf.append(plan.getPrefixPath());
+    buf.append(LINE_SEPARATOR);
+    ByteBuffer buff = ByteBuffer.wrap(buf.toString().getBytes());
+    channel.write(buff);
+    lineNumber.incrementAndGet();
+  }
+
+  public void createTemplate(CreateTemplatePlan plan) throws IOException {
+    StringBuilder buf = new StringBuilder();
+    for (int i = 0; i < plan.getSchemaNames().size(); i++) {
+      for (int j = 0; j < plan.getMeasurements().get(i).size(); j++) {
+        String measurement;
+        boolean isAligned = false;
+        if (plan.getMeasurements().get(i).size() == 1) {
+          measurement = plan.getSchemaNames().get(i);
+        } else {
+          // for aligned timeseries
+          isAligned = true;
+          measurement =
+              plan.getSchemaNames().get(i)
+                  + TsFileConstant.PATH_SEPARATOR
+                  + plan.getMeasurements().get(i).get(j);
+        }
+        buf.append(
+            String.format(
+                "%s,%s,%s,%s,%s,%s,%s",
+                MetadataOperationType.CREATE_TEMPLATE,
+                plan.getName(),
+                isAligned ? 1 : 0,
+                measurement,
+                plan.getDataTypes().get(i).get(j).serialize(),
+                plan.getEncodings().get(i).get(j).serialize(),
+                plan.getCompressors().get(i).serialize()));
+        buf.append(LINE_SEPARATOR);
+        lineNumber.incrementAndGet();
+      }
+    }
+    ByteBuffer buff = ByteBuffer.wrap(buf.toString().getBytes());
+    channel.write(buff);
+  }
+
+  public void autoCreateDeviceNode(String Device) throws IOException {
+    String outputStr = MetadataOperationType.AUTO_CREATE_DEVICE + "," + Device + LINE_SEPARATOR;
+    ByteBuffer buff = ByteBuffer.wrap(outputStr.getBytes());
     channel.write(buff);
     lineNumber.incrementAndGet();
   }

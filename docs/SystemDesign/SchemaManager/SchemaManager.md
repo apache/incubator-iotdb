@@ -213,15 +213,14 @@ The method is `MManager.initFromLog()`:
 
 ## Log management of metadata
 
-* org.apache.iotdb.db.metadata.logfile.MLogWriter
 
 All metadata operations are recorded in a metadata log file, which defaults to data/system/schema/mlog.bin.
 
 When the system restarted, the logs in mlog will be replayed. Until the replaying finished, you need to mark writeToLog to false. When the restart is complete, the writeToLog needs to be set to true.
 
-The type of metadata log is recorded by the MetadataOperationType class. mlog directly stores the corresponding string encoding.
+mlog stores the binary encoding. We can use [MlogParser Tool](https://iotdb.apache.org/UserGuide/Master/System-Tools/MLogParser-Tool.html) to parse the mlog.bin to a human-readable txt version.
 
-sql examples and the corresponding mlog record:
+Schema operation examples and the corresponding parsed mlog record:
 
 * set storage group to root.turbine
 
@@ -265,8 +264,36 @@ sql examples and the corresponding mlog record:
    > mlog: 13,root.turbine.d1.s1,newAlias
    
    > format: 13,path,[new alias]
-                                                                                                                
-                                                                                                              
+                                                                                                               
+* create schema template temp1(
+  s1 INT32 with encoding=Gorilla and compression SNAPPY,
+  s2 FLOAT with encoding=RLE and compression=SNAPPY
+)
+   
+   > mlog:5,temp1,0,s1,1,8,1
+   
+   > mlog:5,temp1,0,s2,3,2,1
+   
+   > format: 5,template name,is Aligned Timeseries,measurementId,TSDataType,TSEncoding,CompressionType
+
+* set schema template temp1 to root.turbine
+ 
+    > mlog: 6,temp1,root.turbine
+   
+    > format: 6,template name,path
+
+* Auto create device root.turbine.d1 (after set a template to a prefix path,  create a device path in mtree automatically when insert data to the device)
+ 
+    > mlog: 4,root.turbine.d1
+   
+    > format: 4,path
+
+* set root.turbine.d1 is using template (after set a template to a device path, this log shows the device is using template)
+ 
+    > mlog: 61,root.turbine.d1
+   
+    > format: 61,path                                                                                                              
+
 ## TLog
 * org.apache.iotdb.db.metadata.TagLogFile
 

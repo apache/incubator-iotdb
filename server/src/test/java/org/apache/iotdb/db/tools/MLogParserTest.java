@@ -23,6 +23,8 @@ import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.metadata.MetadataConstant;
 import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.qp.physical.crud.CreateTemplatePlan;
+import org.apache.iotdb.db.qp.physical.crud.SetDeviceTemplatePlan;
 import org.apache.iotdb.db.qp.physical.sys.CreateTimeSeriesPlan;
 import org.apache.iotdb.db.service.IoTDB;
 import org.apache.iotdb.db.tools.mlog.MLogParser;
@@ -35,21 +37,18 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class MLogParserTest {
-
-  private static final Logger logger = LoggerFactory.getLogger(MLogParserTest.class);
 
   @Before
   public void setUp() {
@@ -99,6 +98,42 @@ public class MLogParserTest {
     } catch (MetadataException | IOException e) {
       e.printStackTrace();
     }
+
+    try {
+      IoTDB.metaManager.setStorageGroup(new PartialPath("root.sg"));
+      IoTDB.metaManager.createDeviceTemplate(genCreateTemplatePlan());
+      SetDeviceTemplatePlan setDeviceTemplatePlan =
+          new SetDeviceTemplatePlan("template1", "root.sg");
+      IoTDB.metaManager.setDeviceTemplate(setDeviceTemplatePlan);
+      IoTDB.metaManager.getDeviceNodeWithAutoCreate(new PartialPath("root.sg.d1"), true, true, 1);
+    } catch (MetadataException | IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  private CreateTemplatePlan genCreateTemplatePlan() {
+    List<List<String>> measurementList = new ArrayList<>();
+    measurementList.add(Collections.singletonList("s11"));
+    measurementList.add(Collections.singletonList("s12"));
+
+    List<List<TSDataType>> dataTypeList = new ArrayList<>();
+    dataTypeList.add(Collections.singletonList(TSDataType.INT64));
+    dataTypeList.add(Collections.singletonList(TSDataType.DOUBLE));
+
+    List<List<TSEncoding>> encodingList = new ArrayList<>();
+    encodingList.add(Collections.singletonList(TSEncoding.RLE));
+    encodingList.add(Collections.singletonList(TSEncoding.GORILLA));
+
+    List<CompressionType> compressionTypes = new ArrayList<>();
+    compressionTypes.add(CompressionType.SNAPPY);
+    compressionTypes.add(CompressionType.SNAPPY);
+
+    List<String> schemaNames = new ArrayList<>();
+    schemaNames.add("s11");
+    schemaNames.add("s12");
+
+    return new CreateTemplatePlan(
+        "template1", schemaNames, measurementList, dataTypeList, encodingList, compressionTypes);
   }
 
   @Test
@@ -126,20 +161,22 @@ public class MLogParserTest {
         lineNum++;
         lines.add(line);
       }
-      if (lineNum != 108) {
-        // We prepare 2 storage groups, each one has 5 devices, and every device has 10
+      if (lineNum != 113) {
+        // First, we prepare 2 storage groups, each one has 5 devices, and every device has 10
         // measurements.
         // So, mlog records 2 * 5 * 10 = 100 CreateTimeSeriesPlan, and 2 SetStorageGroupPlan.
         // Next, we do 6 operations which will be written into mlog, include set 2 sgs, set ttl,
         // delete timeseries, delete sg, add tags.
         // The final operation changeAlias only change the mtree in memory, so it will not write
         // record to mlog.
-        // Finally, the mlog should have 100 + 2  + 6 = 108 records
+        // Then, we set 1 more storage group, create a template with 2 measurements, set
+        // the template to this storage group and create 1 device using template.
+        // Finally, the mlog should have 100 + 2 + 6 + 1 + 2 + 1 + 1 = 113 records
         for (String content : lines) {
-          logger.info(content);
+          System.out.println(content);
         }
       }
-      Assert.assertEquals(108, lineNum);
+      Assert.assertEquals(113, lineNum);
     } catch (IOException e) {
       Assert.fail(e.getMessage());
     }
@@ -170,20 +207,22 @@ public class MLogParserTest {
         lineNum++;
         lines.add(line);
       }
-      if (lineNum != 113) {
-        // We prepare 2 storage groups, each one has 5 devices, and every device has 10
+      if (lineNum != 115) {
+        // First, we prepare 2 storage groups, each one has 5 devices, and every device has 10
         // measurements.
         // So, mtree records 2 * 5 * 10 = 100 TimeSeries, and 2 SetStorageGroup, 2 * 5 devices.
         // Next, we do 4 operations which will be record in mtree, include set 2 sgs, delete
         // timeseries, delete sg.
-        // The snapshot should have 100 + 2 + 5 * 2 + 2 - 1 - 1 = 112 records, and we have root
-        // record,
-        // so we have 112 + 1 = 113 records finally.
+        // Then, we set 1 more storage group, create a template with 2 measurements and set
+        // the template to this storage group and create 1 device using template.
+        // The snapshot should have 100 + 2 + 5 * 2 + 2 - 1 - 1 + 1 + 1 = 114 records,
+        // and we have root record,
+        // so we have 114 + 1 = 115 records finally.
         for (String content : lines) {
-          logger.info(content);
+          System.out.println(content);
         }
       }
-      Assert.assertEquals(113, lineNum);
+      Assert.assertEquals(115, lineNum);
     } catch (IOException e) {
       Assert.fail(e.getMessage());
     }
