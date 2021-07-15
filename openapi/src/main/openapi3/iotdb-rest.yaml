@@ -1,0 +1,718 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+openapi: 3.0.0
+info:
+  title: iotdb-rest
+  description: IoTDB Rest API for Grafana, Prometheus, etc..
+  license:
+    name: Apache 2.0
+  version: 1.0.0
+servers:
+- url: http://localhost:8080/
+  description: api
+security:
+- basic: []
+paths:
+  /ping:
+    get:
+      summary: Your GET endpoint
+      tags: []
+      security:
+        - basic: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+              examples:
+                example-1:
+                  value: OK
+      operationId: tryPing
+      description: Just for checking whether the server works
+  /v1/grafana/query/frame:
+    post:
+      summary: Serve for queries from Grafana
+      description: Auto Downsampling data query for Grafana
+      operationId: post-v1-grafana-data
+      parameters: []
+      requestBody:
+        description: Group By Fill Plan
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupByFillPlan'
+            examples:
+              example-1:
+                value:
+                  interval: 0
+                  stime: 0
+                  etime: 0
+                  fills:
+                  - dtype: string
+                    fun: string
+                  paths:
+                  - - string
+      responses:
+        "200":
+          description: return data in wide table format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrafanaDataFrame'
+              examples: {}
+        "401":
+          description: Example response
+          content:
+            application/json:
+              schema:
+                type: string
+                description: "reason: \nnot login\nno permission"
+              examples:
+                example-1:
+                  value: passowrd is incorrect;
+  /v1/grafana/query/json:
+    post:
+      summary: Serve for queries from Grafana with simpleJson plugin
+      description: Auto Downsampling data query for Grafana with SimpleJson Plugin
+      operationId: post-v1-grafana-data-simplejson
+      parameters: []
+      requestBody:
+        description: Group By Fill Plan
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupByFillPlan'
+            examples: {}
+      responses:
+        "200":
+          description: Return data in narrow table format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrafanaJson'
+              examples:
+                example-1:
+                  value:
+                  - target: root.sg.d1.s1
+                    datapoints:
+                    - 1.2
+                    - 16100110034
+                    - 1.3
+                    - 16100110035
+                  - target: root.sg.d1.s2
+                    datapoints:
+                    - 1.2
+                    - 16100110034
+                    - 1.3
+                    - 16100110035
+        "401":
+          description: Example response
+          content:
+            application/json:
+              schema:
+                type: string
+                description: "reason: \nnot login\nno permission"
+              examples:
+                example-1:
+                  value: passowrd is incorrect;
+  /v1/rest/write:
+    post:
+      summary: Serve for writing data by OpenApi
+      description:
+      operationId: post-v1-rest-data-write
+      parameters: []
+      requestBody:
+        description: Insert Plan
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WriteData'
+            examples: {}
+      responses:
+        "200":
+          description: Return data status
+          content:
+            application/json:
+              schema:
+                type: string
+                description: "reason: \nnot login\nno permission"
+              examples:
+                example-1:
+                  value: success;
+        "401":
+          description: Example response
+          content:
+            application/json:
+              schema:
+                type: string
+                description: "reason: \nnot login\nno permission"
+              examples:
+                example-1:
+                  value: passowrd is incorrect;
+  /v1/rest/nonQuery:
+    post:
+      summary: Serve for non query by OpenApi
+      description:
+      operationId: post-v1-non-query
+      parameters: [ ]
+      requestBody:
+        description: non query Plan
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReadData'
+            examples: { }
+      responses:
+        "200":
+          description: return executed status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200'
+              examples:
+                example-1:
+                  value:
+                    code: string
+                    message: string
+        "401":
+          description: Example response
+          content:
+            application/json:
+              schema:
+                type: string
+                description: "reason: \nnot login\nno permission"
+              examples:
+                example-1:
+                  value: passowrd is incorrect;
+  /v1/rest/read:
+    post:
+      summary: Serve for read data by OpenApi
+      description:
+      operationId: post-v1-rest-data-read
+      parameters: []
+      requestBody:
+        description: Read Plan
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReadData'
+            examples: {}
+      responses:
+        "200":
+          description: return data in wide table format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrafanaDataFrame'
+              examples: {}
+        "401":
+          description: Example response
+          content:
+            application/json:
+              schema:
+                type: string
+                description: "reason: \nnot login\nno permission"
+              examples:
+                example-1:
+                  value: passowrd is incorrect;
+  /v1/prometheus/write:
+    post:
+      summary: Serve for writing data by Prometheus
+      operationId: post-v1-prometheus-receive
+      parameters:
+      - name: User-Agent
+        in: header
+        description: Prometheus/2.24.0
+        required: false
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: Prometheus/2.24.0
+      - name: X-Prometheus-Remote-Write-Version
+        in: header
+        description: 0.1.0
+        required: false
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: 0.1.0
+      requestBody:
+        description: |
+          Prompb.WriteRequest that encoding by Protobuf (3.12.3) and compressed by Snappy. Once uncompressed and dencoding.
+        content:
+          application/x-protobuf:
+            schema:
+              type: string
+              format: byte
+              properties: {}
+            examples:
+              example-1:
+                value:
+                  Timeseries:
+                  - - Labels:
+                      - Name: tagkey
+                        Value: tagvalue
+                      - Name: tagkey2
+                        Value: tagValue2
+                    - Samples:
+                      - value1:
+                          Timestamp: 16100105235
+                          Value: 0.1
+                  - - Labels:
+                      - Name: tagkey
+                        Value: tagvalue
+                      - value2:
+                          Name: tagkey2
+                          Value: tagValue2
+                    - Samples:
+                      - value1:
+                          Timestamp: 16100105235
+                          Value: 0.1
+      responses:
+        "200":
+          description: OK for failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200'
+              examples:
+                example-1:
+                  value:
+                    code: string
+                    message: string
+        "401":
+          description: Example response
+          content:
+            application/json:
+              schema:
+                type: string
+                description: "reason: \nnot login\nno permission"
+              examples:
+                example-1:
+                  value: passowrd is incorrect;
+  /v1/prometheus/query:
+    post:
+      summary: Serve for queries from Prometheus
+      description: Serve reading data by Prometheus
+      operationId: post-v1-prometheus-query
+      parameters:
+      - name: User-Agent
+        in: header
+        description: e.g., Prometheus/2.24.0
+        required: false
+        style: simple
+        explode: false
+        schema:
+          type: string
+      - name: X-Prometheus-Remote-Read-version
+        in: header
+        description: e.g., 0.1.0
+        required: false
+        style: simple
+        explode: false
+        schema:
+          type: string
+      requestBody:
+        description: |
+          Prompb.ReadRequest that encoding by Protobuf (3.12.3) and compressed by Snappy. Once uncompressed and dencoding.
+        content:
+          application/x-protobuf:
+            schema:
+              type: string
+              format: byte
+              properties: { }
+            examples:
+              example-1:
+                value:
+                  Queries:
+                  - StartTimestampMs: 1610210292064
+                    EndTimestampMs: 1610210292064
+                    Matchers:
+                    - Type: LabelMatcher_EQ
+                      Name: __name__
+                      Value: value on the operator right side, e.g., root.sg.d1.s1
+                    Hints:
+                      StepMs: 0
+                      Func: ""
+                      StartMs: 161021029264
+                      EndMs: 161021029264
+                      Grouping: []
+                      By: false
+                      RangeMs: 0
+      responses:
+        "200":
+          description: |
+            Prompb.QueryResult that encoding by Protobuf (3.12.3) and compressed by Snappy. Once uncompressed and dencoding, the data looks like (the same with WriteRequest).
+          content:
+            application/x-protobuf:
+              schema:
+                type: object
+              examples:
+                example-1:
+                  value:
+                    Timeseries:
+                    - - Labels:
+                        - Name: tagkey
+                          Value: tagvalue
+                        - Name: tagkey2
+                          Value: tagValue2
+                      - Samples:
+                        - value1:
+                            Timestamp: 16100105235
+                            Value: 0.1
+                    - - Labels:
+                        - Name: tagkey
+                          Value: tagvalue
+                        - value2:
+                            Name: tagkey2
+                            Value: tagValue2
+                      - Samples:
+                        - value1:
+                            Timestamp: 16100105235
+                            Value: 0.1
+  /v1/grafana/node:
+    post:
+      summary: Serve for getting time series name level by level by Grafana
+      description: Get Children nodes that the node has
+      operationId: post-v1-grafana-node
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              description: node name (e.g., "root.a.b.c")
+              items:
+                type: string
+            examples:
+              example-1:
+                value:
+                - root
+                - sg
+                - d1
+      responses:
+        "200":
+          description: Return Node collection for a given parent node.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_1'
+              examples:
+                example-1:
+                  value:
+                    series:
+                      name: node
+                      leaf: true
+                    internal:
+                    - string
+        "401":
+          description: Example response
+          content:
+            application/json:
+              schema:
+                type: string
+                description: "reason: \nnot login\nno permission"
+              examples:
+                example-1:
+                  value: passowrd is incorrect;
+components:
+  schemas:
+    WriteData:
+      title: Write Data
+      type: object
+      properties:
+        params:
+          type: array
+          items:
+            type: string
+        valuses:
+          type: array
+          items:
+            type: string
+        paths:
+          type: array
+          items:
+            type: string
+      description: write data in IoTDB
+      x-examples:
+        example-1:
+          params:
+            []
+          valuses:
+            - - string
+          paths:
+            - - string
+    ReadData:
+      title: Read Data
+      type: object
+      properties:
+        sql:
+          type: string
+      description: read data in IoTDB
+      x-examples:
+        example-1:
+          sql: string
+    GroupByFillPlan:
+      title: GroupByTimeFillPlan
+      type: object
+      properties:
+        aggregation:
+          type: string
+          description: group by
+        groupBy:
+          type: object
+          properties:
+            step:
+              type: string
+            samplingInterval:
+              type: string
+        limitAll:
+          type: object
+          properties:
+            limit:
+              type: string
+            slimit:
+              type: string
+        stime:
+          type: number
+        etime:
+          type: number
+        fills:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupByFillPlan_fills'
+        paths:
+            type: array
+            items:
+              type: string
+      description: Group By Time Plan in IoTDB
+      x-examples:
+        example-1:
+          interval: 0
+          stime: 0
+          etime: 0
+          fills:
+          - dtype: string
+            fun: string
+          paths:
+          - - string
+    GrafanaDataFrame:
+      minItems: 1
+      uniqueItems: true
+      type: array
+      items:
+        $ref: '#/components/schemas/GrafanaDataFrame_inner'
+      x-examples:
+        example-1:
+        - name: test
+          fields:
+          - name: Time
+            type: FieldType.time
+            values:
+            - 1610111000
+            - 1610111100
+            - 1610112000
+          - name: root.sg.d1.s1
+            type: FieldType.number
+            values:
+            - 1
+            - 2
+            - 3
+          - name: root.sg.d1.s2
+            type: FieldType.number
+            values:
+            - 1
+            - null
+            - 3
+          - name: root.sg.d1.s3
+            type: FieldType.boolean
+            values:
+            - 0
+            - 0
+            - 1
+    GrafanaJson:
+      title: GrafanaJson
+      type: array
+      items:
+        $ref: '#/components/schemas/GrafanaJson_inner'
+      x-examples:
+        example-1:
+        - target: root.sg.d1.s1
+          datapoints:
+          - - 1.2
+            - 16100110034
+          - - 1.3
+            - 16100110035
+        - target: root.sg.d1.s2
+          datapoints:
+          - - 1.2
+            - 16100110034
+          - - 1.3
+            - 16100110035
+    inline_response_200:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+    inline_response_200_1:
+      type: object
+      properties:
+        series:
+          type: array
+          description: All children nodes that are leaves
+          items:
+            type: string
+        internal:
+          type: array
+          description: All internal nodes
+          items:
+            type: string
+    GroupByFillPlan_fills:
+      type: object
+      properties:
+        dataType:
+          type: string
+        previous:
+          type: string
+        duration:
+          type: string
+    GrafanaDataFrame_inner:
+      required:
+      - fields
+      type: object
+      properties:
+        name:
+          minLength: 1
+          type: string
+          description: prefix of series path
+        fields:
+          minItems: 1
+          uniqueItems: true
+          type: array
+          items:
+            required:
+            - name
+            - type
+            type: object
+            properties:
+              name:
+                minLength: 1
+                type: string
+                description: Time, or series name
+              type:
+                minLength: 1
+                type: string
+                description: FieldType.time or FieldType.number
+              values:
+                type: array
+                description: points (time column or value column)
+                items: {}
+    GrafanaJson_inner:
+      type: object
+      properties:
+        target:
+          type: string
+          description: time series name
+        datapoints:
+          type: array
+          description: value(null if no value), timestamp
+          items:
+            type: number
+  responses:
+    Unauthorized401:
+      description: Example response
+      content:
+        application/json:
+          schema:
+            type: string
+            description: "reason: \nnot login\nno permission"
+          examples:
+            example-1:
+              value: passowrd is incorrect;
+    GrafanaDataFrame200:
+      description: return data in wide table format
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GrafanaDataFrame'
+          examples: {}
+    GrafanaSimpleJson200:
+      description: Return data in narrow table format
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GrafanaJson'
+          examples:
+            example-1:
+              value:
+              - target: root.sg.d1.s1
+                datapoints:
+                - 1.2
+                - 16100110034
+                - 1.3
+                - 16100110035
+              - target: root.sg.d1.s2
+                datapoints:
+                - 1.2
+                - 16100110034
+                - 1.3
+                - 16100110035
+    ChinldNodes200:
+      description: Return Node collection for a given parent node.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_response_200_1'
+          examples:
+            example-1:
+              value:
+                leaf:
+                - string
+                internal:
+                - string
+    GeneralResult200:
+      description: Example response
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: integer
+              type:
+                type: integer
+              ? ""
+              : oneOf:
+                - $ref: '#/components/schemas/GrafanaJson'
+                - $ref: '#/components/schemas/GrafanaDataFrame'
+                - type: object
+  securitySchemes:
+    basic:
+      type: http
+      scheme: basic
+    APIKey:
+      type: apiKey
+      name: API Key
+      in: header

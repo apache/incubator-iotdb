@@ -711,8 +711,102 @@ public class IoTDBConfig {
 
   private String adminPassword = "root";
 
+  /** if the startOpenApi is true, we will start OpenApi */
+  private boolean startOpenApi = true;
+
+  /** set the OpenApi reset port. */
+  private int OpenApiPort = 18080;
+
+  /** set the OpenApi storegroup number. */
+  private int sgCount = 5;
+
+  /** enable the OpenApi ssl. */
+  private boolean enable_https = false;
+  /** openapi ssl key Store Path */
+  private String keyStorePath = "";
+  /** openapi ssl trust Store Path */
+  private String trustStorePath = "";
+  /** openapi ssl key Store password */
+  private String keyStorePwd = "";
+  /** openapi ssl trust Store password */
+  private String trustStorePwd = "";
+  /** OpenApi ssl timeout */
+  private int idleTimeout = 50000;
+
+  public String getTrustStorePwd() {
+    return trustStorePwd;
+  }
+
+  public void setTrustStorePwd(String trustStorePwd) {
+    this.trustStorePwd = trustStorePwd;
+  }
+
+  public int getIdleTimeout() {
+    return idleTimeout;
+  }
+
+  public void setIdleTimeout(int idleTimeout) {
+    this.idleTimeout = idleTimeout;
+  }
+
+  public boolean isEnable_https() {
+    return enable_https;
+  }
+
+  public void setEnable_https(boolean enable_https) {
+    this.enable_https = enable_https;
+  }
+
+  public String getKeyStorePath() {
+    return keyStorePath;
+  }
+
+  public void setKeyStorePath(String keyStorePath) {
+    this.keyStorePath = keyStorePath;
+  }
+
+  public String getTrustStorePath() {
+    return trustStorePath;
+  }
+
+  public void setTrustStorePath(String trustStorePath) {
+    this.trustStorePath = trustStorePath;
+  }
+
+  public String getKeyStorePwd() {
+    return keyStorePwd;
+  }
+
+  public void setKeyStorePwd(String keyStorePwd) {
+    this.keyStorePwd = keyStorePwd;
+  }
+
+  public int getSgCount() {
+    return sgCount;
+  }
+
+  public void setSgCount(int sgCount) {
+    this.sgCount = sgCount;
+  }
+
   public IoTDBConfig() {
     // empty constructor
+  }
+
+  public boolean isStartOpenApi() {
+    return startOpenApi;
+  }
+
+  public void setStartOpenApi(boolean startOpenApi) {
+    this.startOpenApi = startOpenApi;
+  }
+
+  public int getOpenApiPort() {
+    return OpenApiPort;
+  }
+
+  public void setOpenApiPort(int openApiPort) {
+    OpenApiPort = openApiPort;
   }
 
   public float getUdfMemoryBudgetInMB() {

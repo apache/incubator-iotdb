@@ -42,6 +42,7 @@ import org.apache.iotdb.db.rescon.SystemInfo;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.sync.receiver.SyncServerManager;
 import org.apache.iotdb.db.writelog.manager.MultiFileLogNodeManager;
+import org.apache.iotdb.openapi.gen.handler.OpenApiServer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,6 +69,20 @@ public class IoTDB implements IoTDBMBean {
     }
     IoTDB daemon = IoTDB.getInstance();
     daemon.active();
+    if (IoTDBDescriptor.getInstance().getConfig().isStartOpenApi()) {
+      OpenApiServer oas = new OpenApiServer();
+      if (IoTDBDescriptor.getInstance().getConfig().isEnable_https()) {
+        oas.startSSL(
+            IoTDBDescriptor.getInstance().getConfig().getOpenApiPort(),
+            IoTDBDescriptor.getInstance().getConfig().getKeyStorePath(),
+            IoTDBDescriptor.getInstance().getConfig().getTrustStorePath(),
+            IoTDBDescriptor.getInstance().getConfig().getKeyStorePwd(),
+            IoTDBDescriptor.getInstance().getConfig().getTrustStorePwd(),
+            IoTDBDescriptor.getInstance().getConfig().getIdleTimeout());
+      } else {
+        oas.start(IoTDBDescriptor.getInstance().getConfig().getOpenApiPort());
+      }
+    }
   }
 
   public static void setMetaManager(MManager metaManager) {
