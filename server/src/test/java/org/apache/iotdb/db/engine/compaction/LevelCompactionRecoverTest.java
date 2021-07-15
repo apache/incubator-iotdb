@@ -113,7 +113,7 @@ public class LevelCompactionRecoverTest extends LevelCompactionTest {
     CompactionUtils.merge(targetTsFileResource, new ArrayList<>(seqResources.subList(0, 3)),
         COMPACTION_TEST_SG, compactionLogger, new HashSet<>(), true, new ArrayList<>());
     compactionLogger.close();
-    levelCompactionTsFileManagement.addRecover(targetTsFileResource, true);
+    levelCompactionTsFileManagement.add(targetTsFileResource, true);
     levelCompactionTsFileManagement.recover();
     context = new QueryContext();
     path = new PartialPath(
@@ -191,7 +191,7 @@ public class LevelCompactionRecoverTest extends LevelCompactionTest {
     }
     logStream.close();
 
-    levelCompactionTsFileManagement.addRecover(targetTsFileResource, true);
+    levelCompactionTsFileManagement.add(targetTsFileResource, true);
     levelCompactionTsFileManagement.recover();
     context = new QueryContext();
     path = new PartialPath(
@@ -333,7 +333,7 @@ public class LevelCompactionRecoverTest extends LevelCompactionTest {
     CompactionUtils.merge(targetTsFileResource, new ArrayList<>(seqResources.subList(0, 3)),
         COMPACTION_TEST_SG, compactionLogger, new HashSet<>(), false, new ArrayList<>());
     compactionLogger.close();
-    levelCompactionTsFileManagement.addRecover(targetTsFileResource, false);
+    levelCompactionTsFileManagement.add(targetTsFileResource, false);
     levelCompactionTsFileManagement.recover();
     context = new QueryContext();
     path = new PartialPath(
@@ -484,7 +484,7 @@ public class LevelCompactionRecoverTest extends LevelCompactionTest {
     compactionLogger.logFile(TARGET_NAME, targetTsFileResource.getTsFile());
     CompactionUtils.merge(targetTsFileResource, new ArrayList<>(seqResources.subList(0, 3)),
         COMPACTION_TEST_SG, compactionLogger, new HashSet<>(), true, new ArrayList<>());
-    levelCompactionTsFileManagement.addRecover(targetTsFileResource, true);
+    levelCompactionTsFileManagement.add(targetTsFileResource, true);
     compactionLogger.close();
     levelCompactionTsFileManagement.recover();
     QueryContext context = new QueryContext();
