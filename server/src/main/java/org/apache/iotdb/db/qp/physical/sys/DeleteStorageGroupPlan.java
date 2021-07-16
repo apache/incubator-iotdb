@@ -48,12 +48,19 @@ public class DeleteStorageGroupPlan extends PhysicalPlan {
   }
 
   @Override
+  public void setPaths(List<PartialPath> paths) {
+    this.deletePathList = paths;
+  }
+
+  @Override
   public void serialize(DataOutputStream stream) throws IOException {
     int type = PhysicalPlan.PhysicalPlanType.DELETE_STORAGE_GROUP.ordinal();
     stream.writeByte((byte) type);
     stream.writeInt(this.getPaths().size());
     for (PartialPath path : this.getPaths()) {
       putString(stream, path.getFullPath());
+      stream.writeLong(path.getMajorVersion());
+      stream.writeLong(path.getMinorVersion());
     }
 
     stream.writeLong(index);
@@ -66,6 +73,8 @@ public class DeleteStorageGroupPlan extends PhysicalPlan {
     buffer.putInt(this.getPaths().size());
     for (PartialPath path : this.getPaths()) {
       putString(buffer, path.getFullPath());
+      buffer.putLong(path.getMajorVersion());
+      buffer.putLong(path.getMinorVersion());
     }
 
     buffer.putLong(index);
@@ -76,9 +85,17 @@ public class DeleteStorageGroupPlan extends PhysicalPlan {
     int pathNum = buffer.getInt();
     this.deletePathList = new ArrayList<>();
     for (int i = 0; i < pathNum; i++) {
-      deletePathList.add(new PartialPath(readString(buffer)));
+      PartialPath partialPath = new PartialPath(readString(buffer));
+      partialPath.setMajorVersion(buffer.getLong());
+      partialPath.setMinorVersion(buffer.getLong());
+      deletePathList.add(partialPath);
     }
 
     this.index = buffer.getLong();
+  }
+
+  @Override
+  public String toString() {
+    return "DeleteStorageGroupPlan{" + " deletePathList=" + deletePathList + "}";
   }
 }

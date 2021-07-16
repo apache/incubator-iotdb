@@ -1555,7 +1555,7 @@ public class MManagerBasicTest {
     } catch (Exception e) {
       e.printStackTrace();
       Assert.assertEquals(
-          "Path [root.laptop.d1.vector] is an aligned timeseries, please set InsertPlan.isAligned() = true",
+          "Path [PartialPath{fullPath=root.laptop.d1.vector, majorVersion=0, minorVersion=0}] is an aligned timeseries, please set InsertPlan.isAligned() = true",
           e.getMessage());
     }
   }
@@ -1639,7 +1639,7 @@ public class MManagerBasicTest {
     } catch (Exception e) {
       e.printStackTrace();
       Assert.assertEquals(
-          "Path [root.laptop.d1.vector] is not an aligned timeseries, please set InsertPlan.isAligned() = false",
+          "Path [PartialPath{fullPath=root.laptop.d1.vector, majorVersion=0, minorVersion=0}] is not an aligned timeseries, please set InsertPlan.isAligned() = false",
           e.getMessage());
     }
   }

@@ -36,23 +36,32 @@ import org.apache.iotdb.tsfile.read.common.Field;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public abstract class Cases {
 
+  private static Logger logger = LoggerFactory.getLogger(Cases.class);
   protected Statement writeStatement;
   protected Connection writeConnection;
   protected Statement[] readStatements;
   protected Connection[] readConnections;
   protected Session session;
+  protected Session anotherSession;
   private final Planner processor = new Planner();
 
   /** initialize the writeStatement,writeConnection, readStatements and the readConnections. */
@@ -68,6 +77,7 @@ public abstract class Cases {
       connection.close();
     }
     session.close();
+    anotherSession.close();
   }
 
   // if we seperate the test into multiply test() methods, then the docker container have to be
@@ -506,6 +516,112 @@ public abstract class Cases {
       writeStatement.execute(sql);
     } catch (SQLException e) {
       Assert.assertNull(e);
+    }
+  }
+
+  // test https://issues.apache.org/jira/browse/IOTDB-1292
+  @Test
+  public void testDataRaftAndMetaRaftConcurrentOperation() {
+    ExecutorService dataRaftGroupThread = Executors.newFixedThreadPool(1);
+    ExecutorService metaRaftGroupThread = Executors.newFixedThreadPool(1);
+    createSgTask();
+    Future<?> dataFeature = dataRaftGroupThread.submit(this::createTimeSeriesTask);
+    Future<?> metaFeature = metaRaftGroupThread.submit(this::deleteSgTask);
+    try {
+      dataFeature.get();
+      metaFeature.get();
+    } catch (InterruptedException e) {
+      logger.error(e.getMessage());
+    } catch (ExecutionException e) {
+      Assert.fail(e.getMessage());
+    }
+
+    // check the final result
+    try {
+      queryFinalResult();
+    } catch (SQLException e) {
+      Assert.fail(e.getMessage());
+    }
+  }
+
+  public void createTimeSeriesTask() {
+    int sgNum = 10;
+    int deviceNum = 10;
+    int measurementsNum = 100;
+    String sqlFormat =
+        "create timeseries root.sg_%d.device_%d.s_%d with datatype=INT64, encoding=PLAIN, compression=SNAPPY";
+    for (int sg = 0; sg < sgNum; sg++) {
+      for (int device = 0; device < deviceNum; device++) {
+        for (int measurement = 0; measurement < measurementsNum; measurement++) {
+          String sql = String.format(sqlFormat, sg, device, measurement);
+          try {
+            session.executeNonQueryStatement(sql);
+          } catch (StatementExecutionException e) {
+            if (e.getMessage().contains("Storage group is not set for current seriesPath")) {
+              // it's ok due to concurrent operation, do nothing.
+            } else {
+              Assert.fail(e.getMessage());
+            }
+          } catch (IoTDBConnectionException e) {
+            Assert.fail(e.getMessage());
+          }
+        }
+      }
+    }
+  }
+
+  public void createSgTask() {
+    int sgNum = 10;
+    String sqlFormat = "set storage group to root.sg_%d";
+    for (int sg = 0; sg < sgNum; sg++) {
+      String sql = String.format(sqlFormat, sg);
+      try {
+        writeStatement.execute(sql);
+      } catch (SQLException e) {
+        Assert.fail(e.getMessage());
+      }
+    }
+  }
+
+  public void deleteSgTask() {
+    int sgNum = 10;
+    String sqlFormat = "delete storage group root.sg_%d";
+    for (int sg = 0; sg < sgNum; sg++) {
+      String sql = String.format(sqlFormat, sg);
+      try {
+        anotherSession.executeNonQueryStatement(sql);
+        Thread.sleep(10);
+      } catch (StatementExecutionException | IoTDBConnectionException | InterruptedException e) {
+        Assert.fail(e.getMessage());
+      }
+    }
+  }
+
+  public void queryFinalResult() throws SQLException {
+    int lastCount = Integer.MIN_VALUE;
+    List<String> lastTimeseriesList = new ArrayList<>();
+
+    for (Statement readStatement : readStatements) {
+      ResultSet resultSet = readStatement.executeQuery("SHOW TIMESERIES");
+      int cnt = 0;
+      List<String> timeseriesList = new ArrayList<>();
+      while (resultSet.next()) {
+        cnt++;
+        String tmpTimeseries = resultSet.getString("timeseries");
+        timeseriesList.add(tmpTimeseries);
+      }
+
+      if (lastCount != Integer.MIN_VALUE) {
+        Collections.sort(timeseriesList);
+        if ((cnt != lastCount) || !timeseriesList.equals(lastTimeseriesList)) {
+          Assert.fail("result on every node not equal");
+        }
+      } else {
+        lastCount = cnt;
+        Collections.sort(timeseriesList);
+        lastTimeseriesList = timeseriesList;
+      }
+      resultSet.close();
     }
   }
 }

@@ -53,7 +53,9 @@ public class IndexLogicalPlanTest {
     CreateIndexOperator createOperator = (CreateIndexOperator) op;
     Assert.assertEquals(OperatorType.CREATE_INDEX, createOperator.getType());
     Assert.assertNotNull(createOperator.getPaths());
-    Assert.assertEquals("root.Ery.*.Glu", createOperator.getPaths().get(0).toString());
+    Assert.assertEquals(
+        "PartialPath{fullPath=root.Ery.*.Glu, majorVersion=0, minorVersion=0}",
+        createOperator.getPaths().get(0).toString());
     Assert.assertEquals(IndexType.RTREE_PAA, createOperator.getIndexType());
     Assert.assertEquals(50, createOperator.getTime());
     Assert.assertEquals(1, createOperator.getProps().size());
@@ -68,7 +70,9 @@ public class IndexLogicalPlanTest {
     CreateIndexOperator createOperator = (CreateIndexOperator) op;
     Assert.assertEquals(OperatorType.CREATE_INDEX, createOperator.getType());
     Assert.assertNotNull(createOperator.getPaths());
-    Assert.assertEquals("root.Wind.AZQ02.Speed", createOperator.getPaths().get(0).toString());
+    Assert.assertEquals(
+        "PartialPath{fullPath=root.Wind.AZQ02.Speed, majorVersion=0, minorVersion=0}",
+        createOperator.getPaths().get(0).toString());
     Assert.assertEquals(IndexType.ELB_INDEX, createOperator.getIndexType());
     Assert.assertEquals(1, createOperator.getProps().size());
     Assert.assertEquals("5", createOperator.getProps().get(BLOCK_SIZE));
@@ -82,7 +86,9 @@ public class IndexLogicalPlanTest {
     DropIndexOperator dropIndexOperator = (DropIndexOperator) op;
     Assert.assertEquals(OperatorType.DROP_INDEX, dropIndexOperator.getType());
     Assert.assertNotNull(dropIndexOperator.getPaths());
-    Assert.assertEquals("root.Ery.*.Glu", dropIndexOperator.getPaths().get(0).toString());
+    Assert.assertEquals(
+        "PartialPath{fullPath=root.Ery.*.Glu, majorVersion=0, minorVersion=0}",
+        dropIndexOperator.getPaths().get(0).toString());
     Assert.assertEquals(IndexType.RTREE_PAA, dropIndexOperator.getIndexType());
   }
 
@@ -94,7 +100,9 @@ public class IndexLogicalPlanTest {
     DropIndexOperator dropIndexOperator = (DropIndexOperator) op;
     Assert.assertEquals(OperatorType.DROP_INDEX, dropIndexOperator.getType());
     Assert.assertNotNull(dropIndexOperator.getPaths());
-    Assert.assertEquals("root.Wind.AZQ02.Speed", dropIndexOperator.getPaths().get(0).toString());
+    Assert.assertEquals(
+        "PartialPath{fullPath=root.Wind.AZQ02.Speed, majorVersion=0, minorVersion=0}",
+        dropIndexOperator.getPaths().get(0).toString());
     Assert.assertEquals(IndexType.ELB_INDEX, dropIndexOperator.getIndexType());
   }
 

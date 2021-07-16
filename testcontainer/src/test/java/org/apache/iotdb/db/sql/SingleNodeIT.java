@@ -37,6 +37,7 @@ import java.sql.*;
 // do not add tests here.
 // add tests into Cases.java instead.
 public class SingleNodeIT extends Cases {
+
   private static Logger logger = LoggerFactory.getLogger(SingleNodeIT.class);
 
   @Rule
@@ -72,6 +73,9 @@ public class SingleNodeIT extends Cases {
     writeStatement = readStatements[0] = writeConnection.createStatement();
     session = new Session("127.0.0.1", rpcPort);
     session.open();
+
+    anotherSession = new Session("127.0.0.1", rpcPort);
+    anotherSession.open();
   }
 
   @After

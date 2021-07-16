@@ -41,8 +41,26 @@ public class PartialPath extends Path implements Comparable<Path> {
   private static final Logger logger = LoggerFactory.getLogger(PartialPath.class);
 
   protected String[] nodes;
-  // alias of measurement, null pointer cannot be serialized in thrift so empty string is instead
+  /**
+   * alias of measurement, null pointer cannot be serialized in thrift so empty string is instead
+   */
   protected String measurementAlias = "";
+
+  /**
+   * When a CreateStorageGroupPlan is converted to a meta log, its majorVersion is set to the index
+   * of the meta log.
+   *
+   * <p>When a PhysicalPLan that modifies a storage group is converted to a data
+   * log(Create/DeleteTimeseriesPlan, SetTemplatePlan...), the majorVersion of the plan is set to
+   * the major version of the related SGNode, and the minorVersion is set to the index of the data
+   * log.
+   *
+   * <p>Please see https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=177050789 for
+   * more details.
+   */
+  private long majorVersion = 0;
+
+  private long minorVersion = 0;
 
   /**
    * Construct the PartialPath using a String, will split the given String into String[] E.g., path
@@ -257,7 +275,14 @@ public class PartialPath extends Path implements Comparable<Path> {
 
   @Override
   public String toString() {
-    return getFullPath();
+    return "PartialPath{"
+        + "fullPath="
+        + getFullPath()
+        + ", majorVersion="
+        + majorVersion
+        + ", minorVersion="
+        + minorVersion
+        + "}";
   }
 
   public PartialPath getDevicePath() {
@@ -312,5 +337,21 @@ public class PartialPath extends Path implements Comparable<Path> {
       }
     }
     return fullPath;
+  }
+
+  public long getMajorVersion() {
+    return majorVersion;
+  }
+
+  public void setMajorVersion(long majorVersion) {
+    this.majorVersion = majorVersion;
+  }
+
+  public long getMinorVersion() {
+    return minorVersion;
+  }
+
+  public void setMinorVersion(long minorVersion) {
+    this.minorVersion = minorVersion;
   }
 }

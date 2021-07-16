@@ -76,7 +76,9 @@ public class SingleDataSetTest {
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan("count devices");
     QueryDataSet dataSet = queryExecutor.processQuery(plan, EnvironmentUtils.TEST_QUERY_CONTEXT);
     Assert.assertTrue(dataSet instanceof SingleDataSet);
-    Assert.assertEquals("[devices]", dataSet.getPaths().toString());
+    Assert.assertEquals(
+        "[PartialPath{fullPath=devices, majorVersion=0, minorVersion=0}]",
+        dataSet.getPaths().toString());
     while (dataSet.hasNext()) {
       RowRecord record = dataSet.next();
       Assert.assertEquals("0\t3", record.toString());
@@ -91,7 +93,9 @@ public class SingleDataSetTest {
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan("count TimeSeries");
     QueryDataSet dataSet = queryExecutor.processQuery(plan, EnvironmentUtils.TEST_QUERY_CONTEXT);
     Assert.assertTrue(dataSet instanceof SingleDataSet);
-    Assert.assertEquals("[count]", dataSet.getPaths().toString());
+    Assert.assertEquals(
+        "[PartialPath{fullPath=count, majorVersion=0, minorVersion=0}]",
+        dataSet.getPaths().toString());
     while (dataSet.hasNext()) {
       RowRecord record = dataSet.next();
       Assert.assertEquals("0\t5", record.toString());
@@ -106,7 +110,9 @@ public class SingleDataSetTest {
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan("count storage group");
     QueryDataSet dataSet = queryExecutor.processQuery(plan, EnvironmentUtils.TEST_QUERY_CONTEXT);
     Assert.assertTrue(dataSet instanceof SingleDataSet);
-    Assert.assertEquals("[storage group]", dataSet.getPaths().toString());
+    Assert.assertEquals(
+        "[PartialPath{fullPath=storage group, majorVersion=0, minorVersion=0}]",
+        dataSet.getPaths().toString());
     while (dataSet.hasNext()) {
       RowRecord record = dataSet.next();
       Assert.assertEquals("0\t2", record.toString());
@@ -121,7 +127,9 @@ public class SingleDataSetTest {
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan("count nodes root.test level=2");
     QueryDataSet dataSet = queryExecutor.processQuery(plan, EnvironmentUtils.TEST_QUERY_CONTEXT);
     Assert.assertTrue(dataSet instanceof SingleDataSet);
-    Assert.assertEquals("[count]", dataSet.getPaths().toString());
+    Assert.assertEquals(
+        "[PartialPath{fullPath=count, majorVersion=0, minorVersion=0}]",
+        dataSet.getPaths().toString());
     while (dataSet.hasNext()) {
       RowRecord record = dataSet.next();
       Assert.assertEquals("0\t2", record.toString());

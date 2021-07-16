@@ -95,7 +95,7 @@ public class IndexWholeMatchingPhysicalPlanTest {
     Planner processor = new Planner();
     CreateIndexPlan plan = (CreateIndexPlan) processor.parseSQLToPhysicalPlan(sqlStr);
     assertEquals(
-        "paths: [root.Ery.*.Glu], index type: RTREE_PAA, start time: 50, props: {PAA_DIM=8}",
+        "paths: [PartialPath{fullPath=root.Ery.*.Glu, majorVersion=0, minorVersion=0}], index type: RTREE_PAA, start time: 50, props: {PAA_DIM=8}",
         plan.toString());
   }
 
@@ -104,7 +104,9 @@ public class IndexWholeMatchingPhysicalPlanTest {
     String sqlStr = "DROP INDEX RTREE_PAA ON root.Ery.*.Glu";
     Planner processor = new Planner();
     DropIndexPlan plan = (DropIndexPlan) processor.parseSQLToPhysicalPlan(sqlStr);
-    assertEquals("paths: [root.Ery.*.Glu], index type: RTREE_PAA", plan.toString());
+    assertEquals(
+        "paths: [PartialPath{fullPath=root.Ery.*.Glu, majorVersion=0, minorVersion=0}], index type: RTREE_PAA",
+        plan.toString());
   }
 
   @Test

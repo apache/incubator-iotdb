@@ -222,10 +222,12 @@ public class MTree implements Serializable {
     MNode cur = root;
     boolean hasSetStorageGroup = false;
     Template upperTemplate = cur.getDeviceTemplate();
+    StorageGroupMNode sgNode = null;
     // e.g, path = root.sg.d1.s1,  create internal nodes and set cur to d1 node
     for (int i = 1; i < nodeNames.length - 1; i++) {
       String nodeName = nodeNames[i];
       if (cur instanceof StorageGroupMNode) {
+        sgNode = (StorageGroupMNode) cur;
         hasSetStorageGroup = true;
       }
       if (!cur.hasChild(nodeName)) {
@@ -255,6 +257,20 @@ public class MTree implements Serializable {
     // synchronize check and add, we need addChild and add Alias become atomic operation
     // only write on mtree will be synchronized
     synchronized (this) {
+      // double check
+      if (sgNode != null && hasSetStorageGroup) {
+        if (sgNode.getMajorVersion() != path.getMajorVersion()) {
+          // skip
+          throw new MetadataException("storage group node major version changed");
+        }
+        sgNode.setMinorVersion(path.getMinorVersion());
+        logger.debug(
+            "create timeseries, sg={}, timeseries={}, majorVersion={}, minorVersion={}",
+            sgNode.getFullPath(),
+            path.getFullPath(),
+            sgNode.getMajorVersion(),
+            sgNode.getMinorVersion());
+      }
       MNode child = cur.getChild(leafName);
       if (child instanceof MeasurementMNode || child instanceof StorageGroupMNode) {
         throw new PathAlreadyExistException(path.getFullPath());
@@ -498,18 +514,67 @@ public class MTree implements Serializable {
       cur = cur.getChild(nodeNames[i]);
       i++;
     }
-    if (cur.hasChild(nodeNames[i])) {
-      // node b has child sg
-      if (cur.getChild(nodeNames[i]) instanceof StorageGroupMNode) {
-        throw new StorageGroupAlreadySetException(path.getFullPath());
+    // make sure the operation is atomic
+    synchronized (this) {
+      if (cur.hasChild(nodeNames[i])) {
+        // node b has child sg
+        if (cur.getChild(nodeNames[i]) instanceof StorageGroupMNode) {
+          throw new StorageGroupAlreadySetException(path.getFullPath());
+        } else {
+          throw new StorageGroupAlreadySetException(path.getFullPath(), true);
+        }
       } else {
-        throw new StorageGroupAlreadySetException(path.getFullPath(), true);
+        StorageGroupMNode storageGroupMNode =
+            new StorageGroupMNode(
+                cur,
+                nodeNames[i],
+                IoTDBDescriptor.getInstance().getConfig().getDefaultTTL(),
+                path.getMajorVersion());
+        cur.addChild(nodeNames[i], storageGroupMNode);
+        logger.debug(
+            "set storage group success, sg={}, sg majorVersion={}, sg minorVersion={}, path={}, path's majorVersion={},  path's minorVersion={}",
+            storageGroupMNode.getFullPath(),
+            storageGroupMNode.getMajorVersion(),
+            storageGroupMNode.getMinorVersion(),
+            path,
+            path.getMajorVersion(),
+            path.getMinorVersion());
       }
-    } else {
-      StorageGroupMNode storageGroupMNode =
-          new StorageGroupMNode(
-              cur, nodeNames[i], IoTDBDescriptor.getInstance().getConfig().getDefaultTTL());
-      cur.addChild(nodeNames[i], storageGroupMNode);
+    }
+  }
+
+  /**
+   * update the storage group node's version
+   *
+   * @param path path
+   */
+  void updateStorageGroupVersion(PartialPath path) throws MetadataException {
+    String[] nodeNames = path.getNodes();
+    checkStorageGroup(path.getFullPath());
+    MNode cur = root;
+    if (nodeNames.length <= 1 || !nodeNames[0].equals(root.getName())) {
+      throw new IllegalPathException(path.getFullPath());
+    }
+    int i = 1;
+    synchronized (this) {
+      while (i < nodeNames.length - 1) {
+        MNode temp = cur.getChild(nodeNames[i]);
+        if (temp == null) {
+          throw new StorageGroupNotSetException(path.getFullPath());
+        } else if (temp instanceof StorageGroupMNode) {
+          long nodeMajorVersion = ((StorageGroupMNode) temp).getMajorVersion();
+          // double check, if the node's major version do not equals the plan's major version,
+          // skip the operation.
+          if (nodeMajorVersion != path.getMajorVersion()) {
+            return;
+          }
+
+          ((StorageGroupMNode) temp).setMinorVersion(path.getMinorVersion());
+          return;
+        }
+        cur = cur.getChild(nodeNames[i]);
+        i++;
+      }
     }
   }
 

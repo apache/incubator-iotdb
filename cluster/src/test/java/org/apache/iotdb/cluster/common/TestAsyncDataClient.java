@@ -36,10 +36,12 @@ import org.apache.iotdb.cluster.rpc.thrift.SingleSeriesQueryRequest;
 import org.apache.iotdb.cluster.server.member.BaseMember;
 import org.apache.iotdb.cluster.server.member.DataGroupMember;
 import org.apache.iotdb.cluster.server.service.DataAsyncService;
+import org.apache.iotdb.cluster.utils.ClusterUtils;
 import org.apache.iotdb.cluster.utils.IOUtils;
 import org.apache.iotdb.cluster.utils.StatusUtils;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
+import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.metadata.StorageGroupNotSetException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.qp.executor.PlanExecutor;
@@ -49,6 +51,7 @@ import org.apache.iotdb.service.rpc.thrift.TSStatus;
 
 import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
+import org.junit.Assert;
 
 import java.io.File;
 import java.io.IOException;
@@ -168,6 +171,11 @@ public class TestAsyncDataClient extends AsyncDataClient {
             () -> {
               try {
                 PhysicalPlan plan = PhysicalPlan.Factory.create(request.planBytes);
+                try {
+                  ClusterUtils.setVersionForSpecialPlan(plan, 0);
+                } catch (MetadataException e) {
+                  Assert.fail(e.getMessage());
+                }
                 if (!(plan instanceof LogPlan)) {
                   planExecutor.processNonQuery(plan);
                 }

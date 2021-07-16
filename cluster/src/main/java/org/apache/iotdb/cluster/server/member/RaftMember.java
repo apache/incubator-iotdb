@@ -38,6 +38,7 @@ import org.apache.iotdb.cluster.log.LogParser;
 import org.apache.iotdb.cluster.log.catchup.CatchUpTask;
 import org.apache.iotdb.cluster.log.logtypes.PhysicalPlanLog;
 import org.apache.iotdb.cluster.log.manage.RaftLogManager;
+import org.apache.iotdb.cluster.metadata.CMManager;
 import org.apache.iotdb.cluster.partition.PartitionGroup;
 import org.apache.iotdb.cluster.rpc.thrift.AppendEntriesRequest;
 import org.apache.iotdb.cluster.rpc.thrift.AppendEntryRequest;
@@ -59,6 +60,7 @@ import org.apache.iotdb.cluster.server.monitor.Peer;
 import org.apache.iotdb.cluster.server.monitor.Timer;
 import org.apache.iotdb.cluster.server.monitor.Timer.Statistic;
 import org.apache.iotdb.cluster.utils.ClientUtils;
+import org.apache.iotdb.cluster.utils.ClusterUtils;
 import org.apache.iotdb.cluster.utils.IOUtils;
 import org.apache.iotdb.cluster.utils.PlanSerializer;
 import org.apache.iotdb.cluster.utils.StatusUtils;
@@ -66,6 +68,7 @@ import org.apache.iotdb.db.exception.BatchProcessException;
 import org.apache.iotdb.db.exception.IoTDBException;
 import org.apache.iotdb.db.exception.metadata.DuplicatedTemplateException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
+import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.metadata.PathAlreadyExistException;
 import org.apache.iotdb.db.exception.metadata.PathNotExistException;
 import org.apache.iotdb.db.exception.metadata.StorageGroupAlreadySetException;
@@ -74,6 +77,7 @@ import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.qp.executor.PlanExecutor;
 import org.apache.iotdb.db.qp.physical.PhysicalPlan;
 import org.apache.iotdb.db.qp.physical.sys.LogPlan;
+import org.apache.iotdb.db.service.IoTDB;
 import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.rpc.RpcUtils;
 import org.apache.iotdb.rpc.TSStatusCode;
@@ -116,6 +120,7 @@ import static org.apache.iotdb.cluster.config.ClusterConstant.THREAD_POLL_WAIT_T
  */
 @SuppressWarnings("java:S3077") // reference volatile is enough
 public abstract class RaftMember {
+
   private static final Logger logger = LoggerFactory.getLogger(RaftMember.class);
   public static final boolean USE_LOG_DISPATCHER = false;
 
@@ -1032,6 +1037,27 @@ public abstract class RaftMember {
       log.setCurrLogTerm(getTerm().get());
       log.setCurrLogIndex(logManager.getLastLogIndex() + 1);
 
+      // Set version for some special plans
+      try {
+        ClusterUtils.setVersionForSpecialPlan(plan, log.getCurrLogIndex());
+      } catch (StorageGroupNotSetException sge) {
+        // if sg not set, sync the meta leader and try again
+        try {
+          ((CMManager) IoTDB.metaManager).syncMetaLeader();
+          ClusterUtils.setVersionForSpecialPlan(plan, log.getCurrLogIndex());
+        } catch (MetadataException e1) {
+          logger.error("process plan failed, plan={}", plan, e1);
+          TSStatus tsStatus = StatusUtils.INTERNAL_ERROR.deepCopy();
+          return tsStatus.setMessage(e1.getMessage());
+        }
+
+      } catch (MetadataException e) {
+        logger.error("process plan failed, plan={}", plan, e);
+        TSStatus tsStatus = StatusUtils.INTERNAL_ERROR.deepCopy();
+        return tsStatus.setMessage(e.getMessage());
+      }
+
+      // appendLogInGroup will serialize log, and set log size, and we will use the size after it
       logManager.append(log);
     }
     Timer.Statistic.RAFT_SENDER_APPEND_LOG.calOperationCostTimeFromStart(startTime);

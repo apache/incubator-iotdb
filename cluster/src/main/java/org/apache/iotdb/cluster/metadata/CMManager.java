@@ -34,9 +34,11 @@ import org.apache.iotdb.cluster.rpc.thrift.RaftNode;
 import org.apache.iotdb.cluster.server.RaftServer;
 import org.apache.iotdb.cluster.server.member.DataGroupMember;
 import org.apache.iotdb.cluster.server.member.MetaGroupMember;
+import org.apache.iotdb.cluster.utils.ClusterUtils;
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
+import org.apache.iotdb.db.exception.metadata.MajorVersionNotEqualException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.metadata.PathNotExistException;
 import org.apache.iotdb.db.exception.metadata.StorageGroupNotSetException;
@@ -46,6 +48,7 @@ import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.metadata.VectorPartialPath;
 import org.apache.iotdb.db.metadata.mnode.MNode;
 import org.apache.iotdb.db.metadata.mnode.MeasurementMNode;
+import org.apache.iotdb.db.metadata.mnode.StorageGroupMNode;
 import org.apache.iotdb.db.metadata.template.Template;
 import org.apache.iotdb.db.qp.constant.SQLConstant;
 import org.apache.iotdb.db.qp.physical.BatchPlan;
@@ -174,7 +177,10 @@ public class CMManager extends MManager {
     cacheLock.writeLock().lock();
     mRemoteMetaCache.removeItem(prefixPath);
     cacheLock.writeLock().unlock();
-    return super.deleteTimeseries(prefixPath);
+    if (checkSgNodeAndPlanMajorVersion(prefixPath)) {
+      return super.deleteTimeseries(prefixPath);
+    }
+    return null;
   }
 
   @Override
@@ -184,7 +190,12 @@ public class CMManager extends MManager {
       mRemoteMetaCache.removeItem(storageGroup);
     }
     cacheLock.writeLock().unlock();
-    super.deleteStorageGroups(storageGroups);
+
+    for (PartialPath path : storageGroups) {
+      if (checkSgNodeAndPlanMajorVersion(path)) {
+        super.deleteStorageGroup(path);
+      }
+    }
   }
 
   @Override
@@ -586,6 +597,9 @@ public class CMManager extends MManager {
     // need to verify the storage group is created
     verifyCreatedSgSuccess(storageGroups, plan);
 
+    // reset the majorVersion as long as we have create new storage groups above;
+    ClusterUtils.setVersionForSpecialPlan(plan, plan.getIndex());
+
     // try to create timeseries for insertPlan
     if (plan instanceof InsertPlan && !createTimeseries((InsertPlan) plan)) {
       throw new MetadataException("Failed to create timeseries from InsertPlan automatically.");
@@ -732,6 +746,15 @@ public class CMManager extends MManager {
       logger.error("Failed to infer storage group from deviceId {}", deviceId);
       return false;
     }
+
+    Pair<Long, Long> sgNodeVersion;
+    try {
+      sgNodeVersion = getSgNodeMajorVersion(storageGroupName);
+    } catch (MetadataException e) {
+      logger.error("failed get the major version", e);
+      return false;
+    }
+
     for (String measurementId : insertPlan.getMeasurements()) {
       seriesList.add(deviceId.getFullPath() + TsFileConstant.PATH_SEPARATOR + measurementId);
     }
@@ -744,9 +767,27 @@ public class CMManager extends MManager {
     if (unregisteredSeriesList.isEmpty()) {
       return true;
     }
-    logger.debug("Unregisterd series of {} are {}", seriesList, unregisteredSeriesList);
+    logger.debug("Unregistered series of {} are {}", seriesList, unregisteredSeriesList);
 
-    return createTimeseries(unregisteredSeriesList, seriesList, insertPlan);
+    return createTimeseries(unregisteredSeriesList, seriesList, insertPlan, sgNodeVersion);
+  }
+
+  /**
+   * @param partialPath the storage group's partialPath
+   * @return the major version and the minor version of the storage group node
+   */
+  private Pair<Long, Long> getSgNodeMajorVersion(PartialPath partialPath) throws MetadataException {
+    StorageGroupMNode node;
+    try {
+      node = getStorageGroupNodeByPath(partialPath);
+    } catch (MetadataException e) {
+      syncMetaLeader();
+      node = getStorageGroupNodeByPath(partialPath);
+    }
+    if (node == null) {
+      throw new MetadataException("get major version failed");
+    }
+    return new Pair(node.getMajorVersion(), node.getMinorVersion());
   }
 
   private boolean createAlignedTimeseries(List<String> seriesList, InsertPlan insertPlan)
@@ -811,7 +852,10 @@ public class CMManager extends MManager {
    * compressions of the corresponding data type.
    */
   private boolean createTimeseries(
-      List<String> unregisteredSeriesList, List<String> seriesList, InsertPlan insertPlan)
+      List<String> unregisteredSeriesList,
+      List<String> seriesList,
+      InsertPlan insertPlan,
+      Pair<Long, Long> sgNodeVersion)
       throws IllegalPathException {
     List<PartialPath> paths = new ArrayList<>();
     List<TSDataType> dataTypes = new ArrayList<>();
@@ -842,6 +886,8 @@ public class CMManager extends MManager {
     plan.setDataTypes(dataTypes);
     plan.setEncodings(encodings);
     plan.setCompressors(compressionTypes);
+    plan.setMajorVersion(sgNodeVersion.left);
+    plan.setMinorVersion(sgNodeVersion.right);
 
     TSStatus result;
     try {
@@ -1826,5 +1872,69 @@ public class CMManager extends MManager {
       }
       return super.getStorageGroupPath(path);
     }
+  }
+
+  @Override
+  public void createAlignedTimeSeries(CreateAlignedTimeSeriesPlan plan) throws MetadataException {
+    PartialPath path = plan.getPrefixPath();
+    if (checkSgNodeAndPlanMajorVersion(path)) {
+      super.createAlignedTimeSeries(plan);
+    }
+  }
+
+  @Override
+  public void createTimeseries(CreateTimeSeriesPlan plan) throws MetadataException {
+    PartialPath path = plan.getPath();
+    if (checkSgNodeAndPlanMajorVersion(path)) {
+      super.createTimeseries(plan);
+    }
+  }
+
+  /**
+   * @param path the partial path
+   * @return true if the sg node major version == the path's major version; false if the sg node
+   *     major version > the path's major version; throw MetadataException if the sg node major
+   *     version < the path's major version.
+   * @throws MajorVersionNotEqualException sync meta leader failed and the
+   * @throws StorageGroupNotSetException some error occurred.
+   */
+  public boolean checkSgNodeAndPlanMajorVersion(PartialPath path)
+      throws MetadataException, StorageGroupNotSetException {
+    StorageGroupMNode node = null;
+    try {
+      node = getStorageGroupNodeByPath(path);
+    } catch (StorageGroupNotSetException e) {
+      syncMetaLeader();
+      node = getStorageGroupNodeByPath(path);
+    }
+
+    long nodeMajorVersion = node.getMajorVersion();
+    if (nodeMajorVersion < path.getMajorVersion()) {
+      syncMetaLeader();
+      node = getStorageGroupNodeByPath(path);
+    }
+
+    nodeMajorVersion = node.getMajorVersion();
+    if (nodeMajorVersion < path.getMajorVersion()) {
+      logger.error(
+          "unknown error occurred when sync the meta leader, the storage group node major version "
+              + "is still smaller than the plan's major version after sync the meta leader");
+      throw new MajorVersionNotEqualException(
+          String.format(
+              "node major version=%d smaller than path's=%d error",
+              nodeMajorVersion, path.getMajorVersion()));
+    }
+
+    if (nodeMajorVersion > path.getMajorVersion()) {
+      // do nothing, skip
+      logger.warn(
+          "the node's major version={} is larger than the path's={}, ignore the execution, path={}, storage group={}",
+          nodeMajorVersion,
+          path.getMajorVersion(),
+          path,
+          node.getFullPath());
+      return false;
+    }
+    return true;
   }
 }

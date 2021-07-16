@@ -1594,7 +1594,7 @@ public class PlanExecutor implements IPlanExecutor {
     return true;
   }
 
-  private boolean alterTimeSeries(AlterTimeSeriesPlan alterTimeSeriesPlan)
+  protected boolean alterTimeSeries(AlterTimeSeriesPlan alterTimeSeriesPlan)
       throws QueryProcessException {
     PartialPath path = alterTimeSeriesPlan.getPath();
     Map<String, String> alterMap = alterTimeSeriesPlan.getAlterMap();

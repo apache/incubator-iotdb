@@ -130,16 +130,19 @@ public class MLogParserTest {
         // We prepare 2 storage groups, each one has 5 devices, and every device has 10
         // measurements.
         // So, mlog records 2 * 5 * 10 = 100 CreateTimeSeriesPlan, and 2 SetStorageGroupPlan.
+        // And each CreateTimeSeriesPlan except the first one cause SetStorageGroupPlan
+        // will generate one UpdateStorageGroupPlan, so the CreateTimeSeriesPlan will cause
+        // 100 -2 = 98 UpdateStorageGroupPlan records.
         // Next, we do 6 operations which will be written into mlog, include set 2 sgs, set ttl,
         // delete timeseries, delete sg, add tags.
         // The final operation changeAlias only change the mtree in memory, so it will not write
         // record to mlog.
-        // Finally, the mlog should have 100 + 2  + 6 = 108 records
+        // Finally, the mlog should have 100 + 98 + 2  + 6 = 206 records
         for (String content : lines) {
           logger.info(content);
         }
       }
-      Assert.assertEquals(108, lineNum);
+      Assert.assertEquals(206, lineNum);
     } catch (IOException e) {
       Assert.fail(e.getMessage());
     }

@@ -29,6 +29,7 @@ public class MetadataOperationType {
   public static final String SET_STORAGE_GROUP = "2";
   public static final String CREATE_ALIGNED_TIMESERIES = "3";
   public static final String AUTO_CREATE_DEVICE_MNODE = "4";
+  public static final String UPDATE_STORAGE_GROUP = "5";
   public static final String SET_TTL = "10";
   public static final String DELETE_STORAGE_GROUP = "11";
   public static final String CREATE_INDEX = "31";

@@ -33,9 +33,42 @@ public class StorageGroupMNode extends MNode {
    */
   private long dataTTL;
 
+  /**
+   * majorVersion is the raft log index of the modification operation when the SG node is modified.
+   * Such as creating SG, deleting SG, etc. This majorVersion used to determine the version of this
+   * SG node.
+   *
+   * <p>Please see https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=177050789 for
+   * more details.
+   */
+  private long majorVersion = 0;
+
+  /**
+   * minorVersion is the raft log index of the modification operation when the timeseries under the
+   * SG node is modified. For example, create one new timeseries, modify one timeseries and so on.
+   * minorVersion is used to determine the version of the timeseries under the SG node.
+   *
+   * <p>Please see https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=177050789 for
+   * more details.
+   */
+  private long minorVersion = 0;
+
   public StorageGroupMNode(MNode parent, String name, long dataTTL) {
     super(parent, name);
     this.dataTTL = dataTTL;
+  }
+
+  public StorageGroupMNode(MNode parent, String name, long dataTTL, long majorVersion) {
+    this(parent, name, dataTTL);
+    this.majorVersion = majorVersion;
+    this.minorVersion = 0;
+  }
+
+  public StorageGroupMNode(
+      MNode parent, String name, long dataTTL, long majorVersion, long minorVersion) {
+    this(parent, name, dataTTL);
+    this.majorVersion = majorVersion;
+    this.minorVersion = minorVersion;
   }
 
   public long getDataTTL() {
@@ -54,10 +87,27 @@ public class StorageGroupMNode extends MNode {
   }
 
   public static StorageGroupMNode deserializeFrom(StorageGroupMNodePlan plan) {
-    return new StorageGroupMNode(null, plan.getName(), plan.getDataTTL());
+    return new StorageGroupMNode(
+        null, plan.getName(), plan.getDataTTL(), plan.getMajorVersion(), plan.getMinorVersion());
   }
 
   public static StorageGroupMNode deserializeFrom(String[] nodeInfo) {
     return new StorageGroupMNode(null, nodeInfo[1], Long.parseLong(nodeInfo[2]));
+  }
+
+  public long getMajorVersion() {
+    return majorVersion;
+  }
+
+  public void setMajorVersion(long majorVersion) {
+    this.majorVersion = majorVersion;
+  }
+
+  public long getMinorVersion() {
+    return minorVersion;
+  }
+
+  public void setMinorVersion(long minorVersion) {
+    this.minorVersion = minorVersion;
   }
 }

@@ -65,6 +65,7 @@ import org.apache.iotdb.db.qp.physical.sys.SetTTLPlan;
 import org.apache.iotdb.db.qp.physical.sys.SetUsingDeviceTemplatePlan;
 import org.apache.iotdb.db.qp.physical.sys.ShowDevicesPlan;
 import org.apache.iotdb.db.qp.physical.sys.ShowTimeSeriesPlan;
+import org.apache.iotdb.db.qp.physical.sys.UpdateStorageGroupPlan;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.dataset.ShowDevicesResult;
 import org.apache.iotdb.db.query.dataset.ShowTimeSeriesResult;
@@ -363,6 +364,10 @@ public class MManager {
         SetStorageGroupPlan setStorageGroupPlan = (SetStorageGroupPlan) plan;
         setStorageGroup(setStorageGroupPlan.getPath());
         break;
+      case UPDATE_STORAGE_GROUP:
+        UpdateStorageGroupPlan updateStorageGroupPlan = (UpdateStorageGroupPlan) plan;
+        checkAndUpdateStorageGroupVersion(updateStorageGroupPlan.getPath());
+        break;
       case DELETE_STORAGE_GROUP:
         DeleteStorageGroupPlan deleteStorageGroupPlan = (DeleteStorageGroupPlan) plan;
         deleteStorageGroups(deleteStorageGroupPlan.getPaths());
@@ -414,13 +419,16 @@ public class MManager {
 
   private void ensureStorageGroup(PartialPath path) throws MetadataException {
     try {
-      mtree.getStorageGroupPath(path);
+      PartialPath storageGroupPath = getStorageGroupPath(path);
+      checkAndUpdateStorageGroupVersion(storageGroupPath);
     } catch (StorageGroupNotSetException e) {
       if (!config.isAutoCreateSchemaEnabled()) {
         throw e;
       }
       PartialPath storageGroupPath =
           MetaUtils.getStorageGroupPathByLevel(path, config.getDefaultStorageGroupLevel());
+      storageGroupPath.setMajorVersion(path.getMajorVersion());
+      storageGroupPath.setMinorVersion(path.getMinorVersion());
       setStorageGroup(storageGroupPath);
     }
   }
@@ -435,7 +443,6 @@ public class MManager {
     try {
       PartialPath path = plan.getPath();
       SchemaUtils.checkDataTypeWithEncoding(plan.getDataType(), plan.getEncoding());
-
       ensureStorageGroup(path);
 
       TSDataType type = plan.getDataType();
@@ -481,7 +488,6 @@ public class MManager {
         logWriter.createTimeseries(plan);
       }
       leafMNode.setOffset(offset);
-
     } catch (IOException e) {
       throw new MetadataException(e);
     }
@@ -726,40 +732,55 @@ public class MManager {
     }
   }
 
+  public void checkAndUpdateStorageGroupVersion(PartialPath storageGroup) throws MetadataException {
+    try {
+      mtree.updateStorageGroupVersion(storageGroup);
+      if (!isRecovering) {
+        logWriter.updateStorageGroup(storageGroup);
+      }
+    } catch (IOException e) {
+      throw new MetadataException(e.getMessage());
+    }
+  }
+
   /**
    * Delete storage groups of given paths from MTree. Log format: "delete_storage_group,sg1,sg2,sg3"
    *
    * @param storageGroups list of paths to be deleted. Format: root.node
    */
   public void deleteStorageGroups(List<PartialPath> storageGroups) throws MetadataException {
+    for (PartialPath storageGroup : storageGroups) {
+      deleteStorageGroup(storageGroup);
+    }
+  }
+
+  public void deleteStorageGroup(PartialPath storageGroup) throws MetadataException {
     try {
-      for (PartialPath storageGroup : storageGroups) {
-        totalSeriesNumber.addAndGet(-mtree.getAllTimeseriesCount(storageGroup));
-        // clear cached MNode
-        if (!allowToCreateNewSeries
-            && totalSeriesNumber.get() * ESTIMATED_SERIES_SIZE < MTREE_SIZE_THRESHOLD) {
-          logger.info("Current series number {} come back to normal level", totalSeriesNumber);
-          allowToCreateNewSeries = true;
-        }
-        mNodeCache.clear();
+      totalSeriesNumber.addAndGet(-mtree.getAllTimeseriesCount(storageGroup));
+      // clear cached MNode
+      if (!allowToCreateNewSeries
+          && totalSeriesNumber.get() * ESTIMATED_SERIES_SIZE < MTREE_SIZE_THRESHOLD) {
+        logger.info("Current series number {} come back to normal level", totalSeriesNumber);
+        allowToCreateNewSeries = true;
+      }
+      mNodeCache.clear();
 
-        // try to delete storage group
-        List<MeasurementMNode> leafMNodes = mtree.deleteStorageGroup(storageGroup);
-        for (MeasurementMNode leafMNode : leafMNodes) {
-          removeFromTagInvertedIndex(leafMNode);
-        }
+      // try to delete storage group
+      List<MeasurementMNode> leafMNodes = mtree.deleteStorageGroup(storageGroup);
+      for (MeasurementMNode leafMNode : leafMNodes) {
+        removeFromTagInvertedIndex(leafMNode);
+      }
 
-        // drop triggers with no exceptions
-        TriggerEngine.drop(leafMNodes);
+      // drop triggers with no exceptions
+      TriggerEngine.drop(leafMNodes);
 
-        if (!config.isEnableMemControl()) {
-          MemTableManager.getInstance().addOrDeleteStorageGroup(-1);
-        }
+      if (!config.isEnableMemControl()) {
+        MemTableManager.getInstance().addOrDeleteStorageGroup(-1);
+      }
 
-        // if success
-        if (!isRecovering) {
-          logWriter.deleteStorageGroup(storageGroup);
-        }
+      // if success
+      if (!isRecovering) {
+        logWriter.deleteStorageGroup(storageGroup);
       }
     } catch (IOException e) {
       throw new MetadataException(e.getMessage());
@@ -2162,12 +2183,13 @@ public class MManager {
         if (child instanceof MeasurementMNode) {
           measurementMNode = (MeasurementMNode) child;
         } else if (child instanceof StorageGroupMNode) {
-          throw new PathAlreadyExistException(deviceId + PATH_SEPARATOR + measurement);
+          throw new PathAlreadyExistException(
+              deviceId.getFullPath() + PATH_SEPARATOR + measurement);
         } else if ((measurementMNode = findTemplate(deviceMNode, measurement, vectorId)) != null) {
           // empty
         } else {
           if (!config.isAutoCreateSchemaEnabled()) {
-            throw new PathNotExistException(deviceId + PATH_SEPARATOR + measurement);
+            throw new PathNotExistException(deviceId.getFullPath() + PATH_SEPARATOR + measurement);
           } else {
             if (plan instanceof InsertRowPlan || plan instanceof InsertTabletPlan) {
               if (!plan.isAligned()) {

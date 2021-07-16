@@ -150,6 +150,10 @@ public class AlterTimeSeriesPlan extends PhysicalPlan {
     } else {
       stream.write(0);
     }
+    stream.writeLong(index);
+
+    stream.writeLong(path.getMajorVersion());
+    stream.writeLong(path.getMinorVersion());
   }
 
   @Override
@@ -184,6 +188,9 @@ public class AlterTimeSeriesPlan extends PhysicalPlan {
     if (buffer.get() == 1) {
       attributesMap = ReadWriteIOUtils.readMap(buffer);
     }
+    this.index = buffer.getLong();
+    path.setMajorVersion(buffer.getLong());
+    path.setMinorVersion(buffer.getLong());
   }
 
   @Override
@@ -208,5 +215,24 @@ public class AlterTimeSeriesPlan extends PhysicalPlan {
   @Override
   public int hashCode() {
     return Objects.hash(path, alias, alterType, alterMap, attributesMap, tagsMap);
+  }
+
+  @Override
+  public String toString() {
+    return "AlterTimeSeriesPlan{"
+        + " path="
+        + path
+        + ", alterType="
+        + alterType
+        + ", alterMap="
+        + alterMap
+        + ", alias='"
+        + alias
+        + '\''
+        + ", tagsMap="
+        + tagsMap
+        + ", attributesMap="
+        + attributesMap
+        + "}";
   }
 }

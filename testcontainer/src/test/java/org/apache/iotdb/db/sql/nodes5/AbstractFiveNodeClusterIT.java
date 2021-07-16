@@ -82,4 +82,24 @@ public abstract class AbstractFiveNodeClusterIT extends ClusterIT {
   protected DockerComposeContainer getContainer() {
     return environment;
   }
+
+  protected int[] getReadRpcPorts() {
+    return new int[] {
+      getContainer().getServicePort("iotdb-server_1", 6667),
+      getContainer().getServicePort("iotdb-server_2", 6667),
+      getContainer().getServicePort("iotdb-server_3", 6667),
+      getContainer().getServicePort("iotdb-server_4", 6667),
+      getContainer().getServicePort("iotdb-server_5", 6667)
+    };
+  }
+
+  protected String[] getReadRpcIps() {
+    return new String[] {
+      getContainer().getServiceHost("iotdb-server_1", 6667),
+      getContainer().getServiceHost("iotdb-server_2", 6667),
+      getContainer().getServiceHost("iotdb-server_3", 6667),
+      getContainer().getServiceHost("iotdb-server_4", 6667),
+      getContainer().getServiceHost("iotdb-server_5", 6667)
+    };
+  }
 }

@@ -117,7 +117,7 @@ public class AggregationPlan extends RawDataQueryPlan {
       String aggregatePath =
           path.isMeasurementAliasExists()
               ? FilePathUtils.generatePartialPathByLevel(path.getFullPathWithAlias(), level)
-              : FilePathUtils.generatePartialPathByLevel(path.toString(), level);
+              : FilePathUtils.generatePartialPathByLevel(path.getFullPath(), level);
       columnForDisplay = aggregations.get(pathIndex) + "(" + aggregatePath + ")";
     }
     return columnForDisplay;

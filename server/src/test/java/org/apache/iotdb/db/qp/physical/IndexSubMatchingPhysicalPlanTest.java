@@ -82,7 +82,7 @@ public class IndexSubMatchingPhysicalPlanTest {
     CreateIndexPlan plan = (CreateIndexPlan) processor.parseSQLToPhysicalPlan(sqlStr);
     System.out.println(plan);
     assertEquals(
-        "paths: [root.Wind.AZQ02.Speed], index type: ELB_INDEX, start time: 0, props: {BLOCK_SIZE=5}",
+        "paths: [PartialPath{fullPath=root.Wind.AZQ02.Speed, majorVersion=0, minorVersion=0}], index type: ELB_INDEX, start time: 0, props: {BLOCK_SIZE=5}",
         plan.toString());
   }
 
@@ -91,7 +91,9 @@ public class IndexSubMatchingPhysicalPlanTest {
     String sqlStr = "DROP INDEX ELB_INDEX ON root.Wind.AZQ02.Speed";
     Planner processor = new Planner();
     DropIndexPlan plan = (DropIndexPlan) processor.parseSQLToPhysicalPlan(sqlStr);
-    assertEquals("paths: [root.Wind.AZQ02.Speed], index type: ELB_INDEX", plan.toString());
+    assertEquals(
+        "paths: [PartialPath{fullPath=root.Wind.AZQ02.Speed, majorVersion=0, minorVersion=0}], index type: ELB_INDEX",
+        plan.toString());
   }
 
   @Test

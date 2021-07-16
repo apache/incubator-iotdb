@@ -139,7 +139,7 @@ public class PhysicalPlanTest {
     Planner processor = new Planner();
     CreateTimeSeriesPlan plan = (CreateTimeSeriesPlan) processor.parseSQLToPhysicalPlan(metadata);
     assertEquals(
-        "seriesPath: root.vehicle.d1.s2, resultDataType: INT32, encoding: RLE, compression: SNAPPY, tagOffset: -1",
+        "seriesPath: PartialPath{fullPath=root.vehicle.d1.s2, majorVersion=0, minorVersion=0}, resultDataType: INT32, encoding: RLE, compression: SNAPPY, tagOffset: -1",
         plan.toString());
   }
 
@@ -149,7 +149,7 @@ public class PhysicalPlanTest {
     Planner processor = new Planner();
     CreateTimeSeriesPlan plan = (CreateTimeSeriesPlan) processor.parseSQLToPhysicalPlan(metadata);
     assertEquals(
-        "seriesPath: root.vehicle.d1.s2, resultDataType: INT32, encoding: RLE, compression: SNAPPY, tagOffset: -1",
+        "seriesPath: PartialPath{fullPath=root.vehicle.d1.s2, majorVersion=0, minorVersion=0}, resultDataType: INT32, encoding: RLE, compression: SNAPPY, tagOffset: -1",
         plan.toString());
   }
 
@@ -162,7 +162,7 @@ public class PhysicalPlanTest {
     Planner processor = new Planner();
     CreateTimeSeriesPlan plan = (CreateTimeSeriesPlan) processor.parseSQLToPhysicalPlan(metadata);
     assertEquals(
-        "seriesPath: root.vehicle.d1.s2, resultDataType: INT32, encoding: RLE, compression: SNAPPY, tagOffset: -1",
+        "seriesPath: PartialPath{fullPath=root.vehicle.d1.s2, majorVersion=0, minorVersion=0}, resultDataType: INT32, encoding: RLE, compression: SNAPPY, tagOffset: -1",
         plan.toString());
   }
 
@@ -193,7 +193,7 @@ public class PhysicalPlanTest {
             + "password: null\n"
             + "newPassword: null\n"
             + "permissions: [0, 5]\n"
-            + "nodeName: root.vehicle.d1.s1\n"
+            + "nodeName: PartialPath{fullPath=root.vehicle.d1.s1, majorVersion=0, minorVersion=0}\n"
             + "authorType: GRANT_ROLE",
         plan.toString());
   }
@@ -701,7 +701,7 @@ public class PhysicalPlanTest {
   }
 
   @Test
-  public void testQuery3() throws QueryProcessException {
+  public void testQuery3() throws QueryProcessException, IllegalPathException {
     String sqlStr = "SELECT s1 FROM root.vehicle.d1 WHERE time > 50 and time <= 100 or s1 < 10";
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr);
     IExpression queryFilter = ((RawDataQueryPlan) plan).getExpression();
@@ -710,7 +710,8 @@ public class PhysicalPlanTest {
     expect =
         BinaryExpression.or(
             expect,
-            new SingleSeriesExpression(new Path("root.vehicle.d1", "s1"), ValueFilter.lt(10.0)));
+            new SingleSeriesExpression(
+                new PartialPath("root.vehicle.d1", "s1"), ValueFilter.lt(10.0)));
     assertEquals(expect.toString(), queryFilter.toString());
   }
 
@@ -722,7 +723,8 @@ public class PhysicalPlanTest {
 
     IExpression expect =
         BinaryExpression.and(
-            new SingleSeriesExpression(new Path("root.vehicle.d1", "s1"), ValueFilter.lt(10.0)),
+            new SingleSeriesExpression(
+                new PartialPath("root.vehicle.d1", "s1"), ValueFilter.lt(10.0)),
             new GlobalTimeExpression(FilterFactory.and(TimeFilter.gt(50L), TimeFilter.ltEq(100L))));
 
     assertEquals(expect.toString(), queryFilter.toString());
@@ -732,13 +734,13 @@ public class PhysicalPlanTest {
   }
 
   @Test
-  public void testQuery5() throws QueryProcessException {
+  public void testQuery5() throws QueryProcessException, IllegalPathException {
     String sqlStr = "SELECT s1 FROM root.vehicle.d1 WHERE s1 > 20 or s1 < 10";
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr);
     IExpression queryFilter = ((RawDataQueryPlan) plan).getExpression();
     IExpression expect =
         new SingleSeriesExpression(
-            new Path("root.vehicle.d1", "s1"),
+            new PartialPath("root.vehicle.d1", "s1"),
             FilterFactory.or(ValueFilter.gt(20.0), ValueFilter.lt(10.0)));
     assertEquals(expect.toString(), queryFilter.toString());
   }
@@ -790,147 +792,152 @@ public class PhysicalPlanTest {
   }
 
   @Test
-  public void testQueryFloat1() throws QueryProcessException {
+  public void testQueryFloat1() throws QueryProcessException, IllegalPathException {
     String sqlStr = "SELECT s1 FROM root.vehicle.d1 WHERE s1 > 20.5e3";
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr);
     IExpression queryFilter = ((RawDataQueryPlan) plan).getExpression();
     IExpression expect =
-        new SingleSeriesExpression(new Path("root.vehicle.d1", "s1"), ValueFilter.gt(20.5e3));
+        new SingleSeriesExpression(
+            new PartialPath("root.vehicle.d1", "s1"), ValueFilter.gt(20.5e3));
     assertEquals(expect.toString(), queryFilter.toString());
   }
 
   @Test
-  public void testQueryFloat2() throws QueryProcessException {
+  public void testQueryFloat2() throws QueryProcessException, IllegalPathException {
     String sqlStr = "SELECT s1 FROM root.vehicle.d1 WHERE s1 > 20.5E-3";
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr);
     IExpression queryFilter = ((RawDataQueryPlan) plan).getExpression();
     IExpression expect =
-        new SingleSeriesExpression(new Path("root.vehicle.d1", "s1"), ValueFilter.gt(20.5e-3));
+        new SingleSeriesExpression(
+            new PartialPath("root.vehicle.d1", "s1"), ValueFilter.gt(20.5e-3));
     assertEquals(expect.toString(), queryFilter.toString());
   }
 
   @Test
-  public void testQueryFloat3() throws QueryProcessException {
+  public void testQueryFloat3() throws QueryProcessException, IllegalPathException {
     String sqlStr = "SELECT s1 FROM root.vehicle.d1 WHERE s1 > 2.5";
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr);
     IExpression queryFilter = ((RawDataQueryPlan) plan).getExpression();
     IExpression expect =
-        new SingleSeriesExpression(new Path("root.vehicle.d1", "s1"), ValueFilter.gt(2.5));
+        new SingleSeriesExpression(new PartialPath("root.vehicle.d1", "s1"), ValueFilter.gt(2.5));
     assertEquals(expect.toString(), queryFilter.toString());
   }
 
   @Test
-  public void testQueryFloat4() throws QueryProcessException {
+  public void testQueryFloat4() throws QueryProcessException, IllegalPathException {
     String sqlStr = "SELECT s1 FROM root.vehicle.d1 WHERE s1 > 2.5";
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr);
     IExpression queryFilter = ((RawDataQueryPlan) plan).getExpression();
     IExpression expect =
-        new SingleSeriesExpression(new Path("root.vehicle.d1", "s1"), ValueFilter.gt(2.5));
+        new SingleSeriesExpression(new PartialPath("root.vehicle.d1", "s1"), ValueFilter.gt(2.5));
     assertEquals(expect.toString(), queryFilter.toString());
   }
 
   @Test
-  public void testQueryFloat5() throws QueryProcessException {
+  public void testQueryFloat5() throws QueryProcessException, IllegalPathException {
     String sqlStr = "SELECT s1 FROM root.vehicle.d1 WHERE s1 > -2.5";
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr);
     IExpression queryFilter = ((RawDataQueryPlan) plan).getExpression();
     IExpression expect =
-        new SingleSeriesExpression(new Path("root.vehicle.d1", "s1"), ValueFilter.gt(-2.5));
+        new SingleSeriesExpression(new PartialPath("root.vehicle.d1", "s1"), ValueFilter.gt(-2.5));
     assertEquals(expect.toString(), queryFilter.toString());
   }
 
   @Test
-  public void testQueryFloat6() throws QueryProcessException {
+  public void testQueryFloat6() throws QueryProcessException, IllegalPathException {
     String sqlStr = "SELECT s1 FROM root.vehicle.d1 WHERE s1 > -2.5E-1";
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr);
     IExpression queryFilter = ((RawDataQueryPlan) plan).getExpression();
     IExpression expect =
-        new SingleSeriesExpression(new Path("root.vehicle.d1", "s1"), ValueFilter.gt(-2.5e-1));
+        new SingleSeriesExpression(
+            new PartialPath("root.vehicle.d1", "s1"), ValueFilter.gt(-2.5e-1));
     assertEquals(expect.toString(), queryFilter.toString());
   }
 
   @Test
-  public void testQueryFloat7() throws QueryProcessException {
+  public void testQueryFloat7() throws QueryProcessException, IllegalPathException {
     String sqlStr = "SELECT s1 FROM root.vehicle.d1 WHERE s1 > 2.5E2";
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr);
     IExpression queryFilter = ((RawDataQueryPlan) plan).getExpression();
     IExpression expect =
-        new SingleSeriesExpression(new Path("root.vehicle.d1", "s1"), ValueFilter.gt(2.5e+2));
+        new SingleSeriesExpression(
+            new PartialPath("root.vehicle.d1", "s1"), ValueFilter.gt(2.5e+2));
     assertEquals(expect.toString(), queryFilter.toString());
   }
 
   @Test
-  public void testQueryFloat8() throws QueryProcessException {
+  public void testQueryFloat8() throws QueryProcessException, IllegalPathException {
     String sqlStr = "SELECT s1 FROM root.vehicle.d1 WHERE s1 > .2e2";
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr);
     IExpression queryFilter = ((RawDataQueryPlan) plan).getExpression();
     IExpression expect =
-        new SingleSeriesExpression(new Path("root.vehicle.d1", "s1"), ValueFilter.gt(0.2e+2));
+        new SingleSeriesExpression(
+            new PartialPath("root.vehicle.d1", "s1"), ValueFilter.gt(0.2e+2));
     assertEquals(expect.toString(), queryFilter.toString());
   }
 
   @Test
-  public void testQueryFloat9() throws QueryProcessException {
+  public void testQueryFloat9() throws QueryProcessException, IllegalPathException {
     String sqlStr = "SELECT s1 FROM root.vehicle.d1 WHERE s1 > .2";
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr);
     IExpression queryFilter = ((RawDataQueryPlan) plan).getExpression();
     IExpression expect =
-        new SingleSeriesExpression(new Path("root.vehicle.d1", "s1"), ValueFilter.gt(0.2));
+        new SingleSeriesExpression(new PartialPath("root.vehicle.d1", "s1"), ValueFilter.gt(0.2));
     assertEquals(expect.toString(), queryFilter.toString());
   }
 
   @Test
-  public void testQueryFloat10() throws QueryProcessException {
+  public void testQueryFloat10() throws QueryProcessException, IllegalPathException {
     String sqlStr = "SELECT s1 FROM root.vehicle.d1 WHERE s1 > 2.";
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr);
     IExpression queryFilter = ((RawDataQueryPlan) plan).getExpression();
     IExpression expect =
-        new SingleSeriesExpression(new Path("root.vehicle.d1", "s1"), ValueFilter.gt(2.0));
+        new SingleSeriesExpression(new PartialPath("root.vehicle.d1", "s1"), ValueFilter.gt(2.0));
     assertEquals(expect.toString(), queryFilter.toString());
   }
 
   @Test
-  public void testQueryFloat11() throws QueryProcessException {
+  public void testQueryFloat11() throws QueryProcessException, IllegalPathException {
     String sqlStr = "SELECT s1 FROM root.vehicle.d1 WHERE s1 > 2.";
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr);
     IExpression queryFilter = ((RawDataQueryPlan) plan).getExpression();
     IExpression expect =
-        new SingleSeriesExpression(new Path("root.vehicle.d1", "s1"), ValueFilter.gt(2.0));
+        new SingleSeriesExpression(new PartialPath("root.vehicle.d1", "s1"), ValueFilter.gt(2.0));
     assertEquals(expect.toString(), queryFilter.toString());
   }
 
   @Test
-  public void testQueryFloat12() throws QueryProcessException {
+  public void testQueryFloat12() throws QueryProcessException, IllegalPathException {
     String sqlStr = "SELECT s1 FROM root.vehicle.d1 WHERE s1 > -2.";
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr);
     IExpression queryFilter = ((RawDataQueryPlan) plan).getExpression();
     IExpression expect =
-        new SingleSeriesExpression(new Path("root.vehicle.d1", "s1"), ValueFilter.gt(-2.0));
+        new SingleSeriesExpression(new PartialPath("root.vehicle.d1", "s1"), ValueFilter.gt(-2.0));
     assertEquals(expect.toString(), queryFilter.toString());
   }
 
   @Test
-  public void testQueryFloat13() throws QueryProcessException {
+  public void testQueryFloat13() throws QueryProcessException, IllegalPathException {
     String sqlStr = "SELECT s1 FROM root.vehicle.d1 WHERE s1 > -.2";
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr);
     IExpression queryFilter = ((RawDataQueryPlan) plan).getExpression();
     IExpression expect =
-        new SingleSeriesExpression(new Path("root.vehicle.d1", "s1"), ValueFilter.gt(-0.2));
+        new SingleSeriesExpression(new PartialPath("root.vehicle.d1", "s1"), ValueFilter.gt(-0.2));
     assertEquals(expect.toString(), queryFilter.toString());
   }
 
   @Test
-  public void testQueryFloat14() throws QueryProcessException {
+  public void testQueryFloat14() throws QueryProcessException, IllegalPathException {
     String sqlStr = "SELECT s1 FROM root.vehicle.d1 WHERE s1 > -.2e2";
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr);
     IExpression queryFilter = ((RawDataQueryPlan) plan).getExpression();
     IExpression expect =
-        new SingleSeriesExpression(new Path("root.vehicle.d1", "s1"), ValueFilter.gt(-20.0));
+        new SingleSeriesExpression(new PartialPath("root.vehicle.d1", "s1"), ValueFilter.gt(-20.0));
     assertEquals(expect.toString(), queryFilter.toString());
   }
 
   @Test
-  public void testInOperator() throws QueryProcessException {
+  public void testInOperator() throws QueryProcessException, IllegalPathException {
     String sqlStr = "SELECT s1 FROM root.vehicle.d1 WHERE s1 in (25, 30, 40)";
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr);
     IExpression queryFilter = ((RawDataQueryPlan) plan).getExpression();
@@ -940,12 +947,12 @@ public class PhysicalPlanTest {
     values.add(40.0f);
     IExpression expect =
         new SingleSeriesExpression(
-            new Path("root.vehicle.d1", "s1"), ValueFilter.in(values, false));
+            new PartialPath("root.vehicle.d1", "s1"), ValueFilter.in(values, false));
     assertEquals(expect.toString(), queryFilter.toString());
   }
 
   @Test
-  public void testNotInOperator() throws QueryProcessException {
+  public void testNotInOperator() throws QueryProcessException, IllegalPathException {
     String sqlStr = "SELECT s1 FROM root.vehicle.d1 WHERE s1 not in (25, 30, 40)";
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr);
     IExpression queryFilter = ((RawDataQueryPlan) plan).getExpression();
@@ -954,7 +961,8 @@ public class PhysicalPlanTest {
     values.add(30.0f);
     values.add(40.0f);
     IExpression expect =
-        new SingleSeriesExpression(new Path("root.vehicle.d1", "s1"), ValueFilter.in(values, true));
+        new SingleSeriesExpression(
+            new PartialPath("root.vehicle.d1", "s1"), ValueFilter.in(values, true));
     assertEquals(expect.toString(), queryFilter.toString());
 
     sqlStr = "SELECT s1 FROM root.vehicle.d1 WHERE not(s1 not in (25, 30, 40))";
@@ -962,7 +970,7 @@ public class PhysicalPlanTest {
     queryFilter = ((RawDataQueryPlan) plan).getExpression();
     expect =
         new SingleSeriesExpression(
-            new Path("root.vehicle.d1", "s1"), ValueFilter.in(values, false));
+            new PartialPath("root.vehicle.d1", "s1"), ValueFilter.in(values, false));
     assertEquals(expect.toString(), queryFilter.toString());
   }
 

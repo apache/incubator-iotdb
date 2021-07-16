@@ -78,7 +78,9 @@ public class ListDataSetTest {
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan("show storage group");
     QueryDataSet dataSet = queryExecutor.processQuery(plan, EnvironmentUtils.TEST_QUERY_CONTEXT);
     Assert.assertTrue(dataSet instanceof ListDataSet);
-    Assert.assertEquals("[storage group]", dataSet.getPaths().toString());
+    Assert.assertEquals(
+        "[PartialPath{fullPath=storage group, majorVersion=0, minorVersion=0}]",
+        dataSet.getPaths().toString());
     int i = 0;
     while (dataSet.hasNext()) {
       RowRecord record = dataSet.next();
@@ -96,7 +98,9 @@ public class ListDataSetTest {
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan("show child paths root.test");
     QueryDataSet dataSet = queryExecutor.processQuery(plan, EnvironmentUtils.TEST_QUERY_CONTEXT);
     Assert.assertTrue(dataSet instanceof ListDataSet);
-    Assert.assertEquals("[child paths]", dataSet.getPaths().toString());
+    Assert.assertEquals(
+        "[PartialPath{fullPath=child paths, majorVersion=0, minorVersion=0}]",
+        dataSet.getPaths().toString());
     int i = 0;
     while (dataSet.hasNext()) {
       RowRecord record = dataSet.next();
@@ -114,7 +118,9 @@ public class ListDataSetTest {
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan("show devices");
     QueryDataSet dataSet = queryExecutor.processQuery(plan, EnvironmentUtils.TEST_QUERY_CONTEXT);
     Assert.assertTrue(dataSet instanceof ShowDevicesDataSet);
-    Assert.assertEquals("[devices]", dataSet.getPaths().toString());
+    Assert.assertEquals(
+        "[PartialPath{fullPath=devices, majorVersion=0, minorVersion=0}]",
+        dataSet.getPaths().toString());
     int i = 0;
     while (dataSet.hasNext()) {
       RowRecord record = dataSet.next();
@@ -137,8 +143,12 @@ public class ListDataSetTest {
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan("show devices with storage group");
     QueryDataSet dataSet = queryExecutor.processQuery(plan, EnvironmentUtils.TEST_QUERY_CONTEXT);
     Assert.assertTrue(dataSet instanceof ShowDevicesDataSet);
-    Assert.assertEquals("devices", dataSet.getPaths().get(0).toString());
-    Assert.assertEquals("storage group", dataSet.getPaths().get(1).toString());
+    Assert.assertEquals(
+        "PartialPath{fullPath=devices, majorVersion=0, minorVersion=0}",
+        dataSet.getPaths().get(0).toString());
+    Assert.assertEquals(
+        "PartialPath{fullPath=storage group, majorVersion=0, minorVersion=0}",
+        dataSet.getPaths().get(1).toString());
     int i = 0;
     while (dataSet.hasNext()) {
       RowRecord record = dataSet.next();

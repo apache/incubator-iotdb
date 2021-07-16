@@ -168,6 +168,8 @@ public class CreateAlignedTimeSeriesPlan extends PhysicalPlan {
       stream.write(0);
     }
     stream.writeLong(index);
+    stream.writeLong(prefixPath.getMajorVersion());
+    stream.writeLong(prefixPath.getMinorVersion());
   }
 
   @Override
@@ -200,6 +202,8 @@ public class CreateAlignedTimeSeriesPlan extends PhysicalPlan {
     }
 
     buffer.putLong(index);
+    buffer.putLong(prefixPath.getMajorVersion());
+    buffer.putLong(prefixPath.getMinorVersion());
   }
 
   @Override
@@ -233,6 +237,8 @@ public class CreateAlignedTimeSeriesPlan extends PhysicalPlan {
     }
 
     this.index = buffer.getLong();
+    prefixPath.setMajorVersion(buffer.getLong());
+    prefixPath.setMinorVersion(buffer.getLong());
   }
 
   @Override

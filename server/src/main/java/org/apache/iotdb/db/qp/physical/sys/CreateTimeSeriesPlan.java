@@ -205,6 +205,8 @@ public class CreateTimeSeriesPlan extends PhysicalPlan {
     }
 
     stream.writeLong(index);
+    stream.writeLong(path.getMajorVersion());
+    stream.writeLong(path.getMinorVersion());
   }
 
   @Override
@@ -251,6 +253,9 @@ public class CreateTimeSeriesPlan extends PhysicalPlan {
     }
 
     buffer.putLong(index);
+
+    buffer.putLong(path.getMajorVersion());
+    buffer.putLong(path.getMinorVersion());
   }
 
   @Override
@@ -285,6 +290,9 @@ public class CreateTimeSeriesPlan extends PhysicalPlan {
     }
 
     this.index = buffer.getLong();
+
+    path.setMajorVersion(buffer.getLong());
+    path.setMinorVersion(buffer.getLong());
   }
 
   @Override

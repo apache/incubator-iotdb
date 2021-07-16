@@ -45,6 +45,7 @@ import org.apache.iotdb.db.qp.physical.sys.SetStorageGroupPlan;
 import org.apache.iotdb.db.qp.physical.sys.SetTTLPlan;
 import org.apache.iotdb.db.qp.physical.sys.SetUsingDeviceTemplatePlan;
 import org.apache.iotdb.db.qp.physical.sys.StorageGroupMNodePlan;
+import org.apache.iotdb.db.qp.physical.sys.UpdateStorageGroupPlan;
 import org.apache.iotdb.db.writelog.io.LogWriter;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -152,6 +153,11 @@ public class MLogWriter implements AutoCloseable {
     putLog(plan);
   }
 
+  public void updateStorageGroup(PartialPath storageGroup) throws IOException {
+    UpdateStorageGroupPlan plan = new UpdateStorageGroupPlan(storageGroup);
+    putLog(plan);
+  }
+
   public void deleteStorageGroup(PartialPath storageGroup) throws IOException {
     DeleteStorageGroupPlan plan =
         new DeleteStorageGroupPlan(Collections.singletonList(storageGroup));
@@ -211,7 +217,12 @@ public class MLogWriter implements AutoCloseable {
       childSize = node.getChildren().size();
     }
     StorageGroupMNodePlan plan =
-        new StorageGroupMNodePlan(node.getName(), node.getDataTTL(), childSize);
+        new StorageGroupMNodePlan(
+            node.getName(),
+            node.getDataTTL(),
+            childSize,
+            node.getMajorVersion(),
+            node.getMinorVersion());
     putLog(plan);
   }
 
@@ -450,7 +461,7 @@ public class MLogWriter implements AutoCloseable {
                 CompressionType.values()[Integer.parseInt(words[5])]));
       case "1":
         return new StorageGroupMNodePlan(
-            words[1], Long.parseLong(words[2]), Integer.parseInt(words[3]));
+            words[1], Long.parseLong(words[2]), Integer.parseInt(words[3]), 0, 0);
       case "0":
         return new MNodePlan(words[1], Integer.parseInt(words[2]));
       default:

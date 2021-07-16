@@ -31,8 +31,15 @@ import org.apache.iotdb.cluster.rpc.thrift.Node;
 import org.apache.iotdb.cluster.rpc.thrift.StartUpStatus;
 import org.apache.iotdb.cluster.server.member.MetaGroupMember;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
+import org.apache.iotdb.db.exception.metadata.PathNotExistException;
 import org.apache.iotdb.db.exception.metadata.StorageGroupNotSetException;
 import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.metadata.mnode.StorageGroupMNode;
+import org.apache.iotdb.db.qp.physical.PhysicalPlan;
+import org.apache.iotdb.db.qp.physical.sys.AlterTimeSeriesPlan;
+import org.apache.iotdb.db.qp.physical.sys.CreateAlignedTimeSeriesPlan;
+import org.apache.iotdb.db.qp.physical.sys.CreateTimeSeriesPlan;
+import org.apache.iotdb.db.qp.physical.sys.DeleteStorageGroupPlan;
 import org.apache.iotdb.db.service.IoTDB;
 import org.apache.iotdb.db.utils.CommonUtils;
 import org.apache.iotdb.rpc.RpcTransportFactory;
@@ -49,6 +56,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -366,6 +374,90 @@ public class ClusterUtils {
       partitionGroup = metaGroupMember.getPartitionTable().partitionByPathTime(prefixPath, 0);
     }
     return partitionGroup;
+  }
+
+  public static void setVersionForSpecialPlan(PhysicalPlan plan, long currLogIndex)
+      throws MetadataException {
+    long majorVersion = 0;
+    long minorVersion = 0;
+    if (plan.getOperatorType() == null) {
+      logger.warn("the plan={} have no operator, ignore it", plan);
+      return;
+    }
+    switch (plan.getOperatorType()) {
+      case SET_STORAGE_GROUP:
+        majorVersion = currLogIndex;
+        minorVersion = 0;
+        plan.setMajorVersion(majorVersion);
+        plan.setMinorVersion(minorVersion);
+        break;
+      case DELETE_STORAGE_GROUP:
+        List<PartialPath> deletePathList = new ArrayList<>();
+        for (PartialPath storageGroupPath : plan.getPaths()) {
+          List<PartialPath> allRelatedStorageGroupPath =
+              IoTDB.metaManager.getStorageGroupPaths(storageGroupPath);
+          if (allRelatedStorageGroupPath.isEmpty()) {
+            throw new PathNotExistException(storageGroupPath.getFullPath(), true);
+          }
+          for (PartialPath path : allRelatedStorageGroupPath) {
+            StorageGroupMNode storageGroupMNode = IoTDB.metaManager.getStorageGroupNodeByPath(path);
+            majorVersion = storageGroupMNode.getMajorVersion();
+            minorVersion = storageGroupMNode.getMinorVersion();
+            path.setMajorVersion(majorVersion);
+            path.setMinorVersion(minorVersion);
+            deletePathList.add(path);
+          }
+        }
+        // replace the to be deleted paths
+        ((DeleteStorageGroupPlan) plan).setPaths(deletePathList);
+        break;
+      case CREATE_TIMESERIES:
+        PartialPath partialPath = ((CreateTimeSeriesPlan) plan).getPath();
+        StorageGroupMNode storageGroupMNode =
+            IoTDB.metaManager.getStorageGroupNodeByPath(partialPath);
+        majorVersion = storageGroupMNode.getMajorVersion();
+        minorVersion = currLogIndex;
+        ((CreateTimeSeriesPlan) plan).getPath().setMajorVersion(majorVersion);
+        ((CreateTimeSeriesPlan) plan).getPath().setMinorVersion(minorVersion);
+        break;
+      case ALTER_TIMESERIES:
+        partialPath = ((AlterTimeSeriesPlan) plan).getPath();
+        storageGroupMNode = IoTDB.metaManager.getStorageGroupNodeByPath(partialPath);
+        majorVersion = storageGroupMNode.getMajorVersion();
+        minorVersion = currLogIndex;
+        ((AlterTimeSeriesPlan) plan).getPath().setMajorVersion(majorVersion);
+        ((AlterTimeSeriesPlan) plan).getPath().setMinorVersion(minorVersion);
+        break;
+      case CREATE_ALIGNED_TIMESERIES:
+        partialPath = ((CreateAlignedTimeSeriesPlan) plan).getPrefixPath();
+        storageGroupMNode = IoTDB.metaManager.getStorageGroupNodeByPath(partialPath);
+        majorVersion = storageGroupMNode.getMajorVersion();
+        minorVersion = currLogIndex;
+        ((CreateAlignedTimeSeriesPlan) plan).getPrefixPath().setMajorVersion(majorVersion);
+        ((CreateAlignedTimeSeriesPlan) plan).getPrefixPath().setMinorVersion(minorVersion);
+        break;
+      case CREATE_MULTI_TIMESERIES:
+      case DELETE_TIMESERIES:
+        List<PartialPath> partialPaths = plan.getPaths();
+        for (PartialPath path : partialPaths) {
+          storageGroupMNode = IoTDB.metaManager.getStorageGroupNodeByPath(path);
+          majorVersion = storageGroupMNode.getMajorVersion();
+          path.setMajorVersion(storageGroupMNode.getMajorVersion());
+          path.setMinorVersion(currLogIndex);
+          logger.debug(
+              "set majorVersion={}, minorVersion={} for path={}, plan={}",
+              majorVersion,
+              currLogIndex,
+              path,
+              plan);
+        }
+        break;
+      default:
+        // do nothing
+        break;
+    }
+    logger.debug(
+        "set majorVersion={}, minorVersion={} for plan={}", majorVersion, minorVersion, plan);
   }
 
   public static int getSlotByPathTimeWithSync(

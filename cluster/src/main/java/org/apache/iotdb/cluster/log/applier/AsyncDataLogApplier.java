@@ -172,7 +172,9 @@ public class AsyncDataLogApplier implements LogApplier {
     if (Timer.ENABLE_INSTRUMENTING) {
       log.setEnqueueTime(System.nanoTime());
     }
-    consumerMap.computeIfAbsent(planKey, d -> new DataLogConsumer(name + "-" + d)).accept(log);
+    consumerMap
+        .computeIfAbsent(planKey, d -> new DataLogConsumer(name + "-" + d.getFullPath()))
+        .accept(log);
   }
 
   private void drainConsumers() {

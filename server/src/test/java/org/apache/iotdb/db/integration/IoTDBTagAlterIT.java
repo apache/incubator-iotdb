@@ -103,7 +103,8 @@ public class IoTDBTagAlterIT {
       } catch (Exception e) {
         assertTrue(
             e.getMessage()
-                .contains("TimeSeries [root.turbine.d1.s1] does not have tag/attribute [tag3]."));
+                .contains(
+                    "TimeSeries [PartialPath{fullPath=root.turbine.d1.s1, majorVersion=0, minorVersion=0}] does not have tag/attribute [tag3]."));
       }
 
       try {
@@ -113,7 +114,7 @@ public class IoTDBTagAlterIT {
         assertTrue(
             e.getMessage()
                 .contains(
-                    "TimeSeries [root.turbine.d1.s1] already has a tag/attribute named [tag2]."));
+                    "TimeSeries [PartialPath{fullPath=root.turbine.d1.s1, majorVersion=0, minorVersion=0}] already has a tag/attribute named [tag2]."));
       }
 
       statement.execute("ALTER timeseries root.turbine.d1.s1 RENAME tag1 TO tagNew1");
@@ -208,7 +209,8 @@ public class IoTDBTagAlterIT {
       } catch (Exception e) {
         assertTrue(
             e.getMessage()
-                .contains("TimeSeries [root.turbine.d1.s1] does not have tag/attribute [tag3]."));
+                .contains(
+                    "TimeSeries [PartialPath{fullPath=root.turbine.d1.s1, majorVersion=0, minorVersion=0}] does not have tag/attribute [tag3]."));
       }
 
       statement.execute("ALTER timeseries root.turbine.d1.s1 SET tag1=newV1, attr2=newV2");

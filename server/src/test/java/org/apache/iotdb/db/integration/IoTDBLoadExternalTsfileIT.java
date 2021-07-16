@@ -492,7 +492,9 @@ public class IoTDBLoadExternalTsfileIT {
               .length);
       assertEquals(
           0,
-          new File(tmpDir, new PartialPath("root.test") + File.separator + "0").listFiles().length);
+          new File(tmpDir, new PartialPath("root.test").getFullPath() + File.separator + "0")
+              .listFiles()
+              .length);
 
       // check query result
       hasResultSet = statement.execute("SELECT  * FROM root");

@@ -18,6 +18,7 @@
  */
 package org.apache.iotdb.db.qp.physical;
 
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.metadata.PartialPath;
@@ -29,7 +30,6 @@ import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.read.expression.IExpression;
 import org.apache.iotdb.tsfile.read.expression.impl.BinaryExpression;
 import org.apache.iotdb.tsfile.read.expression.impl.SingleSeriesExpression;
@@ -115,24 +115,29 @@ public class ConcatOptimizerTest {
   }
 
   @Test
-  public void testConcat3() throws QueryProcessException, RecognitionException {
+  public void testConcat3()
+      throws QueryProcessException, RecognitionException, IllegalPathException {
     String inputSQL = "select s1 from root.laptop.d1 where s1 < 10";
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan(inputSQL);
     SingleSeriesExpression seriesExpression =
-        new SingleSeriesExpression(new Path("root.laptop.d1", "s1"), ValueFilter.lt(10));
+        new SingleSeriesExpression(new PartialPath("root.laptop.d1", "s1"), ValueFilter.lt(10));
     assertEquals(seriesExpression.toString(), ((RawDataQueryPlan) plan).getExpression().toString());
   }
 
   @Test
-  public void testConcatMultipleDeviceInFilter() throws QueryProcessException {
+  public void testConcatMultipleDeviceInFilter()
+      throws QueryProcessException, IllegalPathException {
     String inputSQL = "select s1 from root.laptop.* where s1 < 10";
     PhysicalPlan plan = processor.parseSQLToPhysicalPlan(inputSQL);
     IExpression expression =
         BinaryExpression.and(
             BinaryExpression.and(
-                new SingleSeriesExpression(new Path("root.laptop.d1", "s1"), ValueFilter.lt(10)),
-                new SingleSeriesExpression(new Path("root.laptop.d2", "s1"), ValueFilter.lt(10))),
-            new SingleSeriesExpression(new Path("root.laptop.d3", "s1"), ValueFilter.lt(10)));
+                new SingleSeriesExpression(
+                    new PartialPath("root.laptop.d1", "s1"), ValueFilter.lt(10)),
+                new SingleSeriesExpression(
+                    new PartialPath("root.laptop.d2", "s1"), ValueFilter.lt(10))),
+            new SingleSeriesExpression(
+                new PartialPath("root.laptop.d3", "s1"), ValueFilter.lt(10)));
     assertEquals(expression.toString(), ((RawDataQueryPlan) plan).getExpression().toString());
   }
 }

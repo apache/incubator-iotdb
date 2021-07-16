@@ -183,7 +183,11 @@ public class IoTDBLoadExternalTsFileWithTimePartitionIT {
       File f =
           new File(
               dataDir,
-              new PartialPath("sequence") + File.separator + "root.ln" + File.separator + "0");
+              new PartialPath("sequence").getFullPath()
+                  + File.separator
+                  + "root.ln"
+                  + File.separator
+                  + "0");
       Assert.assertEquals(
           (endTime - startTime) / (timePartition), f.list().length * originalTsFileNum);
 

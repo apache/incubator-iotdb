@@ -34,6 +34,7 @@ import org.apache.iotdb.cluster.rpc.thrift.Node;
 import org.apache.iotdb.cluster.server.RaftServer;
 import org.apache.iotdb.cluster.server.member.DataGroupMember;
 import org.apache.iotdb.cluster.server.member.MetaGroupMember;
+import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.exception.StorageEngineException;
@@ -47,7 +48,10 @@ import org.apache.iotdb.db.qp.physical.PhysicalPlan;
 import org.apache.iotdb.db.qp.physical.crud.AlignByDevicePlan;
 import org.apache.iotdb.db.qp.physical.crud.DeletePlan;
 import org.apache.iotdb.db.qp.physical.crud.QueryPlan;
+import org.apache.iotdb.db.qp.physical.sys.AlterTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.AuthorPlan;
+import org.apache.iotdb.db.qp.physical.sys.DeleteStorageGroupPlan;
+import org.apache.iotdb.db.qp.physical.sys.DeleteTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.LoadConfigurationPlan;
 import org.apache.iotdb.db.qp.physical.sys.ShowPlan;
 import org.apache.iotdb.db.query.context.QueryContext;
@@ -81,6 +85,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ClusterPlanExecutor extends PlanExecutor {
 
   private static final Logger logger = LoggerFactory.getLogger(ClusterPlanExecutor.class);
+  private static final Logger AUDIT_LOGGER =
+      LoggerFactory.getLogger(IoTDBConstant.AUDIT_LOGGER_NAME);
   private MetaGroupMember metaGroupMember;
 
   public static final int THREAD_POOL_SIZE = 6;
@@ -633,5 +639,54 @@ public class ClusterPlanExecutor extends PlanExecutor {
     } catch (StorageEngineException e) {
       throw new QueryProcessException(e);
     }
+  }
+
+  /**
+   * the deleteStorageGroupPlan.getPaths() are all storage group paths, it have been processed in
+   * the {@link org.apache.iotdb.cluster.utils.ClusterUtils#setVersionForSpecialPlan(PhysicalPlan,
+   * long)}
+   */
+  @Override
+  protected boolean deleteStorageGroups(DeleteStorageGroupPlan deleteStorageGroupPlan)
+      throws QueryProcessException {
+    AUDIT_LOGGER.info("delete storage group {}", deleteStorageGroupPlan.getPaths());
+    try {
+      IoTDB.metaManager.deleteStorageGroups(deleteStorageGroupPlan.getPaths());
+    } catch (MetadataException e) {
+      throw new QueryProcessException(e);
+    }
+    return true;
+  }
+
+  @Override
+  protected boolean deleteTimeSeries(DeleteTimeSeriesPlan deleteTimeSeriesPlan)
+      throws QueryProcessException {
+    AUDIT_LOGGER.info("delete timeseries {}", deleteTimeSeriesPlan.getPaths());
+    List<PartialPath> deletePathList = deleteTimeSeriesPlan.getPaths();
+    for (PartialPath path : deletePathList) {
+      try {
+        ((CMManager) (IoTDB.metaManager)).checkSgNodeAndPlanMajorVersion(path);
+      } catch (MetadataException e) {
+        logger.warn(
+            "some error occurred when check the storage group version, plan={}",
+            deleteTimeSeriesPlan,
+            e);
+      }
+    }
+    return super.deleteTimeSeries(deleteTimeSeriesPlan);
+  }
+
+  @Override
+  protected boolean alterTimeSeries(AlterTimeSeriesPlan alterTimeSeriesPlan)
+      throws QueryProcessException {
+    PartialPath path = alterTimeSeriesPlan.getPath();
+    try {
+      if (((CMManager) (IoTDB.metaManager)).checkSgNodeAndPlanMajorVersion(path)) {
+        return super.alterTimeSeries(alterTimeSeriesPlan);
+      }
+    } catch (MetadataException e) {
+      throw new QueryProcessException(e.getMessage());
+    }
+    return false;
   }
 }

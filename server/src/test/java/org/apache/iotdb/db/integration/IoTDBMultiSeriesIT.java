@@ -453,7 +453,9 @@ public class IoTDBMultiSeriesIT {
       fail("not throw exception when unknown time series in where clause");
     } catch (SQLException e) {
       assertTrue(
-          e.getMessage().contains("Unknown time series root.vehicle.d0.s10 in `where clause`"));
+          e.getMessage()
+              .contains(
+                  "Unknown time series PartialPath{fullPath=root.vehicle.d0.s10, majorVersion=0, minorVersion=0} in `where clause`"));
     }
   }
 

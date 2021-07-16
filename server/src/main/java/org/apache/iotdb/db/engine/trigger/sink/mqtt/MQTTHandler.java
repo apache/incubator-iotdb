@@ -48,7 +48,7 @@ public class MQTTHandler implements Handler<MQTTConfiguration, MQTTEvent> {
       throws SinkException {
     return String.format(
         "{\"device\":\"%s\",\"measurements\":[%s]%s",
-        configuration.getDevice(),
+        configuration.getDevice().getFullPath(),
         arrayToJson(configuration.getMeasurements()),
         ",\"timestamp\":%d,\"values\":[%s]}");
   }

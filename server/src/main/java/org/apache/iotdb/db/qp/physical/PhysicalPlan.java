@@ -65,6 +65,7 @@ import org.apache.iotdb.db.qp.physical.sys.ShowTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.StartTriggerPlan;
 import org.apache.iotdb.db.qp.physical.sys.StopTriggerPlan;
 import org.apache.iotdb.db.qp.physical.sys.StorageGroupMNodePlan;
+import org.apache.iotdb.db.qp.physical.sys.UpdateStorageGroupPlan;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 import java.io.DataOutputStream;
@@ -400,6 +401,9 @@ public abstract class PhysicalPlan {
         case DROP_FUNCTION:
           plan = new DropFunctionPlan();
           break;
+        case UPDATE_STORAGE_GROUP:
+          plan = new UpdateStorageGroupPlan();
+          break;
         default:
           throw new IOException("unrecognized log type " + type);
       }
@@ -463,7 +467,8 @@ public abstract class PhysicalPlan {
     CREATE_SNAPSHOT,
     CLEARCACHE,
     CREATE_FUNCTION,
-    DROP_FUNCTION
+    DROP_FUNCTION,
+    UPDATE_STORAGE_GROUP
   }
 
   public long getIndex() {
@@ -481,4 +486,18 @@ public abstract class PhysicalPlan {
    * @throws QueryProcessException when the check fails
    */
   public void checkIntegrity() throws QueryProcessException {}
+
+  public void setMajorVersion(long majorVersion) {
+    List<PartialPath> partialPaths = this.getPaths();
+    for (PartialPath partialPath : partialPaths) {
+      partialPath.setMajorVersion(majorVersion);
+    }
+  }
+
+  public void setMinorVersion(long minorVersion) {
+    List<PartialPath> partialPaths = this.getPaths();
+    for (PartialPath partialPath : partialPaths) {
+      partialPath.setMinorVersion(minorVersion);
+    }
+  }
 }

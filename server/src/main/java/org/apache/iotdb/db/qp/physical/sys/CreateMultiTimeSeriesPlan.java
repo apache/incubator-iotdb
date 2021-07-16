@@ -140,6 +140,7 @@ public class CreateMultiTimeSeriesPlan extends PhysicalPlan implements BatchPlan
     this.indexes = indexes;
   }
 
+  @Override
   public Map<Integer, TSStatus> getResults() {
     return results;
   }
@@ -161,6 +162,8 @@ public class CreateMultiTimeSeriesPlan extends PhysicalPlan implements BatchPlan
 
     for (PartialPath path : paths) {
       putString(stream, path.getFullPath());
+      stream.writeLong(path.getMajorVersion());
+      stream.writeLong(path.getMinorVersion());
     }
 
     for (TSDataType dataType : dataTypes) {
@@ -219,6 +222,8 @@ public class CreateMultiTimeSeriesPlan extends PhysicalPlan implements BatchPlan
 
     for (PartialPath path : paths) {
       putString(buffer, path.getFullPath());
+      buffer.putLong(path.getMajorVersion());
+      buffer.putLong(path.getMinorVersion());
     }
 
     for (TSDataType dataType : dataTypes) {
@@ -274,7 +279,10 @@ public class CreateMultiTimeSeriesPlan extends PhysicalPlan implements BatchPlan
     int dataTypeSize = buffer.getInt();
     paths = new ArrayList<>(totalSize);
     for (int i = 0; i < totalSize; i++) {
-      paths.add(new PartialPath(readString(buffer)));
+      PartialPath partialPath = new PartialPath(readString(buffer));
+      partialPath.setMajorVersion(buffer.getLong());
+      partialPath.setMinorVersion(buffer.getLong());
+      paths.add(partialPath);
     }
     dataTypes = new ArrayList<>(totalSize);
     for (int i = 0; i < dataTypeSize; i++) {
