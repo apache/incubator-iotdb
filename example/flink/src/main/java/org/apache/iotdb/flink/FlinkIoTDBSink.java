@@ -41,7 +41,6 @@ public class FlinkIoTDBSink {
     options.setPort(6667);
     options.setUser("root");
     options.setPassword("root");
-    options.setStorageGroup("root.sg");
 
     // If the server enables auto_create_schema, then we do not need to register all timeseries
     // here.
