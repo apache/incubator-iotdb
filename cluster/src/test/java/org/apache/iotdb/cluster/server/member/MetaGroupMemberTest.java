@@ -878,7 +878,7 @@ public class MetaGroupMemberTest extends BaseMember {
     }
 
     QueryContext context =
-        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true, 1024, -1));
+        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true));
 
     try {
       ClusterReaderFactory readerFactory = new ClusterReaderFactory(testMetaMember);
@@ -940,7 +940,7 @@ public class MetaGroupMemberTest extends BaseMember {
     }
 
     QueryContext context =
-        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true, 1024, -1));
+        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true));
 
     try {
       ClusterReaderFactory readerFactory = new ClusterReaderFactory(testMetaMember);

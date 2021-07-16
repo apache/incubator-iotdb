@@ -73,7 +73,7 @@ public class ClusterQueryRouterTest extends BaseQueryTest {
     queryPlan.setDeduplicatedPaths(pathList);
     queryPlan.setDeduplicatedDataTypes(dataTypes);
     QueryContext context =
-        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true, 1024, -1));
+        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true));
 
     try {
       QueryDataSet dataSet = clusterQueryRouter.rawDataQuery(queryPlan, context);
@@ -117,7 +117,7 @@ public class ClusterQueryRouterTest extends BaseQueryTest {
     plan.setDeduplicatedAggregations(aggregations);
 
     QueryContext context =
-        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true, 1024, -1));
+        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true));
     try {
       QueryDataSet queryDataSet = clusterQueryRouter.aggregate(plan, context);
       checkDoubleDataset(queryDataSet, new Object[] {0.0, 19.0, 9.5, 20.0, 190.0});
@@ -142,7 +142,7 @@ public class ClusterQueryRouterTest extends BaseQueryTest {
             TSDataType.DOUBLE, new PreviousFill(TSDataType.DOUBLE, 0, defaultFillInterval));
     plan.setFillType(tsDataTypeIFillMap);
     QueryContext context =
-        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true, 1024, -1));
+        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true));
 
     try {
       QueryDataSet queryDataSet;
@@ -183,7 +183,7 @@ public class ClusterQueryRouterTest extends BaseQueryTest {
     plan.setFillType(tsDataTypeIFillMap);
 
     QueryContext context =
-        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true, 1024, -1));
+        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true));
 
     try {
       QueryDataSet queryDataSet;
@@ -212,7 +212,7 @@ public class ClusterQueryRouterTest extends BaseQueryTest {
       throws IOException, StorageEngineException, QueryFilterOptimizationException,
           QueryProcessException, IllegalPathException {
     QueryContext queryContext =
-        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true, 1024, -1));
+        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true));
     try {
       GroupByTimePlan groupByPlan = new GroupByTimePlan();
       List<PartialPath> pathList = new ArrayList<>();
@@ -265,7 +265,7 @@ public class ClusterQueryRouterTest extends BaseQueryTest {
       throws StorageEngineException, IOException, QueryFilterOptimizationException,
           QueryProcessException, IllegalPathException {
     QueryContext queryContext =
-        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true, 1024, -1));
+        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true));
     try {
       GroupByTimePlan groupByPlan = new GroupByTimePlan();
       List<PartialPath> pathList = new ArrayList<>();

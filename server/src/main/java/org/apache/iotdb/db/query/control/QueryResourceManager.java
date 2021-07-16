@@ -25,7 +25,6 @@ import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.exception.StorageEngineException;
-import org.apache.iotdb.db.exception.query.PathNumOverLimitException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.query.context.QueryContext;
@@ -74,59 +73,20 @@ public class QueryResourceManager {
    */
   private final Map<Long, List<IExternalSortFileDeserializer>> externalSortFileMap;
 
-  private final Map<Long, Long> queryIdEstimatedMemoryMap;
-
-  // current total free memory for reading process(not including the cache memory)
-  private final AtomicLong totalFreeMemoryForRead;
-
-  // estimated size for one point memory size, the unit is byte
-  private static final long POINT_ESTIMATED_SIZE = 16L;
-
-  private static final IoTDBConfig CONFIG = IoTDBDescriptor.getInstance().getConfig();
-
   private QueryResourceManager() {
     filePathsManager = new QueryFileManager();
     externalSortFileMap = new ConcurrentHashMap<>();
-    queryIdEstimatedMemoryMap = new ConcurrentHashMap<>();
-    totalFreeMemoryForRead =
-        new AtomicLong(
-            IoTDBDescriptor.getInstance().getConfig().getAllocateMemoryForReadWithoutCache());
   }
 
   public static QueryResourceManager getInstance() {
     return QueryTokenManagerHelper.INSTANCE;
   }
 
-  public int getMaxDeduplicatedPathNum(int fetchSize) {
-    if (fetchSize == 0) {
-      return CONFIG.getMaxQueryDeduplicatedPathNum();
-    }
-    return (int)
-        Math.min(
-            ((totalFreeMemoryForRead.get() / fetchSize) / POINT_ESTIMATED_SIZE),
-            CONFIG.getMaxQueryDeduplicatedPathNum());
-  }
-
   /** Register a new query. When a query request is created firstly, this method must be invoked. */
-  public long assignQueryId(boolean isDataQuery, int fetchSize, int deduplicatedPathNum) {
-    int maxDeduplicatedPathNum = getMaxDeduplicatedPathNum(fetchSize);
-    if (deduplicatedPathNum > maxDeduplicatedPathNum) {
-      throw new RuntimeException(
-          new PathNumOverLimitException(maxDeduplicatedPathNum, deduplicatedPathNum));
-    }
+  public long assignQueryId(boolean isDataQuery) {
     long queryId = queryIdAtom.incrementAndGet();
     if (isDataQuery) {
       filePathsManager.addQueryId(queryId);
-      if (deduplicatedPathNum > 0) {
-        long estimatedMemoryUsage =
-            (long) deduplicatedPathNum * POINT_ESTIMATED_SIZE * (long) fetchSize;
-        // apply the memory successfully
-        if (totalFreeMemoryForRead.addAndGet(-estimatedMemoryUsage) >= 0) {
-          queryIdEstimatedMemoryMap.put(queryId, estimatedMemoryUsage);
-        } else {
-          totalFreeMemoryForRead.addAndGet(estimatedMemoryUsage);
-        }
-      }
     }
     return queryId;
   }
@@ -210,12 +170,6 @@ public class QueryResourceManager {
         }
       }
       externalSortFileMap.remove(queryId);
-    }
-
-    // put back the memory usage
-    Long estimatedMemoryUsage = queryIdEstimatedMemoryMap.remove(queryId);
-    if (estimatedMemoryUsage != null) {
-      totalFreeMemoryForRead.addAndGet(estimatedMemoryUsage);
     }
 
     // remove usage of opened file paths of current thread

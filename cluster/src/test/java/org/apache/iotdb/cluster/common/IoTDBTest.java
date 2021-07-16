@@ -158,8 +158,7 @@ public abstract class IoTDBTest {
   protected QueryDataSet query(List<String> pathStrs, IExpression expression)
       throws QueryProcessException, QueryFilterOptimizationException, StorageEngineException,
           IOException, MetadataException, InterruptedException {
-    QueryContext context =
-        new QueryContext(QueryResourceManager.getInstance().assignQueryId(true, 1024, -1));
+    QueryContext context = new QueryContext(QueryResourceManager.getInstance().assignQueryId(true));
     RawDataQueryPlan queryPlan = new RawDataQueryPlan();
     queryPlan.setExpression(expression);
     List<PartialPath> paths = new ArrayList<>();

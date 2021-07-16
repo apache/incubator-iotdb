@@ -50,7 +50,6 @@ import org.apache.iotdb.db.qp.physical.crud.AlignByDevicePlan;
 import org.apache.iotdb.db.qp.physical.crud.AlignByDevicePlan.MeasurementType;
 import org.apache.iotdb.db.qp.physical.crud.CreateTemplatePlan;
 import org.apache.iotdb.db.qp.physical.crud.DeletePlan;
-import org.apache.iotdb.db.qp.physical.crud.GroupByTimePlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertMultiTabletPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowsOfOneDevicePlan;
@@ -58,7 +57,6 @@ import org.apache.iotdb.db.qp.physical.crud.InsertRowsPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
 import org.apache.iotdb.db.qp.physical.crud.LastQueryPlan;
 import org.apache.iotdb.db.qp.physical.crud.QueryPlan;
-import org.apache.iotdb.db.qp.physical.crud.RawDataQueryPlan;
 import org.apache.iotdb.db.qp.physical.crud.SetDeviceTemplatePlan;
 import org.apache.iotdb.db.qp.physical.crud.UDFPlan;
 import org.apache.iotdb.db.qp.physical.crud.UDTFPlan;
@@ -126,7 +124,6 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
-import org.apache.iotdb.tsfile.utils.Pair;
 
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.apache.thrift.TException;
@@ -139,7 +136,6 @@ import java.sql.SQLException;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -695,13 +691,8 @@ public class TSServiceImpl implements TSIService.Iface {
     long startTime = System.currentTimeMillis();
     long queryId = -1;
     try {
-
-      // pair.left = fetchSize, pair.right = deduplicatedNum
-      Pair<Integer, Integer> p = getMemoryParametersFromPhysicalPlan(plan, fetchSize);
-      fetchSize = p.left;
-
       // generate the queryId for the operation
-      queryId = sessionManager.requestQueryId(statementId, true, fetchSize, p.right);
+      queryId = sessionManager.requestQueryId(statementId, true);
       // register query info to queryTimeManager
       if (!(plan instanceof ShowQueryProcesslistPlan)) {
         queryTimeManager.registerQuery(queryId, startTime, statement, timeout);
@@ -814,53 +805,6 @@ public class TSServiceImpl implements TSIService.Iface {
         SLOW_SQL_LOGGER.info("Cost: {} ms, sql is {}", costTime, statement);
       }
     }
-  }
-
-  /**
-   * get fetchSize and deduplicatedPathNum that are used for memory estimation
-   *
-   * @return Pair - fetchSize, deduplicatedPathNum
-   */
-  private Pair<Integer, Integer> getMemoryParametersFromPhysicalPlan(
-      PhysicalPlan plan, int fetchSizeBefore) {
-    // In case users forget to set this field in query, use the default value
-    int fetchSize = fetchSizeBefore == 0 ? DEFAULT_FETCH_SIZE : fetchSizeBefore;
-    int deduplicatedPathNum = -1;
-    if (plan instanceof GroupByTimePlan) {
-      fetchSize = Math.min(getFetchSizeForGroupByTimePlan((GroupByTimePlan) plan), fetchSize);
-    } else if (plan.getOperatorType() == OperatorType.AGGREGATION) {
-      // the actual row number of aggregation query is 1
-      fetchSize = 1;
-    }
-    if (plan instanceof AlignByDevicePlan) {
-      deduplicatedPathNum = ((AlignByDevicePlan) plan).getMeasurements().size();
-    } else if (plan instanceof LastQueryPlan) {
-      // dataset of last query consists of three column: time column + value column = 1
-      // deduplicatedPathNum
-      // and we assume that the memory which sensor name takes equals to 1 deduplicatedPathNum
-      deduplicatedPathNum = 2;
-      // last query's actual row number should be the minimum between the number of series and
-      // fetchSize
-      fetchSize = Math.min(((LastQueryPlan) plan).getDeduplicatedPaths().size(), fetchSize);
-    } else if (plan instanceof RawDataQueryPlan) {
-      deduplicatedPathNum = ((RawDataQueryPlan) plan).getDeduplicatedPaths().size();
-    }
-    return new Pair<>(fetchSize, deduplicatedPathNum);
-  }
-
-  /*
-  calculate fetch size for group by time plan
-   */
-  private int getFetchSizeForGroupByTimePlan(GroupByTimePlan plan) {
-    int rows = (int) ((plan.getEndTime() - plan.getStartTime()) / plan.getInterval());
-    // rows gets 0 is caused by: the end time - the start time < the time interval.
-    if (rows == 0 && plan.isIntervalByMonth()) {
-      Calendar calendar = Calendar.getInstance();
-      calendar.setTimeInMillis(plan.getStartTime());
-      calendar.add(Calendar.MONTH, (int) (plan.getInterval() / MS_TO_MONTH));
-      rows = calendar.getTimeInMillis() <= plan.getEndTime() ? 1 : 0;
-    }
-    return rows;
   }
 
   private TSExecuteStatementResp getListDataSetHeaders(QueryDataSet dataSet) {
@@ -1175,7 +1119,7 @@ public class TSServiceImpl implements TSIService.Iface {
 
     status = executeNonQueryPlan(plan);
     TSExecuteStatementResp resp = RpcUtils.getTSExecuteStatementResp(status);
-    long queryId = sessionManager.requestQueryId(false, DEFAULT_FETCH_SIZE, -1);
+    long queryId = sessionManager.requestQueryId(false);
     return resp.setQueryId(queryId);
   }
 

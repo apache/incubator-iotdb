@@ -164,7 +164,7 @@ public class StatMonitor implements StatMonitorMBean, IService {
           LastQueryExecutor.calculateLastPairForSeriesLocally(
                   Collections.singletonList(monitorSeries),
                   Collections.singletonList(TSDataType.INT64),
-                  new QueryContext(QueryResourceManager.getInstance().assignQueryId(true, 1024, 1)),
+                  new QueryContext(QueryResourceManager.getInstance().assignQueryId(true)),
                   null,
                   Collections.singletonMap(
                       monitorSeries.getDevice(),

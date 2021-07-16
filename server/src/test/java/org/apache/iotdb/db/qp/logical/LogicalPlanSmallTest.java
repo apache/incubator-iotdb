@@ -193,7 +193,7 @@ public class LogicalPlanSmallTest {
         (RootOperator) logicalGenerator.generate(sqlStr, ZoneId.systemDefault());
     IoTDB.metaManager.init();
     ConcatPathOptimizer concatPathOptimizer = new ConcatPathOptimizer();
-    concatPathOptimizer.transform(operator, 1000);
+    concatPathOptimizer.transform(operator);
     IoTDB.metaManager.clear();
     // expected to throw LogicalOptimizeException: The value of SOFFSET (%d) is equal to or exceeds
     // the number of sequences (%d) that can actually be returned.
