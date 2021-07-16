@@ -619,6 +619,8 @@
                             <exclude>.pytest_cache/**</exclude>
                             <exclude>venv/**</exclude>
                             <exclude>apache_iotdb.egg-info/**</exclude>
+                            <!-- Java SPI uses files in resources/META-INF/services-->
+                            <exclude>**/resources/META-INF/services/**</exclude>
                         </excludes>
                     </configuration>
                 </plugin>

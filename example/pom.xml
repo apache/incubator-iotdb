@@ -42,6 +42,7 @@
         <module>hadoop</module>
         <module>flink</module>
         <module>mqtt</module>
+        <module>mqtt-customize</module>
         <module>pulsar</module>
         <module>udf</module>
         <module>trigger</module>

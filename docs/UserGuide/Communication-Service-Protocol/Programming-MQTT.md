@@ -100,5 +100,82 @@ connection.disconnect();
 
 ```
 
-## Rest
+### Customize your MQTT Message Format
+
+If you do not like the above Json format, you can customize your MQTT Message format by just writing several lines 
+of codes. An example can be found in `example/mqtt-customize` project.
+
+Steps:
+* Create a java project, and add dependency:
+```xml
+        <dependency>
+            <groupId>org.apache.iotdb</groupId>
+            <artifactId>iotdb-server</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+```
+* Define your implementation which implements `org.apache.iotdb.db.mqtt.PayloadFormatter.java`
+e.g.,
+```java
+package org.apache.iotdb.mqtt.server;
+
+import io.netty.buffer.ByteBuf;
+import org.apache.iotdb.db.mqtt.Message;
+import org.apache.iotdb.db.mqtt.PayloadFormatter;
+
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+public class CustomizedJsonPayloadFormatter implements PayloadFormatter {
+
+  @Override
+  public List<Message> format(ByteBuf payload) {
+    // Suppose the payload is a json format
+    if (payload == null) {
+      return null;
+    }
+
+    String json = payload.toString(StandardCharsets.UTF_8);
+    // parse data from the json and generate Messages and put them into List<Meesage> ret
+    List<Message> ret = new ArrayList<>();
+    // this is just an example, so we just generate some Messages directly
+    for (int i = 0; i < 2; i++) {
+      long ts = i;
+      Message message = new Message();
+      message.setDevice("d" + i);
+      message.setTimestamp(ts);
+      message.setMeasurements(Arrays.asList("s1", "s2"));
+      message.setValues(Arrays.asList("4.0" + i, "5.0" + i));
+      ret.add(message);
+    }
+    return ret;
+  }
+
+  @Override
+  public String getName() {
+    // set the value of mqtt_payload_formatter in iotdb-engine.properties as the following string:
+    return "CustomizedJson";
+  }
+}
+```
+* modify the file in `src/main/resources/META-INF/services/org.apache.iotdb.db.mqtt.PayloadFormatter`:
+  clean the file and put your implementation class name into the file.
+  In this example, the content is: `org.apache.iotdb.mqtt.server.CustomizedJsonPayloadFormatter`
+* compile your implementation as a jar file: `mvn package -DskipTests`
+
+
+Then, in your server:
+* put the jar into your server's lib folder
+* Update configuration to enable MQTT service. (`enable_mqtt_service=true` in `conf/iotdb-engine.properties`)
+* Set the value of `mqtt_payload_formatter` in `conf/iotdb-engine.properties` as the value of getName() in your implementation
+  , in this example, the value is `CustomizedJson`
+* Launch the IoTDB server.
+* Now IoTDB will use your implementation to parse the MQTT message.
+
+More: the message format can be anything you want. For example, if it is a binary format, 
+just use `payload.forEachByte()` or `payload.array` to get bytes content. 
+
+
 

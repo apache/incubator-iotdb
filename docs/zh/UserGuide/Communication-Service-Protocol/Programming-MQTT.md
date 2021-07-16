@@ -100,7 +100,79 @@ for (int i = 0; i < 10; i++) {
 connection.disconnect();
  ```
 
-## Rest 
+
+### 自定义MQTT消息格式
+
+事实上可以通过简单编程来实现MQTT消息的格式自定义。
+可以在源码的`example/mqtt-customize`项目中找到一个简单示例。
+
+步骤:
+* 创建一个Java项目，增加如下依赖
+```xml
+        <dependency>
+            <groupId>org.apache.iotdb</groupId>
+            <artifactId>iotdb-server</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+```
+* 创建一个实现类，实现接口 `org.apache.iotdb.db.mqtt.PayloadFormatter.java`
+```java
+package org.apache.iotdb.mqtt.server;
+
+import io.netty.buffer.ByteBuf;
+import org.apache.iotdb.db.mqtt.Message;
+import org.apache.iotdb.db.mqtt.PayloadFormatter;
+
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+public class CustomizedJsonPayloadFormatter implements PayloadFormatter {
+
+  @Override
+  public List<Message> format(ByteBuf payload) {
+    // Suppose the payload is a json format
+    if (payload == null) {
+      return null;
+    }
+
+    String json = payload.toString(StandardCharsets.UTF_8);
+    // parse data from the json and generate Messages and put them into List<Meesage> ret
+    List<Message> ret = new ArrayList<>();
+    // this is just an example, so we just generate some Messages directly
+    for (int i = 0; i < 2; i++) {
+      long ts = i;
+      Message message = new Message();
+      message.setDevice("d" + i);
+      message.setTimestamp(ts);
+      message.setMeasurements(Arrays.asList("s1", "s2"));
+      message.setValues(Arrays.asList("4.0" + i, "5.0" + i));
+      ret.add(message);
+    }
+    return ret;
+  }
+
+  @Override
+  public String getName() {
+    // set the value of mqtt_payload_formatter in iotdb-engine.properties as the following string:
+    return "CustomizedJson";
+  }
+}
+```
+* 修改项目中的 `src/main/resources/META-INF/services/org.apache.iotdb.db.mqtt.PayloadFormatter`文件:
+  将示例中的文件内容清除，并将刚才的实现类的全名（包名.类名）写入文件中。注意，这个文件中只有一行。
+  在本例中，文件内容为: `org.apache.iotdb.mqtt.server.CustomizedJsonPayloadFormatter`
+* 编译项目生成一个jar包: `mvn package -DskipTests`
 
 
+在IoTDB服务端:
+* 将刚才的jar包放入IoTDB的lib文件夹内
+* 打开MQTT服务参数. (`enable_mqtt_service=true` in `conf/iotdb-engine.properties`)
+* 用刚才的实现类中的getName() 方法的返回值 设置为 `conf/iotdb-engine.properties`中`mqtt_payload_formatter`的值， 
+  , 在本例中，为 `CustomizedJson`
+* 启动IoTDB
+* 搞定.
 
+More: MQTT协议的消息不限于json，你还可以用任意二进制。通过如下函数获得：
+`payload.forEachByte()` or `payload.array`。 
