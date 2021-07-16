@@ -36,16 +36,6 @@ public enum TimeIndexLevel {
     }
   }
 
-  public ITimeIndex getTimeIndex(int deviceNumInLastClosedTsFile) {
-    switch (this) {
-      case FILE_TIME_INDEX:
-        return new FileTimeIndex();
-      case DEVICE_TIME_INDEX:
-      default:
-        return new DeviceTimeIndex(deviceNumInLastClosedTsFile);
-    }
-  }
-
   public static TimeIndexLevel valueOf(int ordinal) {
     if (ordinal < 0 || ordinal >= values().length) {
       throw new IndexOutOfBoundsException("Invalid ordinal");

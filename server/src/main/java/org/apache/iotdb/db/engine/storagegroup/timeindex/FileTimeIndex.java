@@ -213,4 +213,9 @@ public class FileTimeIndex implements ITimeIndex {
   public long getEndTime(String deviceId) {
     return endTime;
   }
+
+  @Override
+  public boolean checkDeviceIdExist(String deviceId) {
+    return true;
+  }
 }

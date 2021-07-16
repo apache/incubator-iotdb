@@ -1263,8 +1263,7 @@ public class StorageGroupProcessor {
               storageGroupInfo,
               this::closeUnsealedTsFileProcessorCallBack,
               this::updateLatestFlushTimeCallback,
-              true,
-              deviceNumInLastClosedTsFile);
+              true);
     } else {
       tsFileProcessor =
           new TsFileProcessor(
@@ -1273,8 +1272,7 @@ public class StorageGroupProcessor {
               storageGroupInfo,
               this::closeUnsealedTsFileProcessorCallBack,
               this::unsequenceFlushCallback,
-              false,
-              deviceNumInLastClosedTsFile);
+              false);
     }
 
     if (enableMemControl) {
@@ -1853,7 +1851,7 @@ public class StorageGroupProcessor {
         return false;
       }
 
-      if (tsFileResource.getDevices().contains(deviceId)
+      if (tsFileResource.isDeviceIdExist(deviceId)
           && (deleteEnd >= tsFileResource.getStartTime(deviceId) && deleteStart <= endTime)) {
         return false;
       }
@@ -2024,7 +2022,6 @@ public class StorageGroupProcessor {
     closeQueryLock.writeLock().lock();
     try {
       tsFileProcessor.close();
-      deviceNumInLastClosedTsFile = tsFileProcessor.getTsFileResource().getDevices().size();
     } finally {
       closeQueryLock.writeLock().unlock();
     }

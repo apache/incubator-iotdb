@@ -64,14 +64,6 @@ public class DeviceTimeIndex implements ITimeIndex {
     initTimes(endTimes, Long.MIN_VALUE);
   }
 
-  public DeviceTimeIndex(int deviceNumInLastClosedTsFile) {
-    this.deviceToIndex = new ConcurrentHashMap<>();
-    this.startTimes = new long[deviceNumInLastClosedTsFile];
-    this.endTimes = new long[deviceNumInLastClosedTsFile];
-    initTimes(startTimes, Long.MAX_VALUE);
-    initTimes(endTimes, Long.MIN_VALUE);
-  }
-
   public DeviceTimeIndex(Map<String, Integer> deviceToIndex, long[] startTimes, long[] endTimes) {
     this.startTimes = startTimes;
     this.endTimes = endTimes;
@@ -308,5 +300,10 @@ public class DeviceTimeIndex implements ITimeIndex {
       return Long.MIN_VALUE;
     }
     return endTimes[deviceToIndex.get(deviceId)];
+  }
+
+  @Override
+  public boolean checkDeviceIdExist(String deviceId) {
+    return deviceToIndex.containsKey(deviceId);
   }
 }

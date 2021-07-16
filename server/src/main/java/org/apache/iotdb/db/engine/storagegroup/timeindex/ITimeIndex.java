@@ -147,4 +147,12 @@ public interface ITimeIndex {
    * @return end time
    */
   long getEndTime(String deviceId);
+
+  /**
+   * check whether deviceId exists in TsFile
+   *
+   * @param deviceId device name
+   * @return true if the deviceId may exist in TsFile, otherwise false.
+   */
+  boolean checkDeviceIdExist(String deviceId);
 }
