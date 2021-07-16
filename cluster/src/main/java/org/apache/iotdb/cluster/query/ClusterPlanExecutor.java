@@ -258,8 +258,14 @@ public class ClusterPlanExecutor extends PlanExecutor {
               metaGroupMember
                   .getClientProvider()
                   .getSyncDataClient(node, RaftServer.getReadOperationTimeoutMS())) {
-            syncDataClient.setTimeout(RaftServer.getReadOperationTimeoutMS());
-            count = syncDataClient.getPathCount(partitionGroup.getHeader(), pathsToQuery, level);
+            try {
+              syncDataClient.setTimeout(RaftServer.getReadOperationTimeoutMS());
+              count = syncDataClient.getPathCount(partitionGroup.getHeader(), pathsToQuery, level);
+            } catch (TException e) {
+              // the connection may be broken, close it to avoid it being reused
+              syncDataClient.getInputProtocol().getTransport().close();
+              throw e;
+            }
           }
         }
         logger.debug(
@@ -362,8 +368,14 @@ public class ClusterPlanExecutor extends PlanExecutor {
               metaGroupMember
                   .getClientProvider()
                   .getSyncDataClient(node, RaftServer.getReadOperationTimeoutMS())) {
-            paths =
-                syncDataClient.getNodeList(group.getHeader(), schemaPattern.getFullPath(), level);
+            try {
+              paths =
+                  syncDataClient.getNodeList(group.getHeader(), schemaPattern.getFullPath(), level);
+            } catch (TException e) {
+              // the connection may be broken, close it to avoid it being reused
+              syncDataClient.getInputProtocol().getTransport().close();
+              throw e;
+            }
           }
         }
         if (paths != null) {
@@ -448,8 +460,14 @@ public class ClusterPlanExecutor extends PlanExecutor {
               metaGroupMember
                   .getClientProvider()
                   .getSyncDataClient(node, RaftServer.getReadOperationTimeoutMS())) {
-            nextChildrenNodes =
-                syncDataClient.getChildNodeInNextLevel(group.getHeader(), path.getFullPath());
+            try {
+              nextChildrenNodes =
+                  syncDataClient.getChildNodeInNextLevel(group.getHeader(), path.getFullPath());
+            } catch (TException e) {
+              // the connection may be broken, close it to avoid it being reused
+              syncDataClient.getInputProtocol().getTransport().close();
+              throw e;
+            }
           }
         }
         if (nextChildrenNodes != null) {
@@ -556,8 +574,14 @@ public class ClusterPlanExecutor extends PlanExecutor {
               metaGroupMember
                   .getClientProvider()
                   .getSyncDataClient(node, RaftServer.getReadOperationTimeoutMS())) {
-            nextChildren =
-                syncDataClient.getChildNodePathInNextLevel(group.getHeader(), path.getFullPath());
+            try {
+              nextChildren =
+                  syncDataClient.getChildNodePathInNextLevel(group.getHeader(), path.getFullPath());
+            } catch (TException e) {
+              // the connection may be broken, close it to avoid it being reused
+              syncDataClient.getInputProtocol().getTransport().close();
+              throw e;
+            }
           }
         }
         if (nextChildren != null) {

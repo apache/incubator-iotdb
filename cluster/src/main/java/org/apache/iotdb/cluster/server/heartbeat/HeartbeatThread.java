@@ -34,6 +34,7 @@ import org.apache.iotdb.cluster.server.handlers.caller.HeartbeatHandler;
 import org.apache.iotdb.cluster.server.member.RaftMember;
 import org.apache.iotdb.cluster.utils.ClientUtils;
 
+import org.apache.thrift.TException;
 import org.apache.thrift.transport.TTransportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -409,6 +410,11 @@ public class HeartbeatThread implements Runnable {
                 try {
                   long result = client.startElection(request);
                   handler.onComplete(result);
+                } catch (TException e) {
+                  client.getInputProtocol().getTransport().close();
+                  logger.warn(
+                      "{}: Cannot request a vote from {} due to network", memberName, node, e);
+                  handler.onError(e);
                 } catch (Exception e) {
                   handler.onError(e);
                 } finally {

@@ -259,20 +259,28 @@ public class ClusterLastQueryExecutor extends LastQueryExecutor {
     }
 
     private ByteBuffer lastSync(Node node, QueryContext context) throws TException {
+      ByteBuffer res;
       try (SyncDataClient syncDataClient =
           metaGroupMember
               .getClientProvider()
               .getSyncDataClient(node, RaftServer.getReadOperationTimeoutMS())) {
-
-        return syncDataClient.last(
-            new LastQueryRequest(
-                PartialPath.toStringList(seriesPaths),
-                dataTypeOrdinals,
-                context.getQueryId(),
-                queryPlan.getDeviceToMeasurements(),
-                group.getHeader(),
-                syncDataClient.getNode()));
+        try {
+          res =
+              syncDataClient.last(
+                  new LastQueryRequest(
+                      PartialPath.toStringList(seriesPaths),
+                      dataTypeOrdinals,
+                      context.getQueryId(),
+                      queryPlan.getDeviceToMeasurements(),
+                      group.getHeader(),
+                      syncDataClient.getNode()));
+        } catch (TException e) {
+          // the connection may be broken, close it to avoid it being reused
+          syncDataClient.getInputProtocol().getTransport().close();
+          throw e;
+        }
       }
+      return res;
     }
   }
 }

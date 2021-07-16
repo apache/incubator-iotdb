@@ -185,8 +185,14 @@ public class RemoteMultSeriesReader extends AbstractMultPointReader {
 
     try (SyncDataClient curSyncClient =
         sourceInfo.getCurSyncClient(RaftServer.getReadOperationTimeoutMS()); ) {
-
-      return curSyncClient.fetchMultSeries(sourceInfo.getHeader(), sourceInfo.getReaderId(), paths);
+      try {
+        return curSyncClient.fetchMultSeries(
+            sourceInfo.getHeader(), sourceInfo.getReaderId(), paths);
+      } catch (TException e) {
+        // the connection may be broken, close it to avoid it being reused
+        curSyncClient.getInputProtocol().getTransport().close();
+        throw e;
+      }
     } catch (TException e) {
       logger.error("Failed to fetch result sync, connect to {}", sourceInfo, e);
       return null;

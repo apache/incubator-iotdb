@@ -190,7 +190,13 @@ public class MultDataSourceInfo {
         newFilter = TimeFilter.gt(timestamp);
       }
       request.setTimeFilterBytes(SerializeUtils.serializeFilter(newFilter));
-      newReaderId = client.queryMultSeries(request);
+      try {
+        newReaderId = client.queryMultSeries(request);
+      } catch (TException e) {
+        // the connection may be broken, close it to avoid it being reused
+        client.getInputProtocol().getTransport().close();
+        throw e;
+      }
       return newReaderId;
     }
   }

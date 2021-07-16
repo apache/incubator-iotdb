@@ -41,6 +41,7 @@ import org.apache.iotdb.db.utils.TimeValuePairUtils.Intervals;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.TimeValuePair;
 
+import org.apache.thrift.TException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -245,8 +246,13 @@ public class ClusterPreviousFill extends PreviousFill {
         metaGroupMember
             .getClientProvider()
             .getSyncDataClient(node, RaftServer.getReadOperationTimeoutMS())) {
-
-      byteBuffer = syncDataClient.previousFill(request);
+      try {
+        byteBuffer = syncDataClient.previousFill(request);
+      } catch (TException e) {
+        // the connection may be broken, close it to avoid it being reused
+        syncDataClient.getInputProtocol().getTransport().close();
+        throw e;
+      }
     } catch (Exception e) {
       logger.error(
           "{}: Cannot perform previous fill of {} to {}",
