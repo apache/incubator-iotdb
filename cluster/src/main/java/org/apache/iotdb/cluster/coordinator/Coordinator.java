@@ -58,7 +58,6 @@ import org.apache.iotdb.rpc.TSStatusCode;
 import org.apache.iotdb.service.rpc.thrift.EndPoint;
 import org.apache.iotdb.service.rpc.thrift.TSStatus;
 
-import org.apache.thrift.TException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -703,15 +702,11 @@ public class Coordinator {
 
   private TSStatus forwardDataPlanSync(PhysicalPlan plan, Node receiver, Node header)
       throws IOException {
-    RaftService.Client client = null;
-    try {
-      client =
-          metaGroupMember
-              .getClientProvider()
-              .getSyncDataClient(receiver, RaftServer.getWriteOperationTimeoutMS());
-    } catch (TException e) {
-      throw new IOException(e);
-    }
+    RaftService.Client client =
+        metaGroupMember
+            .getClientProvider()
+            .getSyncDataClient(receiver, RaftServer.getWriteOperationTimeoutMS());
+
     return this.metaGroupMember.forwardPlanSync(plan, receiver, header, client);
   }
 
@@ -735,7 +730,7 @@ public class Coordinator {
    * @param node the node to be connected
    * @param timeout timeout threshold of connection
    */
-  public SyncDataClient getSyncDataClient(Node node, int timeout) throws TException {
+  public SyncDataClient getSyncDataClient(Node node, int timeout) throws IOException {
     return metaGroupMember.getClientProvider().getSyncDataClient(node, timeout);
   }
 }

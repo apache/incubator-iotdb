@@ -231,12 +231,18 @@ public class MetaPuller {
               .getSyncDataClient(node, RaftServer.getReadOperationTimeoutMS())) {
 
         // only need measurement name
-        PullSchemaResp pullSchemaResp = syncDataClient.pullMeasurementSchema(request);
-        ByteBuffer buffer = pullSchemaResp.schemaBytes;
-        int size = buffer.getInt();
-        schemas = new ArrayList<>(size);
-        for (int i = 0; i < size; i++) {
-          schemas.add(MeasurementSchema.deserializeFrom(buffer));
+        try {
+          PullSchemaResp pullSchemaResp = syncDataClient.pullMeasurementSchema(request);
+          ByteBuffer buffer = pullSchemaResp.schemaBytes;
+          int size = buffer.getInt();
+          schemas = new ArrayList<>(size);
+          for (int i = 0; i < size; i++) {
+            schemas.add(MeasurementSchema.deserializeFrom(buffer));
+          }
+        } catch (TException e) {
+          // the connection may be broken, close it to avoid it being reused
+          syncDataClient.getInputProtocol().getTransport().close();
+          throw e;
         }
       }
     }

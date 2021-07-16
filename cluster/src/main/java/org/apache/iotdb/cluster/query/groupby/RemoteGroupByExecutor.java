@@ -89,8 +89,14 @@ public class RemoteGroupByExecutor implements GroupByExecutor {
                 .getClientProvider()
                 .getSyncDataClient(source, RaftServer.getReadOperationTimeoutMS())) {
 
-          aggrBuffers =
-              syncDataClient.getGroupByResult(header, executorId, curStartTime, curEndTime);
+          try {
+            aggrBuffers =
+                syncDataClient.getGroupByResult(header, executorId, curStartTime, curEndTime);
+          } catch (TException e) {
+            // the connection may be broken, close it to avoid it being reused
+            syncDataClient.getInputProtocol().getTransport().close();
+            throw e;
+          }
         }
       }
     } catch (TException e) {
@@ -133,9 +139,14 @@ public class RemoteGroupByExecutor implements GroupByExecutor {
             metaGroupMember
                 .getClientProvider()
                 .getSyncDataClient(source, RaftServer.getReadOperationTimeoutMS())) {
-
-          aggrBuffer =
-              syncDataClient.peekNextNotNullValue(header, executorId, nextStartTime, nextEndTime);
+          try {
+            aggrBuffer =
+                syncDataClient.peekNextNotNullValue(header, executorId, nextStartTime, nextEndTime);
+          } catch (TException e) {
+            // the connection may be broken, close it to avoid it being reused
+            syncDataClient.getInputProtocol().getTransport().close();
+            throw e;
+          }
         }
       }
     } catch (TException e) {

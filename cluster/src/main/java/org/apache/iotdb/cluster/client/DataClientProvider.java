@@ -28,7 +28,6 @@ import org.apache.iotdb.cluster.config.ClusterDescriptor;
 import org.apache.iotdb.cluster.rpc.thrift.Node;
 import org.apache.iotdb.cluster.rpc.thrift.RaftService.Client;
 
-import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TProtocolFactory;
 
 import java.io.IOException;
@@ -102,10 +101,10 @@ public class DataClientProvider {
    * @param node the node to be connected
    * @param timeout timeout threshold of connection
    */
-  public SyncDataClient getSyncDataClient(Node node, int timeout) throws TException {
+  public SyncDataClient getSyncDataClient(Node node, int timeout) throws IOException {
     SyncDataClient client = (SyncDataClient) getDataSyncClientPool().getClient(node);
     if (client == null) {
-      throw new TException(GET_CLIENT_FAILED_MSG + node);
+      throw new IOException(GET_CLIENT_FAILED_MSG + node);
     }
     client.setTimeout(timeout);
     return client;
@@ -121,10 +120,10 @@ public class DataClientProvider {
    * @param node the node to be connected
    * @param timeout timeout threshold of connection
    */
-  public SyncDataClient getSyncDataClientForRefresh(Node node, int timeout) throws TException {
+  public SyncDataClient getSyncDataClientForRefresh(Node node, int timeout) throws IOException {
     SyncDataClient client = (SyncDataClient) getDataSyncClientPool().getClientForRefresh(node);
     if (client == null) {
-      throw new TException(GET_CLIENT_FAILED_MSG + node);
+      throw new IOException(GET_CLIENT_FAILED_MSG + node);
     }
     client.setTimeout(timeout);
     return client;

@@ -153,27 +153,31 @@ public class DataSourceInfo {
   }
 
   private Long applyForReaderIdSync(Node node, boolean byTimestamp, long timestamp)
-      throws TException {
-
-    Long newReaderId;
+      throws TException, IOException {
+    long newReaderId;
     try (SyncDataClient client =
         this.metaGroupMember
             .getClientProvider()
             .getSyncDataClient(node, RaftServer.getReadOperationTimeoutMS())) {
-
-      if (byTimestamp) {
-        newReaderId = client.querySingleSeriesByTimestamp(request);
-      } else {
-        Filter newFilter;
-        // add timestamp to as a timeFilter to skip the data which has been read
-        if (request.isSetTimeFilterBytes()) {
-          Filter timeFilter = FilterFactory.deserialize(request.timeFilterBytes);
-          newFilter = new AndFilter(timeFilter, TimeFilter.gt(timestamp));
+      try {
+        if (byTimestamp) {
+          newReaderId = client.querySingleSeriesByTimestamp(request);
         } else {
-          newFilter = TimeFilter.gt(timestamp);
+          Filter newFilter;
+          // add timestamp to as a timeFilter to skip the data which has been read
+          if (request.isSetTimeFilterBytes()) {
+            Filter timeFilter = FilterFactory.deserialize(request.timeFilterBytes);
+            newFilter = new AndFilter(timeFilter, TimeFilter.gt(timestamp));
+          } else {
+            newFilter = TimeFilter.gt(timestamp);
+          }
+          request.setTimeFilterBytes(SerializeUtils.serializeFilter(newFilter));
+          newReaderId = client.querySingleSeries(request);
         }
-        request.setTimeFilterBytes(SerializeUtils.serializeFilter(newFilter));
-        newReaderId = client.querySingleSeries(request);
+      } catch (TException e) {
+        // the connection may be broken, close it to avoid it being reused
+        client.getInputProtocol().getTransport().close();
+        throw e;
       }
       return newReaderId;
     }
@@ -201,7 +205,7 @@ public class DataSourceInfo {
         : metaGroupMember.getClientProvider().getAsyncDataClient(this.curSource, timeout);
   }
 
-  SyncDataClient getCurSyncClient(int timeout) throws TException {
+  SyncDataClient getCurSyncClient(int timeout) throws IOException {
     return isNoClient
         ? null
         : metaGroupMember.getClientProvider().getSyncDataClient(this.curSource, timeout);

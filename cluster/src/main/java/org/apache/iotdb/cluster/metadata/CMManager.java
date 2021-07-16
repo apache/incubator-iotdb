@@ -794,8 +794,14 @@ public class CMManager extends MManager {
               metaGroupMember
                   .getClientProvider()
                   .getSyncDataClient(node, RaftServer.getReadOperationTimeoutMS())) {
-            result =
-                syncDataClient.getUnregisteredTimeseries(partitionGroup.getHeader(), seriesList);
+            try {
+              result =
+                  syncDataClient.getUnregisteredTimeseries(partitionGroup.getHeader(), seriesList);
+            } catch (TException e) {
+              // the connection may be broken, close it to avoid it being reused
+              syncDataClient.getInputProtocol().getTransport().close();
+              throw e;
+            }
           }
         }
         if (result != null) {
@@ -978,13 +984,18 @@ public class CMManager extends MManager {
           metaGroupMember
               .getClientProvider()
               .getSyncDataClient(node, RaftServer.getReadOperationTimeoutMS())) {
-
-        PullSchemaResp pullSchemaResp = syncDataClient.pullTimeSeriesSchema(request);
-        ByteBuffer buffer = pullSchemaResp.schemaBytes;
-        int size = buffer.getInt();
-        schemas = new ArrayList<>(size);
-        for (int i = 0; i < size; i++) {
-          schemas.add(TimeseriesSchema.deserializeFrom(buffer));
+        try {
+          PullSchemaResp pullSchemaResp = syncDataClient.pullTimeSeriesSchema(request);
+          ByteBuffer buffer = pullSchemaResp.schemaBytes;
+          int size = buffer.getInt();
+          schemas = new ArrayList<>(size);
+          for (int i = 0; i < size; i++) {
+            schemas.add(TimeseriesSchema.deserializeFrom(buffer));
+          }
+        } catch (TException e) {
+          // the connection may be broken, close it to avoid it being reused
+          syncDataClient.getInputProtocol().getTransport().close();
+          throw e;
         }
       }
     }
@@ -1212,8 +1223,13 @@ public class CMManager extends MManager {
           metaGroupMember
               .getClientProvider()
               .getSyncDataClient(node, RaftServer.getReadOperationTimeoutMS())) {
-
-        result = syncDataClient.getAllPaths(header, pathsToQuery, withAlias);
+        try {
+          result = syncDataClient.getAllPaths(header, pathsToQuery, withAlias);
+        } catch (TException e) {
+          // the connection may be broken, close it to avoid it being reused
+          syncDataClient.getInputProtocol().getTransport().close();
+          throw e;
+        }
       }
     }
 
@@ -1338,8 +1354,13 @@ public class CMManager extends MManager {
           metaGroupMember
               .getClientProvider()
               .getSyncDataClient(node, RaftServer.getReadOperationTimeoutMS())) {
-
-        paths = syncDataClient.getAllDevices(header, pathsToQuery);
+        try {
+          paths = syncDataClient.getAllDevices(header, pathsToQuery);
+        } catch (TException e) {
+          // the connection may be broken, close it to avoid it being reused
+          syncDataClient.getInputProtocol().getTransport().close();
+          throw e;
+        }
       }
     }
     return paths;
@@ -1792,9 +1813,15 @@ public class CMManager extends MManager {
                   .getClientProvider()
                   .getSyncDataClient(node, RaftServer.getReadOperationTimeoutMS())) {
         plan.serialize(dataOutputStream);
-        resultBinary =
-            syncDataClient.getAllMeasurementSchema(
-                group.getHeader(), ByteBuffer.wrap(byteArrayOutputStream.toByteArray()));
+        try {
+          resultBinary =
+              syncDataClient.getAllMeasurementSchema(
+                  group.getHeader(), ByteBuffer.wrap(byteArrayOutputStream.toByteArray()));
+        } catch (TException e) {
+          // the connection may be broken, close it to avoid it being reused
+          syncDataClient.getInputProtocol().getTransport().close();
+          throw e;
+        }
       }
     }
     return resultBinary;
@@ -1818,9 +1845,15 @@ public class CMManager extends MManager {
                   .getSyncDataClient(node, RaftServer.getReadOperationTimeoutMS())) {
 
         plan.serialize(dataOutputStream);
-        resultBinary =
-            syncDataClient.getDevices(
-                group.getHeader(), ByteBuffer.wrap(byteArrayOutputStream.toByteArray()));
+        try {
+          resultBinary =
+              syncDataClient.getDevices(
+                  group.getHeader(), ByteBuffer.wrap(byteArrayOutputStream.toByteArray()));
+        } catch (TException e) {
+          // the connection may be broken, close it to avoid it being reused
+          syncDataClient.getInputProtocol().getTransport().close();
+          throw e;
+        }
       }
     }
     return resultBinary;

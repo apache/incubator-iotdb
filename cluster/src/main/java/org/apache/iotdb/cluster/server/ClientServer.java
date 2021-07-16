@@ -317,7 +317,13 @@ public class ClientServer extends TSServiceImpl {
               try (SyncDataClient syncDataClient =
                   coordinator.getSyncDataClient(
                       queriedNode, RaftServer.getReadOperationTimeoutMS())) {
-                syncDataClient.endQuery(header, coordinator.getThisNode(), queryId);
+                try {
+                  syncDataClient.endQuery(header, coordinator.getThisNode(), queryId);
+                } catch (TException e) {
+                  // the connection may be broken, close it to avoid it being reused
+                  syncDataClient.getInputProtocol().getTransport().close();
+                  throw e;
+                }
               }
             }
           } catch (IOException | TException e) {

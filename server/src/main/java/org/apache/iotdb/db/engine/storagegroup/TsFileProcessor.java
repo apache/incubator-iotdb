@@ -192,7 +192,12 @@ public class TsFileProcessor {
 
     if (IoTDBDescriptor.getInstance().getConfig().isEnableWal()) {
       try {
+        long startTime = System.currentTimeMillis();
         getLogNode().write(insertRowPlan);
+        long elapsed = System.currentTimeMillis() - startTime;
+        if (elapsed > 5000) {
+          logger.error("write wal slowly : cost {}ms", elapsed);
+        }
       } catch (Exception e) {
         throw new WriteProcessException(
             String.format(

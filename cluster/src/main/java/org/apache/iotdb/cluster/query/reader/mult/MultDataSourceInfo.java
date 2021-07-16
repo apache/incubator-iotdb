@@ -172,9 +172,8 @@ public class MultDataSourceInfo {
     return result.get();
   }
 
-  private Long applyForReaderIdSync(Node node, long timestamp) throws TException {
-
-    Long newReaderId;
+  private Long applyForReaderIdSync(Node node, long timestamp) throws TException, IOException {
+    long newReaderId;
     try (SyncDataClient client =
         this.metaGroupMember
             .getClientProvider()
@@ -189,7 +188,13 @@ public class MultDataSourceInfo {
         newFilter = TimeFilter.gt(timestamp);
       }
       request.setTimeFilterBytes(SerializeUtils.serializeFilter(newFilter));
-      newReaderId = client.queryMultSeries(request);
+      try {
+        newReaderId = client.queryMultSeries(request);
+      } catch (TException e) {
+        // the connection may be broken, close it to avoid it being reused
+        client.getInputProtocol().getTransport().close();
+        throw e;
+      }
       return newReaderId;
     }
   }
@@ -212,7 +217,7 @@ public class MultDataSourceInfo {
         : metaGroupMember.getClientProvider().getAsyncDataClient(this.curSource, timeout);
   }
 
-  SyncDataClient getCurSyncClient(int timeout) throws TException {
+  SyncDataClient getCurSyncClient(int timeout) throws IOException {
     return isNoClient
         ? null
         : metaGroupMember.getClientProvider().getSyncDataClient(this.curSource, timeout);

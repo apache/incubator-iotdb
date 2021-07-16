@@ -67,7 +67,7 @@ public class SyncClientPool {
       if (clientStack.isEmpty()) {
         return null;
       } else {
-        return clientStack.pollLast();
+        return clientStack.poll();
       }
     }
   }
