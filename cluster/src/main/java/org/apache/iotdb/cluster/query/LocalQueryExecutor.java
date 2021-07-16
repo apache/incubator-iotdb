@@ -92,8 +92,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.apache.iotdb.session.Config.DEFAULT_FETCH_SIZE;
-
 public class LocalQueryExecutor {
 
   private static final Logger logger = LoggerFactory.getLogger(LocalQueryExecutor.class);
@@ -237,11 +235,7 @@ public class LocalQueryExecutor {
 
     // the same query from a requester correspond to a context here
     RemoteQueryContext queryContext =
-        queryManager.getQueryContext(
-            request.getRequester(),
-            request.getQueryId(),
-            request.getFetchSize(),
-            request.getDeduplicatedPathNum());
+        queryManager.getQueryContext(request.getRequester(), request.getQueryId());
     logger.debug(
         DEBUG_SHOW_QUERY_ID,
         name,
@@ -341,11 +335,7 @@ public class LocalQueryExecutor {
 
     // the same query from a requester correspond to a context here
     RemoteQueryContext queryContext =
-        queryManager.getQueryContext(
-            request.getRequester(),
-            request.getQueryId(),
-            request.getFetchSize(),
-            request.getDeduplicatedPathNum());
+        queryManager.getQueryContext(request.getRequester(), request.getQueryId());
     logger.debug(
         DEBUG_SHOW_QUERY_ID,
         name,
@@ -581,11 +571,7 @@ public class LocalQueryExecutor {
     Set<String> deviceMeasurements = request.getDeviceMeasurements();
 
     RemoteQueryContext queryContext =
-        queryManager.getQueryContext(
-            request.getRequester(),
-            request.getQueryId(),
-            request.getFetchSize(),
-            request.getDeduplicatedPathNum());
+        queryManager.getQueryContext(request.getRequester(), request.getQueryId());
     logger.debug(
         DEBUG_SHOW_QUERY_ID,
         name,
@@ -689,8 +675,7 @@ public class LocalQueryExecutor {
       timeFilter = FilterFactory.deserialize(request.timeFilterBytes);
     }
     RemoteQueryContext queryContext =
-        queryManager.getQueryContext(
-            request.getRequestor(), request.queryId, DEFAULT_FETCH_SIZE, -1);
+        queryManager.getQueryContext(request.getRequestor(), request.queryId);
     Set<String> deviceMeasurements = request.getDeviceMeasurements();
     boolean ascending = request.ascending;
 
@@ -881,8 +866,7 @@ public class LocalQueryExecutor {
     Set<String> deviceMeasurements = request.getDeviceMeasurements();
     boolean ascending = request.ascending;
 
-    RemoteQueryContext queryContext =
-        queryManager.getQueryContext(request.getRequestor(), queryId, DEFAULT_FETCH_SIZE, -1);
+    RemoteQueryContext queryContext = queryManager.getQueryContext(request.getRequestor(), queryId);
     LocalGroupByExecutor executor =
         getGroupByExecutor(
             path,
@@ -968,8 +952,7 @@ public class LocalQueryExecutor {
     long beforeRange = request.getBeforeRange();
     Node requester = request.getRequester();
     Set<String> deviceMeasurements = request.getDeviceMeasurements();
-    RemoteQueryContext queryContext =
-        queryManager.getQueryContext(requester, queryId, DEFAULT_FETCH_SIZE, -1);
+    RemoteQueryContext queryContext = queryManager.getQueryContext(requester, queryId);
 
     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
     DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutputStream);
@@ -1034,8 +1017,7 @@ public class LocalQueryExecutor {
     dataGroupMember.syncLeaderWithConsistencyCheck(false);
 
     RemoteQueryContext queryContext =
-        queryManager.getQueryContext(
-            request.getRequestor(), request.getQueryId(), DEFAULT_FETCH_SIZE, -1);
+        queryManager.getQueryContext(request.getRequestor(), request.getQueryId());
     List<PartialPath> partialPaths = new ArrayList<>();
     for (String path : request.getPaths()) {
       partialPaths.add(new PartialPath(path));

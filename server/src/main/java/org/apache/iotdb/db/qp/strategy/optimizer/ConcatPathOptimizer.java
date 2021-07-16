@@ -56,14 +56,14 @@ public class ConcatPathOptimizer implements ILogicalOptimizer {
       "failed to concat series paths because the given query operator didn't have prefix paths";
 
   @Override
-  public Operator transform(Operator operator, int fetchSize)
+  public Operator transform(Operator operator)
       throws LogicalOptimizeException, PathNumOverLimitException {
     QueryOperator queryOperator = (QueryOperator) operator;
     if (!optimizable(queryOperator)) {
       return queryOperator;
     }
     concatSelect(queryOperator);
-    removeWildcardsInSelectPaths(queryOperator, fetchSize);
+    removeWildcardsInSelectPaths(queryOperator);
     concatFilterAndRemoveWildcards(queryOperator);
     return queryOperator;
   }
@@ -97,13 +97,13 @@ public class ConcatPathOptimizer implements ILogicalOptimizer {
     queryOperator.getSelectComponent().setResultColumns(resultColumns);
   }
 
-  private void removeWildcardsInSelectPaths(QueryOperator queryOperator, int fetchSize)
+  private void removeWildcardsInSelectPaths(QueryOperator queryOperator)
       throws LogicalOptimizeException, PathNumOverLimitException {
     if (queryOperator.getIndexType() != null) {
       return;
     }
 
-    WildcardsRemover wildcardsRemover = new WildcardsRemover(queryOperator, fetchSize);
+    WildcardsRemover wildcardsRemover = new WildcardsRemover(queryOperator);
     List<ResultColumn> resultColumns = new ArrayList<>();
     for (ResultColumn resultColumn : queryOperator.getSelectComponent().getResultColumns()) {
       resultColumn.removeWildcards(wildcardsRemover, resultColumns);

@@ -57,7 +57,7 @@ public class ClusterTimeGeneratorTest extends BaseQueryTest {
       throws StorageEngineException, IOException, IllegalPathException, QueryProcessException {
     RawDataQueryPlan dataQueryPlan = new RawDataQueryPlan();
     QueryContext context =
-        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true, 1024, -1));
+        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true));
     try {
       IExpression expression =
           BinaryExpression.and(
@@ -86,7 +86,7 @@ public class ClusterTimeGeneratorTest extends BaseQueryTest {
       throws StorageEngineException, IOException, IllegalPathException, QueryProcessException {
     RawDataQueryPlan dataQueryPlan = new RawDataQueryPlan();
     QueryContext context =
-        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true, 1024, -1));
+        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true));
     Filter valueFilter = ValueFilter.gtEq(3.0);
     Filter timeFilter = TimeFilter.ltEq(8);
     try {

@@ -74,8 +74,7 @@ public class ClusterPhysicalGenerator extends PhysicalGenerator {
   }
 
   @Override
-  public PhysicalPlan transformToPhysicalPlan(Operator operator, int fetchSize)
-      throws QueryProcessException {
+  public PhysicalPlan transformToPhysicalPlan(Operator operator) throws QueryProcessException {
     // update storage groups before parsing query plans
     if (operator instanceof QueryOperator) {
       try {
@@ -84,7 +83,7 @@ public class ClusterPhysicalGenerator extends PhysicalGenerator {
         throw new QueryProcessException(e);
       }
     }
-    return super.transformToPhysicalPlan(operator, fetchSize);
+    return super.transformToPhysicalPlan(operator);
   }
 
   @Override

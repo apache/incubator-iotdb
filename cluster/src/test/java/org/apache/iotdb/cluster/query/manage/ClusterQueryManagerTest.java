@@ -46,12 +46,9 @@ public class ClusterQueryManagerTest {
 
   @Test
   public void testContext() {
-    RemoteQueryContext queryContext1 =
-        queryManager.getQueryContext(TestUtils.getNode(0), 1, 1024, -1);
-    RemoteQueryContext queryContext2 =
-        queryManager.getQueryContext(TestUtils.getNode(0), 1, 1024, -1);
-    RemoteQueryContext queryContext3 =
-        queryManager.getQueryContext(TestUtils.getNode(1), 1, 1024, -1);
+    RemoteQueryContext queryContext1 = queryManager.getQueryContext(TestUtils.getNode(0), 1);
+    RemoteQueryContext queryContext2 = queryManager.getQueryContext(TestUtils.getNode(0), 1);
+    RemoteQueryContext queryContext3 = queryManager.getQueryContext(TestUtils.getNode(1), 1);
     assertSame(queryContext1, queryContext2);
     assertNotEquals(queryContext2, queryContext3);
   }
@@ -158,8 +155,7 @@ public class ClusterQueryManagerTest {
 
   @Test
   public void testEndQuery() throws StorageEngineException {
-    RemoteQueryContext queryContext =
-        queryManager.getQueryContext(TestUtils.getNode(0), 1, 1024, -1);
+    RemoteQueryContext queryContext = queryManager.getQueryContext(TestUtils.getNode(0), 1);
     for (int i = 0; i < 10; i++) {
       IBatchReader reader =
           new IBatchReader() {

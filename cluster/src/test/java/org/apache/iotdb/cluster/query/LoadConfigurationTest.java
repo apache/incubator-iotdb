@@ -114,7 +114,7 @@ public class LoadConfigurationTest {
 
     LoadConfigurationPlan loadConfigurationPlan =
         (LoadConfigurationPlan)
-            physicalGenerator.transformToPhysicalPlan(loadConfigurationOperator, 0);
+            physicalGenerator.transformToPhysicalPlan(loadConfigurationOperator);
     String metricProperties =
         (String) loadConfigurationPlan.getIoTDBProperties().get("enable_metric_service");
     assertEquals("false", metricProperties);

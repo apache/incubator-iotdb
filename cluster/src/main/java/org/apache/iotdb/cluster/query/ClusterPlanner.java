@@ -33,18 +33,17 @@ import java.time.ZoneId;
 
 public class ClusterPlanner extends Planner {
 
-  /** @param fetchSize this parameter only take effect when it is a query plan */
   @Override
-  public PhysicalPlan parseSQLToPhysicalPlan(String sqlStr, ZoneId zoneId, int fetchSize)
+  public PhysicalPlan parseSQLToPhysicalPlan(String sqlStr, ZoneId zoneId)
       throws QueryProcessException {
     // from SQL to logical operator
     Operator operator = LogicalGenerator.generate(sqlStr, zoneId);
     // check if there are logical errors
     LogicalChecker.check(operator);
     // optimize the logical operator
-    operator = logicalOptimize(operator, fetchSize);
+    operator = logicalOptimize(operator);
     // from logical operator to physical plan
-    return new ClusterPhysicalGenerator().transformToPhysicalPlan(operator, fetchSize);
+    return new ClusterPhysicalGenerator().transformToPhysicalPlan(operator);
   }
 
   @Override
@@ -56,10 +55,9 @@ public class ClusterPlanner extends Planner {
     // check if there are logical errors
     LogicalChecker.check(operator);
     // optimize the logical operator
-    operator = logicalOptimize(operator, rawDataQueryReq.fetchSize);
+    operator = logicalOptimize(operator);
     // from logical operator to physical plan
-    return new ClusterPhysicalGenerator()
-        .transformToPhysicalPlan(operator, rawDataQueryReq.fetchSize);
+    return new ClusterPhysicalGenerator().transformToPhysicalPlan(operator);
   }
 
   @Override
@@ -71,9 +69,8 @@ public class ClusterPlanner extends Planner {
     // check if there are logical errors
     LogicalChecker.check(operator);
     // optimize the logical operator
-    operator = logicalOptimize(operator, lastDataQueryReq.fetchSize);
+    operator = logicalOptimize(operator);
     // from logical operator to physical plan
-    return new ClusterPhysicalGenerator()
-        .transformToPhysicalPlan(operator, lastDataQueryReq.fetchSize);
+    return new ClusterPhysicalGenerator().transformToPhysicalPlan(operator);
   }
 }

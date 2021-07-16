@@ -52,25 +52,24 @@ public class Planner {
     // do nothing
   }
 
-  /** @param fetchSize this parameter only take effect when it is a query plan */
-  public PhysicalPlan parseSQLToPhysicalPlan(String sqlStr, ZoneId zoneId, int fetchSize)
+  public PhysicalPlan parseSQLToPhysicalPlan(String sqlStr, ZoneId zoneId)
       throws QueryProcessException {
     // from SQL to logical operator
     Operator operator = LogicalGenerator.generate(sqlStr, zoneId);
     // check if there are logical errors
     LogicalChecker.check(operator);
     // optimize the logical operator
-    operator = logicalOptimize(operator, fetchSize);
+    operator = logicalOptimize(operator);
     // from logical operator to physical plan
-    return new PhysicalGenerator().transformToPhysicalPlan(operator, fetchSize);
+    return new PhysicalGenerator().transformToPhysicalPlan(operator);
   }
 
-  public GroupByTimePlan cqQueryOperatorToGroupByTimePlan(QueryOperator operator, int fetchSize)
+  public GroupByTimePlan cqQueryOperatorToGroupByTimePlan(QueryOperator operator)
       throws QueryProcessException {
     // optimize the logical operator (no need to check since the operator has been checked
     // beforehand)
-    operator = (QueryOperator) logicalOptimize(operator, fetchSize);
-    return (GroupByTimePlan) new PhysicalGenerator().transformToPhysicalPlan(operator, fetchSize);
+    operator = (QueryOperator) logicalOptimize(operator);
+    return (GroupByTimePlan) new PhysicalGenerator().transformToPhysicalPlan(operator);
   }
 
   /** convert raw data query to physical plan directly */
@@ -82,9 +81,9 @@ public class Planner {
     // check if there are logical errors
     LogicalChecker.check(operator);
     // optimize the logical operator
-    operator = logicalOptimize(operator, rawDataQueryReq.fetchSize);
+    operator = logicalOptimize(operator);
     // from logical operator to physical plan
-    return new PhysicalGenerator().transformToPhysicalPlan(operator, rawDataQueryReq.fetchSize);
+    return new PhysicalGenerator().transformToPhysicalPlan(operator);
   }
 
   /** convert last data query to physical plan directly */
@@ -96,9 +95,9 @@ public class Planner {
     // check if there are logical errors
     LogicalChecker.check(operator);
     // optimize the logical operator
-    operator = logicalOptimize(operator, lastDataQueryReq.fetchSize);
+    operator = logicalOptimize(operator);
     // from logical operator to physical plan
-    return new PhysicalGenerator().transformToPhysicalPlan(operator, lastDataQueryReq.fetchSize);
+    return new PhysicalGenerator().transformToPhysicalPlan(operator);
   }
 
   /**
@@ -108,10 +107,10 @@ public class Planner {
    * @return optimized logical operator
    * @throws LogicalOptimizeException exception in logical optimizing
    */
-  protected Operator logicalOptimize(Operator operator, int fetchSize)
+  protected Operator logicalOptimize(Operator operator)
       throws LogicalOperatorException, PathNumOverLimitException {
     return operator.getType().equals(QUERY) || operator.getType().equals(QUERY_INDEX)
-        ? optimizeQueryOperator((QueryOperator) operator, fetchSize)
+        ? optimizeQueryOperator((QueryOperator) operator)
         : operator;
   }
 
@@ -122,9 +121,9 @@ public class Planner {
    * @return optimized query operator
    * @throws LogicalOptimizeException exception in query optimizing
    */
-  private QueryOperator optimizeQueryOperator(QueryOperator root, int fetchSize)
+  private QueryOperator optimizeQueryOperator(QueryOperator root)
       throws LogicalOperatorException, PathNumOverLimitException {
-    root = (QueryOperator) new ConcatPathOptimizer().transform(root, fetchSize);
+    root = (QueryOperator) new ConcatPathOptimizer().transform(root);
 
     WhereComponent whereComponent = root.getWhereComponent();
     if (whereComponent == null) {
@@ -141,6 +140,6 @@ public class Planner {
 
   @TestOnly
   public PhysicalPlan parseSQLToPhysicalPlan(String sqlStr) throws QueryProcessException {
-    return parseSQLToPhysicalPlan(sqlStr, ZoneId.systemDefault(), 1024);
+    return parseSQLToPhysicalPlan(sqlStr, ZoneId.systemDefault());
   }
 }

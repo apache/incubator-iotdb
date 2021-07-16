@@ -37,8 +37,7 @@ import java.util.Map;
 /** Used to convert logical operator to physical plan */
 public class PhysicalGenerator {
 
-  public PhysicalPlan transformToPhysicalPlan(Operator operator, int fetchSize)
-      throws QueryProcessException {
+  public PhysicalPlan transformToPhysicalPlan(Operator operator) throws QueryProcessException {
     PhysicalPlan physicalPlan = operator.generatePhysicalPlan(this);
     physicalPlan.setDebug(operator.isDebug());
     return physicalPlan;

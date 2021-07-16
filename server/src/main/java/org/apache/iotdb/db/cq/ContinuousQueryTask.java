@@ -121,7 +121,7 @@ public class ContinuousQueryTask extends WrappedRunnable {
     // we need to save one copy of the original SelectComponent.
     SelectComponent selectComponentCopy = new SelectComponent(queryOperator.getSelectComponent());
 
-    GroupByTimePlan queryPlan = planner.cqQueryOperatorToGroupByTimePlan(queryOperator, FETCH_SIZE);
+    GroupByTimePlan queryPlan = planner.cqQueryOperatorToGroupByTimePlan(queryOperator);
 
     queryOperator.setSelectComponent(selectComponentCopy);
 
@@ -134,9 +134,7 @@ public class ContinuousQueryTask extends WrappedRunnable {
   private QueryDataSet doQuery(GroupByTimePlan queryPlan)
       throws StorageEngineException, QueryFilterOptimizationException, MetadataException,
           IOException, InterruptedException, QueryProcessException {
-    long queryId =
-        QueryResourceManager.getInstance()
-            .assignQueryId(true, FETCH_SIZE, queryPlan.getDeduplicatedPaths().size());
+    long queryId = QueryResourceManager.getInstance().assignQueryId(true);
 
     try {
       return planExecutor.processQuery(queryPlan, new QueryContext(queryId));

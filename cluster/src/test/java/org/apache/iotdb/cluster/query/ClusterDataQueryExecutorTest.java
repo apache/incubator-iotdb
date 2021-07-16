@@ -66,7 +66,7 @@ public class ClusterDataQueryExecutorTest extends BaseQueryTest {
     plan.setDeduplicatedDataTypes(dataTypes);
     queryExecutor = new ClusterDataQueryExecutor(plan, testMetaMember);
     RemoteQueryContext context =
-        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true, 1024, -1));
+        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true));
     try {
       QueryDataSet dataSet = queryExecutor.executeWithoutValueFilter(context);
       checkSequentialDataset(dataSet, 0, 20);
@@ -87,7 +87,7 @@ public class ClusterDataQueryExecutorTest extends BaseQueryTest {
     plan.setExpression(expression);
     queryExecutor = new ClusterDataQueryExecutor(plan, testMetaMember);
     RemoteQueryContext context =
-        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true, 1024, -1));
+        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true));
     try {
       QueryDataSet dataSet = queryExecutor.executeWithValueFilter(context);
       checkSequentialDataset(dataSet, 5, 15);
@@ -104,7 +104,7 @@ public class ClusterDataQueryExecutorTest extends BaseQueryTest {
     plan.setEnableRedirect(true);
     queryExecutor = new ClusterDataQueryExecutor(plan, testMetaMember);
     RemoteQueryContext context =
-        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true, 1024, -1));
+        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true));
     try {
       QueryDataSet dataSet = queryExecutor.executeWithoutValueFilter(context);
       assertNull(dataSet.getEndPoint());
@@ -126,7 +126,7 @@ public class ClusterDataQueryExecutorTest extends BaseQueryTest {
     plan.setEnableRedirect(true);
     queryExecutor = new ClusterDataQueryExecutor(plan, testMetaMember);
     RemoteQueryContext context =
-        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true, 1024, -1));
+        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true));
     try {
       QueryDataSet dataSet = queryExecutor.executeWithValueFilter(context);
       assertNull(dataSet.getEndPoint());
@@ -147,7 +147,7 @@ public class ClusterDataQueryExecutorTest extends BaseQueryTest {
     plan.setEnableRedirect(true);
     queryExecutor = new ClusterDataQueryExecutor(plan, testMetaMember);
     RemoteQueryContext context =
-        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true, 1024, -1));
+        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true));
     try {
       QueryDataSet dataSet = queryExecutor.executeWithoutValueFilter(context);
       assertEquals("ip:port=0.0.0.0:6667", dataSet.getEndPoint().toString());

@@ -61,7 +61,7 @@ public class ClusterPlanExecutorTest extends BaseQueryTest {
     queryPlan.setPaths(pathList);
     queryPlan.setDataTypes(dataTypes);
     QueryContext context =
-        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true, 1024, -1));
+        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true));
 
     try {
       QueryDataSet dataSet = queryExecutor.processQuery(queryPlan, context);
@@ -96,7 +96,7 @@ public class ClusterPlanExecutorTest extends BaseQueryTest {
           IOException, InterruptedException, QueryProcessException {
     ShowTimeSeriesPlan showTimeSeriesPlan = new ShowTimeSeriesPlan(pathList.get(0));
     QueryContext context =
-        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true, 1024, -1));
+        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true));
     try {
       QueryDataSet dataSet = queryExecutor.processQuery(showTimeSeriesPlan, context);
       int count = 0;

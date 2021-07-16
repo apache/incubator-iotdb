@@ -50,7 +50,7 @@ public class MergeGroupByExecutorTest extends BaseQueryTest {
     PartialPath path = new PartialPath(TestUtils.getTestSeries(0, 0));
     TSDataType dataType = TSDataType.DOUBLE;
     QueryContext context =
-        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true, 1024, -1));
+        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true));
     try {
       Filter timeFilter = null;
       Set<String> deviceMeasurements = new HashSet<>();
@@ -85,7 +85,7 @@ public class MergeGroupByExecutorTest extends BaseQueryTest {
     PartialPath path = new PartialPath(TestUtils.getTestSeries(0, 0));
     TSDataType dataType = TSDataType.DOUBLE;
     QueryContext context =
-        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true, 1024, -1));
+        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true));
     try {
       Filter timeFilter = TimeFilter.gtEq(3);
       Set<String> deviceMeasurements = new HashSet<>();

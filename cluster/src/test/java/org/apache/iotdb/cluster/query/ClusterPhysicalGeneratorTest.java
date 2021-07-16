@@ -65,8 +65,7 @@ public class ClusterPhysicalGeneratorTest extends BaseQueryTest {
 
     operator.setSelectComponent(selectComponent);
     operator.setFromComponent(fromComponent);
-    RawDataQueryPlan plan =
-        (RawDataQueryPlan) physicalGenerator.transformToPhysicalPlan(operator, 1024);
+    RawDataQueryPlan plan = (RawDataQueryPlan) physicalGenerator.transformToPhysicalPlan(operator);
 
     assertEquals(pathList, plan.getDeduplicatedPaths());
     assertEquals(dataTypes, plan.getDeduplicatedDataTypes());
