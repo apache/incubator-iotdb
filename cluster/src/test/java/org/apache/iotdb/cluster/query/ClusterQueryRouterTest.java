@@ -26,10 +26,12 @@ import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.constant.SQLConstant;
+import org.apache.iotdb.db.qp.physical.PhysicalPlan;
 import org.apache.iotdb.db.qp.physical.crud.AggregationPlan;
 import org.apache.iotdb.db.qp.physical.crud.FillQueryPlan;
 import org.apache.iotdb.db.qp.physical.crud.GroupByTimePlan;
 import org.apache.iotdb.db.qp.physical.crud.RawDataQueryPlan;
+import org.apache.iotdb.db.qp.physical.crud.UDTFPlan;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.QueryResourceManager;
 import org.apache.iotdb.db.query.executor.fill.IFill;
@@ -37,6 +39,7 @@ import org.apache.iotdb.db.query.executor.fill.LinearFill;
 import org.apache.iotdb.db.query.executor.fill.PreviousFill;
 import org.apache.iotdb.tsfile.exception.filter.QueryFilterOptimizationException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.read.common.RowRecord;
 import org.apache.iotdb.tsfile.read.expression.IExpression;
 import org.apache.iotdb.tsfile.read.expression.impl.BinaryExpression;
 import org.apache.iotdb.tsfile.read.expression.impl.SingleSeriesExpression;
@@ -44,16 +47,19 @@ import org.apache.iotdb.tsfile.read.filter.TimeFilter;
 import org.apache.iotdb.tsfile.read.filter.ValueFilter;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 
+import junit.framework.TestCase;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import static junit.framework.TestCase.assertEquals;
 import static org.junit.Assert.assertFalse;
 
 public class ClusterQueryRouterTest extends BaseQueryTest {
@@ -303,6 +309,33 @@ public class ClusterQueryRouterTest extends BaseQueryTest {
       assertFalse(dataSet.hasNext());
     } finally {
       QueryResourceManager.getInstance().endQuery(queryContext.getQueryId());
+    }
+  }
+
+  @Test
+  public void testUDTFQuery() throws QueryProcessException, StorageEngineException {
+    ClusterPlanner processor = new ClusterPlanner();
+    String sqlStr = "select sin(s0) from root.*";
+    PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr, ZoneId.systemDefault(), 1024);
+    UDTFPlan udtfPlan = (UDTFPlan) plan;
+    QueryContext context =
+        new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true, 1024, -1));
+    try {
+      QueryDataSet queryDataSet = clusterQueryRouter.udtfQuery(udtfPlan, context);
+      for (int i = 0; i < 20; i++) {
+        TestCase.assertTrue(queryDataSet.hasNext());
+        RowRecord record = queryDataSet.next();
+        assertEquals(i, record.getTimestamp());
+        assertEquals(10, record.getFields().size());
+        for (int j = 0; j < 10; j++) {
+          assertEquals(Math.sin(i * 1.0), record.getFields().get(j).getDoubleV(), 0.00001);
+        }
+      }
+      TestCase.assertFalse(queryDataSet.hasNext());
+    } catch (StorageEngineException | IOException | InterruptedException e) {
+      e.printStackTrace();
+    } finally {
+      QueryResourceManager.getInstance().endQuery(context.getQueryId());
     }
   }
 }

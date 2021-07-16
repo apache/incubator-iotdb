@@ -508,4 +508,45 @@ public abstract class Cases {
       Assert.assertNull(e);
     }
   }
+
+  @Test
+  public void clusterUDTFQueryTest() throws SQLException {
+    // Prepare data.
+    writeStatement.execute(
+        "CREATE timeseries root.sg.d.s WITH datatype=DOUBLE, encoding=RLE, compression=SNAPPY");
+    for (int i = 10; i < 20; i++) {
+      writeStatement.execute(
+          String.format("INSERT INTO root.sg.d(timestamp,s) VALUES(%s,%s)", i, i));
+    }
+    for (int i = 0; i < 10; i++) {
+      writeStatement.execute(
+          String.format("INSERT INTO root.sg.d(timestamp,s) VALUES(%s,%s)", i, i));
+    }
+
+    ResultSet resultSet = null;
+
+    // Try to execute udf query on each node.
+    // Without value filter
+    for (Statement readStatement : readStatements) {
+      resultSet = readStatement.executeQuery("SELECT sin(s) FROM root.sg.d");
+
+      int i = 0;
+      while (resultSet.next()) {
+        Assert.assertEquals(Math.sin(i++), resultSet.getDouble(1), 0.00001);
+      }
+      Assert.assertFalse(resultSet.next());
+      resultSet.close();
+    }
+
+    // With value filter
+    for (Statement readStatement : readStatements) {
+      resultSet = readStatement.executeQuery("SELECT sin(s) FROM root.sg.d WHERE time >= 5");
+      int i = 5;
+      while (resultSet.next()) {
+        Assert.assertEquals(Math.sin(i++), resultSet.getDouble(1), 0.00001);
+      }
+      Assert.assertFalse(resultSet.next());
+      resultSet.close();
+    }
+  }
 }

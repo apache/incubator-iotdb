@@ -32,6 +32,7 @@ import org.apache.iotdb.db.qp.physical.crud.AggregationPlan;
 import org.apache.iotdb.db.qp.physical.crud.GroupByTimePlan;
 import org.apache.iotdb.db.qp.physical.crud.LastQueryPlan;
 import org.apache.iotdb.db.qp.physical.crud.RawDataQueryPlan;
+import org.apache.iotdb.db.qp.physical.crud.UDTFPlan;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.dataset.groupby.GroupByWithValueFilterDataSet;
 import org.apache.iotdb.db.query.dataset.groupby.GroupByWithoutValueFilterDataSet;
@@ -41,8 +42,15 @@ import org.apache.iotdb.db.query.executor.LastQueryExecutor;
 import org.apache.iotdb.db.query.executor.QueryRouter;
 import org.apache.iotdb.db.query.executor.RawDataQueryExecutor;
 import org.apache.iotdb.db.query.executor.fill.IFill;
+import org.apache.iotdb.tsfile.exception.filter.QueryFilterOptimizationException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.read.expression.ExpressionType;
+import org.apache.iotdb.tsfile.read.expression.IExpression;
+import org.apache.iotdb.tsfile.read.expression.util.ExpressionOptimizer;
+import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -90,5 +98,37 @@ public class ClusterQueryRouter extends QueryRouter {
   @Override
   protected LastQueryExecutor getLastQueryExecutor(LastQueryPlan lastQueryPlan) {
     return new ClusterLastQueryExecutor(lastQueryPlan, metaGroupMember);
+  }
+
+  @Override
+  public QueryDataSet udtfQuery(UDTFPlan udtfPlan, QueryContext context)
+      throws StorageEngineException, QueryProcessException, IOException, InterruptedException {
+    IExpression expression = udtfPlan.getExpression();
+    IExpression optimizedExpression;
+    try {
+      optimizedExpression =
+          expression == null
+              ? null
+              : ExpressionOptimizer.getInstance()
+                  .optimize(expression, new ArrayList<>(udtfPlan.getDeduplicatedPaths()));
+    } catch (QueryFilterOptimizationException e) {
+      throw new StorageEngineException(e.getMessage());
+    }
+    udtfPlan.setExpression(optimizedExpression);
+
+    boolean withValueFilter =
+        optimizedExpression != null && optimizedExpression.getType() != ExpressionType.GLOBAL_TIME;
+    ClusterUDTFQueryExecutor clusterUDTFQueryExecutor =
+        new ClusterUDTFQueryExecutor(udtfPlan, metaGroupMember);
+
+    if (udtfPlan.isAlignByTime()) {
+      return withValueFilter
+          ? clusterUDTFQueryExecutor.executeWithValueFilterAlignByTime(context)
+          : clusterUDTFQueryExecutor.executeWithoutValueFilterAlignByTime(context);
+    } else {
+      return withValueFilter
+          ? clusterUDTFQueryExecutor.executeWithValueFilterNonAlign(context)
+          : clusterUDTFQueryExecutor.executeWithoutValueFilterNonAlign(context);
+    }
   }
 }
