@@ -2130,8 +2130,12 @@ public class IoTDBSqlVisitor extends SqlBaseBaseVisitor<Operator> {
       long timestamp;
       if (insertMultiValues.get(i).dateFormat() != null) {
         timestamp = parseTimeFormat(insertMultiValues.get(i).dateFormat().getText());
-      } else {
+      } else if (insertMultiValues.get(i).INT() != null) {
         timestamp = Long.parseLong(insertMultiValues.get(i).INT().getText());
+      } else if (insertMultiValues.size() != 1) {
+        throw new SQLParserException("need timestamps when insert multi rows");
+      } else {
+        timestamp = parseTimeFormat("now()");
       }
       timeArray[i] = timestamp;
       List<MeasurementValueContext> values = insertMultiValues.get(i).measurementValue();
